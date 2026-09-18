@@ -2,43 +2,150 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/rando/client-discovery-harness/schemas/source_metadata.schema.json",
   "title": "Client Discovery Harness - Source Metadata",
-  "description": "What is kept about an uploaded document. There is deliberately no filename field and no text field: the original name can itself be sensitive, and document text is never persisted in ephemeral mode. additionalProperties is false so that a well-meaning adapter cannot add one.",
+  "description": "Where a piece of evidence came from, for an uploaded file or a retrieved page alike. There is deliberately no filename field and no text field: the original name can itself be sensitive, and document text is never persisted in ephemeral mode. The file fields and the retrieval fields are mutually exclusive - whichever set does not apply stays null rather than being filled with a plausible-looking value, because a fabricated file_type on a web page corrupts the provenance trail it exists to protect. core.evidence.check_source_metadata enforces that.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["source_id", "project_id", "file_type", "file_size", "source_category", "processing_status", "schema_version"],
+  "required": [
+    "source_id",
+    "project_id",
+    "source_origin",
+    "source_category",
+    "processing_status",
+    "schema_version"
+  ],
   "properties": {
     "source_id": {
       "type": "string",
       "description": "Random opaque id. Must not be derived from the uploaded filename."
     },
-    "project_id": { "type": "string" },
+    "project_id": {
+      "type": "string"
+    },
+    "source_origin": {
+      "type": "string",
+      "enum": [
+        "UPLOADED_FILE",
+        "SEARCH_RESULT",
+        "USER_PROVIDED"
+      ],
+      "description": "How the material reached the harness. Distinct from source_category, which says what it is."
+    },
+    "source_category": {
+      "type": "string",
+      "enum": [
+        "CONSULTING_OUTPUT",
+        "COMPANY_DATA",
+        "EXTERNAL_BUSINESS_DATA",
+        "USER_PROVIDED"
+      ]
+    },
     "display_label": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "maxLength": 100,
       "description": "A name the uploading person typed so they can recognise this source later. Never derived from the filename, never auto-filled, control characters stripped. It is not in the logging allowlist, and in PERSISTENT mode it is stored with the rest of this record - see docs/privacy.md."
     },
     "file_type": {
-      "type": "string",
-      "enum": ["PDF", "DOCX", "PPTX", "XLSX", "HTML", "CSV", "TXT", "MD"]
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "PDF",
+        "DOCX",
+        "PPTX",
+        "XLSX",
+        "HTML",
+        "CSV",
+        "TXT",
+        "MD",
+        null
+      ],
+      "description": "UPLOADED_FILE only."
     },
-    "file_size": { "type": "integer", "minimum": 0 },
-    "source_category": {
-      "type": "string",
-      "enum": ["CONSULTING_OUTPUT", "COMPANY_DATA", "EXTERNAL_BUSINESS_DATA", "USER_PROVIDED"]
+    "file_size": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "UPLOADED_FILE only."
     },
-    "page_count": { "type": ["integer", "null"], "minimum": 0 },
-    "source_date": { "type": ["string", "null"] },
-    "detected_lang": { "type": ["string", "null"] },
+    "page_count": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "UPLOADED_FILE only."
+    },
+    "title": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 300,
+      "description": "SEARCH_RESULT only."
+    },
+    "publisher": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200,
+      "description": "SEARCH_RESULT only. Its absence limits confidence - see core/research/confidence.py."
+    },
+    "url": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 2048,
+      "description": "SEARCH_RESULT only."
+    },
+    "retrieved_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "SEARCH_RESULT only. When this harness read it, as opposed to when it was published."
+    },
+    "source_date": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "detected_lang": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "processing_status": {
       "type": "string",
-      "enum": ["PENDING", "EXTRACTED", "FAILED", "PURGED"],
+      "enum": [
+        "PENDING",
+        "EXTRACTED",
+        "FAILED",
+        "PURGED"
+      ],
       "description": "PURGED means extraction finished and the original was deleted - the normal terminal state in ephemeral mode."
     },
     "error_code": {
-      "type": ["string", "null"],
+      "type": [
+        "string",
+        "null"
+      ],
       "description": "Short non-sensitive code. Never an exception message, which can carry document content."
     },
-    "ingested_at": { "type": "string" },
-    "schema_version": { "type": "string" }
+    "ingested_at": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    }
   }
 }

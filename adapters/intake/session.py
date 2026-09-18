@@ -37,6 +37,7 @@ from core.models import (
     ProcessingStatus,
     SourceCategory,
     SourceMetadata,
+    SourceOrigin,
     new_id,
 )
 
@@ -206,9 +207,10 @@ class IntakeSession:
     ) -> IntakeResult:
         source = SourceMetadata(
             project_id=self.project_id,
+            source_origin=SourceOrigin.UPLOADED_FILE,
+            source_category=source_category,
             file_type=file_type,
             file_size=size,
-            source_category=source_category,
             source_id=source_id,
             display_label=normalize_display_label(display_label, self.policy),
             source_date=source_date,

@@ -1,7 +1,6 @@
 {
   "lang": "ko",
   "_note": "UI 문구는 코드에 하드코딩하지 않는다. core/는 enum·code만 반환하고, 표시는 이 파일이 담당한다. en.json과 키 구조가 완전히 동일해야 하며 tests/test_locales.py가 이를 검사한다. enum 값 자체(FACT, HIGH, STRONG …)는 번역하지 않는다 — 여기 있는 것은 라벨뿐이다.",
-
   "enums": {
     "EvidenceType": {
       "FACT": "확인된 사실",
@@ -45,6 +44,11 @@
       "EXTERNAL_BUSINESS_DATA": "외부 시장자료",
       "USER_PROVIDED": "사용자 입력"
     },
+    "SourceOrigin": {
+      "UPLOADED_FILE": "업로드 파일",
+      "SEARCH_RESULT": "검색 자료",
+      "USER_PROVIDED": "사용자 제공"
+    },
     "FileType": {
       "PDF": "PDF",
       "DOCX": "Word",
@@ -87,7 +91,6 @@
       "FAILED": "실패"
     }
   },
-
   "fields": {
     "company_name": "회사명",
     "market_scope": "시장 범위",
@@ -136,9 +139,16 @@
     "proposal_storyline": "제안 스토리라인",
     "expected_objection": "예상 반론",
     "response_logic": "대응 논리",
-    "status": "상태"
+    "status": "상태",
+    "title": "자료 제목",
+    "publisher": "발행처",
+    "url": "링크",
+    "retrieved_at": "수집 시각",
+    "source_origin": "자료 경로",
+    "statement": "진술",
+    "decision_area": "의사결정 영역",
+    "supporting_finding_ids": "근거 발견사항"
   },
-
   "screens": {
     "project": {
       "title": "프로젝트",
@@ -158,16 +168,19 @@
     "proposal": {
       "title": "제안전략",
       "pricing": "가격"
+    },
+    "key_issue": {
+      "title": "핵심 이슈",
+      "decision_area": "의사결정 영역",
+      "implication": "전략적 시사점"
     }
   },
-
   "actions": {
     "upload": "자료 업로드",
     "analyze": "분석 실행",
     "export": "내려받기",
     "request_pricing": "가격 검토 요청"
   },
-
   "messages": {
     "evidence_required": "근거가 없어 이 항목을 생성할 수 없습니다.",
     "unknown_value": "확인되지 않았습니다.",

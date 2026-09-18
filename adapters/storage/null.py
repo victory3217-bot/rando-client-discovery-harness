@@ -18,6 +18,7 @@ from typing import Optional
 from core.models import (
     ClientAnalysis,
     ClientCandidate,
+    KeyIssue,
     PricingResult,
     Project,
     ProposalStrategy,
@@ -57,6 +58,12 @@ class NullStorage:
         return issue.issue_id
 
     def get_swot_issues(self, project_id: str) -> list[SWOTIssue]:
+        return []
+
+    def save_key_issue(self, issue: KeyIssue) -> str:
+        return issue.key_issue_id
+
+    def get_key_issues(self, project_id: str) -> list[KeyIssue]:
         return []
 
     # -- engine 2 ----------------------------------------------------------

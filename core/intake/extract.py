@@ -20,6 +20,7 @@ from core.models import (
     ProcessingStatus,
     SourceCategory,
     SourceMetadata,
+    SourceOrigin,
 )
 
 #: Below this a segment is noise — a stray page number, a lone bullet glyph, a table gutter.
@@ -94,9 +95,10 @@ def source_metadata_from(
     """
     metadata = SourceMetadata(
         project_id=project_id,
+        source_origin=SourceOrigin.UPLOADED_FILE,
+        source_category=source_category,
         file_type=document.file_type,
         file_size=document.byte_size,
-        source_category=source_category,
         page_count=document.page_count,
         source_date=source_date,
         detected_lang=document.detected_lang,

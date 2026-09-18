@@ -1,7 +1,6 @@
 {
   "lang": "en",
   "_note": "UI wording is never hardcoded. core/ returns enums and codes; this file supplies what people read. The key structure must match ko.json exactly - tests/test_locales.py checks that. Enum values themselves (FACT, HIGH, STRONG, ...) are never translated; only their labels live here.",
-
   "enums": {
     "EvidenceType": {
       "FACT": "Fact",
@@ -43,6 +42,11 @@
       "CONSULTING_OUTPUT": "Consulting output",
       "COMPANY_DATA": "Company data",
       "EXTERNAL_BUSINESS_DATA": "External business data",
+      "USER_PROVIDED": "User provided"
+    },
+    "SourceOrigin": {
+      "UPLOADED_FILE": "Uploaded file",
+      "SEARCH_RESULT": "Search result",
       "USER_PROVIDED": "User provided"
     },
     "FileType": {
@@ -87,7 +91,6 @@
       "FAILED": "Failed"
     }
   },
-
   "fields": {
     "company_name": "Company",
     "market_scope": "Market scope",
@@ -136,9 +139,16 @@
     "proposal_storyline": "Proposal storyline",
     "expected_objection": "Expected objection",
     "response_logic": "Response logic",
-    "status": "Status"
+    "status": "Status",
+    "title": "Source title",
+    "publisher": "Publisher",
+    "url": "Link",
+    "retrieved_at": "Retrieved at",
+    "source_origin": "Source origin",
+    "statement": "Statement",
+    "decision_area": "Decision area",
+    "supporting_finding_ids": "Supporting findings"
   },
-
   "screens": {
     "project": {
       "title": "Project",
@@ -158,16 +168,19 @@
     "proposal": {
       "title": "Proposal strategy",
       "pricing": "Pricing"
+    },
+    "key_issue": {
+      "title": "Key issues",
+      "decision_area": "Decision area",
+      "implication": "Strategic implication"
     }
   },
-
   "actions": {
     "upload": "Upload material",
     "analyze": "Run analysis",
     "export": "Download",
     "request_pricing": "Request pricing review"
   },
-
   "messages": {
     "evidence_required": "This item cannot be produced without evidence.",
     "unknown_value": "Not established.",

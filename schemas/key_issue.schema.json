@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rando/client-discovery-harness/schemas/key_issue.schema.json",
+  "title": "Client Discovery Harness - Key Issue",
+  "description": "A decision the evidence has brought into focus. Its own record rather than a field on a SWOT card, because a real issue usually arises from several SWOT items at once and Phase 4 needs a stable thing to reference. swot_issue_ids has minItems 1: the chain Evidence -> Finding -> SWOT -> Key Issue has no shortcut at any link.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "key_issue_id",
+    "project_id",
+    "statement",
+    "decision_area",
+    "swot_issue_ids",
+    "strategic_implication",
+    "confidence",
+    "schema_version"
+  ],
+  "properties": {
+    "key_issue_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "statement": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The decision question, e.g. which market to pursue first, or whether the competitive advantage matches what buyers actually decide on."
+    },
+    "decision_area": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Short slug for what this bears on, e.g. market_priority, buyer_selection, competitive_position, pricing_fit, evidence_gap."
+    },
+    "swot_issue_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      },
+      "description": "The SWOT items this issue arises from. Must not be empty."
+    },
+    "finding_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "strategic_implication": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Required. Decision support, not a decision: what the current evidence favours, what is still unverified, and what to check next. A candidate without a usable one is rejected outright rather than stored with the field blanked, so every record here satisfies this schema completely."
+    },
+    "missing_evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "HIGH",
+        "MEDIUM",
+        "LOW",
+        "UNKNOWN"
+      ]
+    },
+    "mn_basis": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "lang": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    }
+  }
+}

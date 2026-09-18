@@ -17,6 +17,7 @@ from typing import Optional
 from core.models import (
     ClientAnalysis,
     ClientCandidate,
+    KeyIssue,
     PricingResult,
     Project,
     ProposalStrategy,
@@ -36,6 +37,7 @@ class MemoryStorage:
         self._sources: dict[str, list[SourceMetadata]] = defaultdict(list)
         self._findings: dict[str, list[ResearchFinding]] = defaultdict(list)
         self._swot: dict[str, list[SWOTIssue]] = defaultdict(list)
+        self._key_issues: dict[str, list[KeyIssue]] = defaultdict(list)
         self._clients: dict[str, list[ClientCandidate]] = defaultdict(list)
         self._analyses: dict[str, list[ClientAnalysis]] = defaultdict(list)
         self._strategies: dict[str, list[ProposalStrategy]] = defaultdict(list)
@@ -71,6 +73,13 @@ class MemoryStorage:
 
     def get_swot_issues(self, project_id: str) -> list[SWOTIssue]:
         return list(self._swot[project_id])
+
+    def save_key_issue(self, issue: KeyIssue) -> str:
+        self._key_issues[issue.project_id].append(issue)
+        return issue.key_issue_id
+
+    def get_key_issues(self, project_id: str) -> list[KeyIssue]:
+        return list(self._key_issues[project_id])
 
     # -- engine 2 ----------------------------------------------------------
     def save_client(self, client: ClientCandidate) -> str:
@@ -114,6 +123,7 @@ class MemoryStorage:
             self._sources,
             self._findings,
             self._swot,
+            self._key_issues,
             self._clients,
             self._analyses,
             self._strategies,

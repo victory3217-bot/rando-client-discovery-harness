@@ -20,6 +20,7 @@ from typing import Optional, Protocol, runtime_checkable
 from core.models import (
     ClientAnalysis,
     ClientCandidate,
+    KeyIssue,
     PricingResult,
     Project,
     ProposalStrategy,
@@ -60,6 +61,10 @@ class StorageProvider(Protocol):
     def save_swot_issue(self, issue: SWOTIssue) -> str: ...
 
     def get_swot_issues(self, project_id: str) -> list[SWOTIssue]: ...
+
+    def save_key_issue(self, issue: KeyIssue) -> str: ...
+
+    def get_key_issues(self, project_id: str) -> list[KeyIssue]: ...
 
     # -- engine 2 ----------------------------------------------------------
     def save_client(self, client: ClientCandidate) -> str: ...

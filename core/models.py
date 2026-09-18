@@ -167,9 +167,26 @@ class SalesPriority(str, Enum):
 
 
 class SourceCategory(str, Enum):
+    """What kind of material this is, in business terms."""
+
     CONSULTING_OUTPUT = "CONSULTING_OUTPUT"
     COMPANY_DATA = "COMPANY_DATA"
     EXTERNAL_BUSINESS_DATA = "EXTERNAL_BUSINESS_DATA"
+    USER_PROVIDED = "USER_PROVIDED"
+
+
+class SourceOrigin(str, Enum):
+    """How the material reached the harness.
+
+    Separate from :class:`SourceCategory`, which says what the material *is*. A market report
+    can be EXTERNAL_BUSINESS_DATA whether somebody uploaded the PDF or a search returned the
+    page, and the two cases need different provenance fields — a file has a type and a size, a
+    retrieved page has a publisher and a URL. Giving a search result a fabricated ``file_type``
+    so it fits a file-shaped record would be a lie in the provenance trail.
+    """
+
+    UPLOADED_FILE = "UPLOADED_FILE"
+    SEARCH_RESULT = "SEARCH_RESULT"
     USER_PROVIDED = "USER_PROVIDED"
 
 
@@ -307,7 +324,7 @@ class Project:
 
 @dataclass
 class SourceMetadata:
-    """What we keep about an uploaded document — and nothing more.
+    """Where a piece of evidence came from — for an uploaded file or a retrieved page alike.
 
     There is no ``filename`` field and no text field on purpose. The original file name can
     itself be sensitive (client names, project codes) and document text must never be persisted
@@ -315,18 +332,33 @@ class SourceMetadata:
 
     ``display_label`` is the one piece of human-chosen text kept here, and it is a different
     thing from a filename: it is what the person uploading typed in order to recognise this
-    source later, and nothing derives it from the upload. Without it an analyst with a dozen
-    sources can still trace a finding — by ``source_id``, category, type and date — but cannot
-    easily tell which document that was.
+    source later, and nothing derives it from the upload.
+
+    The record covers both origins without pretending they are the same shape. A file has
+    ``file_type``, ``file_size`` and ``page_count``; a search result has ``title``,
+    ``publisher``, ``url`` and ``retrieved_at``. Whichever set does not apply stays ``None``
+    rather than being filled with a plausible-looking value — a fabricated ``file_type`` on a
+    web page would corrupt the provenance trail it exists to protect.
+    ``core.evidence.check_source_metadata`` enforces that separation.
     """
 
     project_id: str
-    file_type: FileType
-    file_size: int
+    source_origin: SourceOrigin
     source_category: SourceCategory
     source_id: str = field(default_factory=lambda: new_id("src"))
     display_label: Optional[str] = None
+
+    # UPLOADED_FILE only
+    file_type: Optional[FileType] = None
+    file_size: Optional[int] = None
     page_count: Optional[int] = None
+
+    # SEARCH_RESULT only
+    title: Optional[str] = None
+    publisher: Optional[str] = None
+    url: Optional[str] = None
+    retrieved_at: Optional[str] = None
+
     source_date: Optional[str] = None
     detected_lang: Optional[str] = None
     processing_status: ProcessingStatus = ProcessingStatus.PENDING
@@ -349,6 +381,12 @@ class ResearchFinding:
     mn_basis: list[str] = field(default_factory=list)
     confidence: Confidence = Confidence.UNKNOWN
     market_scope: MarketScope = MarketScope.DOMESTIC
+    #: For an INFERENCE: the findings it was reasoned from. Empty for every other type.
+    #:
+    #: An inference points at other findings rather than at a source, because that is what it
+    #: actually rests on. Copying the first supporting finding's ``source_id`` onto it would
+    #: make a conclusion look like something a document said.
+    supporting_finding_ids: list[str] = field(default_factory=list)
     source_id: Optional[str] = None
     source_type: Optional[SourceCategory] = None
     page_or_section: Optional[str] = None
@@ -367,16 +405,52 @@ class SWOTIssue:
 
     ``finding_ids`` must not be empty: a SWOT item that cannot name the findings behind it is
     rejected by ``core.evidence``.
+
+    This holds the classification and nothing else. The key issue and its strategic implication
+    are :class:`KeyIssue`, a separate record — a real issue ("which market do we go after
+    first?") usually arises from several SWOT items at once, and a string field on one card
+    cannot say that.
     """
 
     project_id: str
     category: SWOTCategory
     statement: str
     finding_ids: list[str] = field(default_factory=list)
-    key_issue: Optional[str] = None
-    strategic_implication: Optional[str] = None
     mn_basis: list[str] = field(default_factory=list)
     issue_id: str = field(default_factory=lambda: new_id("swt"))
+    lang: str = "ko"
+    created_at: str = field(default_factory=utc_now)
+    schema_version: str = SCHEMA_VERSION
+
+
+@dataclass
+class KeyIssue:
+    """A decision the evidence has brought into focus, and what it implies.
+
+    Binds together the SWOT items and findings that create the question, which is why it is its
+    own record rather than a field on a SWOT card. Phase 4 consumes these: client discovery
+    needs a stable thing to point at when it says "we are pursuing this market because of that
+    issue".
+
+    ``strategic_implication`` is **required** and is decision *support*, not a decision.
+    "Enter the Vietnamese market" is not an acceptable value; "on current evidence A looks
+    favourable, but B and C are unverified, so they need checking before client discovery" is.
+
+    Required because a key issue without it is an observation, and a record stored with the
+    field blanked reads to a later reader exactly like a finished one. The pipeline refuses such
+    a candidate outright rather than persisting part of it.
+    """
+
+    project_id: str
+    statement: str
+    decision_area: str
+    swot_issue_ids: list[str] = field(default_factory=list)
+    finding_ids: list[str] = field(default_factory=list)
+    strategic_implication: Optional[str] = None
+    missing_evidence: list[str] = field(default_factory=list)
+    confidence: Confidence = Confidence.UNKNOWN
+    mn_basis: list[str] = field(default_factory=list)
+    key_issue_id: str = field(default_factory=lambda: new_id("kis"))
     lang: str = "ko"
     created_at: str = field(default_factory=utc_now)
     schema_version: str = SCHEMA_VERSION
@@ -520,9 +594,10 @@ ENTITIES = (
     SourceMetadata,
     ResearchFinding,
     SWOTIssue,
+    KeyIssue,
     ClientCandidate,
     ClientAnalysis,
     ProposalStrategy,
     PricingResult,
 )
-"""The eight persisted entities, in workflow order. ``tests/test_schemas.py`` walks this tuple."""
+"""The nine persisted entities, in workflow order. ``tests/test_schemas.py`` walks this tuple."""
