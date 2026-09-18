@@ -325,7 +325,20 @@ MODE C 허용원가 / BEP), 또는 Scenario Compare 결과. 그대로 `engine_re
 
 ---
 
-## Reference Dashboard 4화면 *(Phase 8)*
+## Web Application Integration *(Phase 8)*
+
+Phase 8은 원래 "Reference Dashboard 4화면"이었다. 범위를 다음으로 넓혀서 검토한다.
+
+```
+Web Application Integration  +  Mobile-first Reference UI  +  Training UX Validation
+```
+
+**지금 구현하지 않는다.** Phase 8에 도달했을 때 그 시점의 배포 대상 기술구조를 실제로 확인한
+뒤 API 방식 · frontend · deployment · session · mobile UX를 정한다. 지금 특정 기술을
+선결정하지 않는다 — 2026년에 고른 framework로 Phase 8을 시작하게 되는 것이 이 결정을 미루는
+이유다.
+
+### 데스크톱 4화면
 
 | 화면 | 표시 |
 |---|---|
@@ -335,6 +348,138 @@ MODE C 허용원가 / BEP), 또는 Scenario Compare 결과. 그대로 `engine_re
 | Proposal Strategy | Client · Problem · Buyer · Solution · Value Proposition · Competitive Advantage · Pricing · Proposal Status |
 
 화면은 4개로 제한한다. 라벨은 `locales/*.json`의 `screens` 섹션에 이미 준비되어 있다.
+
+### Mobile-first 원칙
+
+교육생이 **개인 스마트폰으로 직접** 접속해 실습한다는 것이 이 UI의 전제다. 세로 화면이 기본이다.
+
+한 화면에 대형 표를 넣는 대신 **card · step · progressive disclosure · simple comparison ·
+expandable evidence**를 우선 검토한다.
+
+모바일 화면 후보 9개:
+
+```
+1 Project / Training Session   4 Client Candidates   7 Priority
+2 Evidence / Research          5 Client Detail       8 Missing Evidence
+3 Key Issues                   6 Fit Assessment      9 Result Summary
+```
+
+**Fit Assessment 8개는 카드로 본다.** 8열 표는 스마트폰에서 읽을 수 없고, 읽을 수 없는 표는
+근거를 감춘다. 카드마다 다음을 **구분해서** 보여준다.
+
+```
+Fit Criterion · Fit Level · Reason · Evidence · Missing Evidence
+```
+
+### Evidence와 AI Interpretation은 시각적으로 갈라야 한다
+
+이것이 이 UI의 가장 중요한 요구사항이다.
+
+| | |
+|---|---|
+| **Evidence** | 자료에서 실제로 확인된 내용 |
+| **AI Interpretation** | 그 Evidence를 근거로 한 분석·해석 |
+
+스마트폰 화면에서도 `Evidence` · `Finding` · `Inference` · `Missing Evidence`가 서로
+구분되어야 한다. 둘이 같은 서체·같은 색으로 섞여 나오는 순간, 교육생은 추론을 사실로 읽는다 —
+이 Harness가 `EvidenceType`을 enum으로 들고 다니는 이유가 화면에서 무효가 된다.
+
+구체적인 디자인은 Phase 8에서 정한다. 요구사항만 여기 고정한다.
+
+### Training UX는 Application Layer의 책임이다
+
+Mobile-first · touch-friendly · short-step · evidence-visible은 **UI 요구사항이다.** Core
+business logic에 넣지 않는다. Core는 화면 크기도, 교육 세션도, 접속한 사람이 강사인지
+교육생인지도 모른다 (`HARNESS.md` 12절).
+
+---
+
+## 영업조직 교육 실습 *(Phase 8 이후, 미구현)*
+
+이 Harness는 영업조직 교육의 실습 도구로 사용할 예정이다. 아래는 **미래 UX 요구사항**이며,
+지금 Core에 권한 모델이나 세션 개념을 추가하는 근거가 아니다.
+
+### 예상 흐름
+
+```
+Instructor                              Learner
+  교육 세션 생성
+  실습 자료 선택
+  QR / URL 공유          ────────────▶   스마트폰 접속
+                                        실습 Project 선택 또는 생성
+                                        회사 / 시장 / 제공 자료 확인
+                                        Research Finding 확인
+                                        Key Issue 확인
+                                        Client Candidate 확인
+                                        Fit Assessment × 8 확인
+                                        Priority 비교
+                                        Missing Evidence 확인
+  팀별 결과 확인         ◀────────────   자신의 판단 정리
+  결과 비교 · 토론 진행
+```
+
+### Harness는 정답을 알려주는 도구가 아니다
+
+교육 목적은 교육생이 **설명하게** 만드는 것이다.
+
+- 왜 이 Client가 후보인가?
+- 어떤 Evidence가 있는가? 어떤 Evidence가 부족한가?
+- Problem Fit은 왜 높은가?
+- Purchasing Potential은 실제로 확인됐는가?
+- 왜 P1인가, 왜 P3인가?
+
+교육생이 화면의 band를 읽고 그대로 옮겨 적는다면 그 수업은 실패한 것이다. Training Mode도
+Human Decision First를 유지한다 — band는 검토 순서이지 영업 지시가 아니고, 그 사실을 교육이
+가장 먼저 무너뜨리기 쉽다.
+
+### 훈련할 사고방식 10가지
+
+| | |
+|---|---|
+| 1 | 유명한 기업과 좋은 고객을 구분한다 |
+| 2 | 추측과 Evidence를 구분한다 |
+| 3 | User · Buyer · Decision Maker를 구분한다 |
+| 4 | 고객 Problem과 우리 Solution의 정합성을 검토한다 |
+| 5 | Purchasing Potential을 회사 규모로 추측하지 않는다 |
+| 6 | Accessibility를 실제 접근 경로로 판단한다 |
+| 7 | 경쟁상황을 Evidence로 확인한다 |
+| 8 | Missing Evidence를 영업 준비과제로 인식한다 |
+| 9 | Priority를 느낌이나 숫자 점수만으로 결정하지 않는다 |
+| 10 | AI의 결과를 최종 판단이 아니라 의사결정 지원자료로 사용한다 |
+
+5·6·7은 Harness가 이미 코드로 강제하는 것과 같다 (`PurchaseSignal` closed list ·
+`AccessRoute` closed list · 경쟁상황의 Evidence 요구). 교육은 그 제약이 왜 있는지를 설명하는
+자리다.
+
+### 교육용 Sample Data
+
+**항상 완전히 가상의 기업과 시장 사례를 쓴다.** 실제 고객사 · 기업 내부자료 · 개인정보 ·
+실제 영업대상 정보를 Public Repository의 교육 예제에 넣지 않는다 (`HARNESS.md` 9절).
+
+교육 중 실제 회사자료를 다루는 경우는 사용 조직이 자체 환경의 privacy 정책에 따라 처리한다.
+이 저장소는 그 경로를 제공하지 않는다.
+
+---
+
+## 배포 대상과의 관계
+
+| | |
+|---|---|
+| `rando-client-discovery-harness` | 재사용 가능한 **Public Core** |
+| Web 배포 대상 (예: `magisglobal.co.kr`) | Core를 **사용하는** Web Application / Host |
+
+배포 대상은 Core의 dependency가 **아니다.** Public Core는 어떤 사이트 없이도 완전히 독립적으로
+실행된다 — `python examples/run_example.py`가 지금 그렇게 동작한다.
+
+따라서 Public Core 코드에 넣지 않는 것:
+
+```
+특정 사이트의 URL 하드코딩 · site-specific route · site-specific auth
+site-specific database · site-specific UI logic · site-specific business rule
+```
+
+사이트 연결은 Application / API / Adapter Layer에서 처리한다. 이 구분이 무너지면 Core는 한
+사이트의 백엔드가 되고, 다른 조직이 재사용할 수 없게 된다.
 
 ---
 

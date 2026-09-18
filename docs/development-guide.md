@@ -50,7 +50,7 @@ PyMuPDF는 PDF 텍스트 추출 품질이 더 낫지만 **AGPL-3.0**이라 채�
 | **5** | Top 3 Client Analysis | 예정 | MN03–MN06 필드가 채워짐 |
 | **6** | Proposal Strategy | 예정 | `proposal_objective` 포함 전 필드 |
 | **7** | Pricing Adapter | 예정 | `pricing_payload`가 Pricing Harness 스키마 검증 통과 |
-| **8** | Reference Dashboard (4화면) + SQLite Adapter | 예정 | Reference App 삭제 후에도 core 테스트 통과 |
+| **8** | Web App Integration + Mobile-first Reference UI + Training UX + SQLite Adapter | 예정 | Reference App 삭제 후에도 core 테스트 통과 |
 | **9** | Report Output (HTML/DOCX) | 예정 | 구조화 데이터만 읽어서 생성 |
 
 Phase 1에서 **만들지 않은 것**과 그 이유:
@@ -60,6 +60,22 @@ Phase 1에서 **만들지 않은 것**과 그 이유:
 | SQLite Adapter | Phase 1–7에는 읽는 주체(대시보드)가 없다. 지금 만들면 실제 쿼리 요구가 확정되기 전에 스키마를 고정하고, 마이그레이션 비용만 남는다. Phase 8에서 대시보드와 함께 만든다 |
 | `core/intake/` · `core/research/` · `core/client/` 빈 패키지 | 아무것도 하지 않는 패키지를 미리 만들지 않는다. 위치는 `ARCHITECTURE.md` 7절에 문서화되어 있다 |
 | `PricingProvider` · `ReportProvider` Protocol | 호출자가 없는 Protocol은 계약이 아니라 추측이다. 정의는 `ARCHITECTURE.md` 3절에 있다 |
+
+### Web / Training 관련으로 아직 만들지 않은 것
+
+Phase 8의 방향은 `docs/product-spec.md`에 기록되어 있으나, 현재 저장소에는 다음이 **하나도
+없고** 지금 추가하지 않는다.
+
+```
+FastAPI · Flask · Django · Next.js · React · Vue · API Server
+Authentication · User Account · Training Session Engine · QR Generator
+Dashboard · Mobile UI · Instructor Console · Learner Account
+Team Comparison · Deployment
+```
+
+Web framework 의존성이 하나라도 들어오면 `tests/test_core_purity.py`가 `core/`에서 그것을
+잡는다. Application Layer 쪽은 테스트가 막아주지 않으므로, 그 디렉토리를 만드는 시점에
+`HARNESS.md` 12절의 경계를 먼저 읽는다.
 
 ---
 

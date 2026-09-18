@@ -18,8 +18,13 @@ other systems embed.
 ## Status
 
 **Phase 4 of 9 — client discovery and prioritisation.**
-Version `0.4.0-alpha.1`. The analysis engines are not built yet; see
-[docs/development-guide.md](docs/development-guide.md) for the phase plan.
+Version `0.4.0-alpha.1`. Research, diagnosis and client discovery run; deep analysis, proposal
+strategy and pricing do not. See [docs/development-guide.md](docs/development-guide.md) for the
+phase plan.
+
+Intended uses: a standalone public harness, the analysis core behind a web application, and a
+mobile-first practice tool for sales training. The core stays independent of all three — see
+[HARNESS.md](HARNESS.md) section 12.
 
 | Phase | Scope | State |
 |---|---|---|

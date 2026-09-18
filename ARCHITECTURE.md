@@ -8,8 +8,13 @@
 ## 1. 레이어
 
 ```
-  +------------------- reference-app/  (Phase 8, 삭제 가능) -----------------+
-  |  Upload -> tempdir -> 4 Screens -> i18n render -> cleanup               |
+  +------------------- Web UI  (Phase 8, 아직 없음) -------------------------+
+  |  브라우저 · 화면 · 입력. Harness가 아니라 Harness를 쓰는 Interface다     |
+  +--------------------------------+---------------------------------------+
+                                   | HTTP 등 (Core는 모른다)
+  +--------------------------------v---------------------------------------+
+  |  Application / API Layer  (Phase 8, 아직 없음)                          |
+  |  라우팅 · 인증 · 세션 · 배포 대상별 설정. reference-app/이 이 자리다     |
   |  환경변수를 읽어 Adapter를 생성하고 create_harness()에 주입한다          |
   +--------------------------------+---------------------------------------+
                                    | 주입 (injection)
@@ -48,17 +53,27 @@
 
 ---
 
-## 2. Core vs Reference App 경계
+## 2. Core vs Application Layer 경계
 
-| | `core/` | `reference-app/` |
+규칙의 원본은 `HARNESS.md` 12절(Web-ready, UI-independent)이다. 여기서는 그 경계가 파일
+수준에서 어떻게 갈리는지만 적는다.
+
+| | `core/` | Application Layer (`reference-app/` 등) |
 |---|---|---|
 | 파일 시스템 접근 | **금지** | tempdir 소유·삭제 |
 | 환경변수 / secret | **금지** | 읽어서 Adapter 생성 |
-| HTTP · 세션 · 쿠키 | **모름** | 소유 |
+| HTTP · route · 세션 · 쿠키 | **모름** | 소유 |
+| Browser · HTML rendering | **모름** | 소유 |
+| 인증 · 계정 · 권한 | **모름** | 소유 |
+| 배포 대상 (URL · 도메인) | **모름** | 소유 |
+| 교육 세션 · QR · 팀 편성 | **모름** | 소유 |
 | Adapter **선택** | 금지 (주입만 받음) | wiring 담당 |
 | 사용자 표시 문구 | 금지 (enum·code만 반환) | `locales/*.json`으로 렌더 |
 | LLM 호출 | `LLMProvider` 경유만 | 직접 호출 금지 |
 | `print` / logging | 금지 (예외·결과 반환) | allowlist 로깅 |
+
+아래 절반은 Phase 8에서 처음 생긴다. 지금 `core/`가 그것들을 모른다는 사실이 중요한 이유는,
+Phase 8에 가서야 알게 되면 이미 늦기 때문이다.
 
 ### 경계를 강제하는 테스트 3개
 
@@ -156,6 +171,7 @@ provider가 아니다. 나머지 2개는 이 문서에 정의만 둔다 (구현 
 | Client 우선순위 규칙을 바꾼다 | `core/client/priority.py`의 규칙표. 숫자를 도입하지 않는다 |
 | 조직명 매칭을 손본다 | `core/client/verify.py`. 토큰 경계를 풀지 않고, semantic alias를 들이지 않는다 |
 | Entity에 집계 필드를 추가한다 | 파생 함수를 `core/models.py`에 두고 `core/evidence.py`가 관계를 검증한다 |
+| Web·API를 붙인다 | `core/`가 아니라 Application Layer. 경계는 2절, 규칙은 `HARNESS.md` 12절 |
 | 업로드 상한을 바꾼다 | `IntakePolicy`를 만들어 주입한다. `core/`는 환경변수를 읽지 않는다 |
 | UI 문구를 바꾼다 | `locales/ko.json` · `locales/en.json` |
 | MN 프레임워크 항목을 바꾼다 | `knowledge/master-notes/MN0*.json` |
@@ -217,5 +233,5 @@ chapters와 worksheet이 존재한다. `adapters/knowledge/handbook.py`는 그 *
 | 4 | `core/client/` · `prompts/discovery/` | **완료** |
 | 5–6 | `core/client/` 확장 (Top 3 분석 · 제안전략) | 예정 |
 | 7 | `core/pricing_bridge/` · `adapters/pricing/` | 예정 |
-| 8 | `reference-app/` · `adapters/storage/sqlite.py` | 예정 |
+| 8 | Application/API Layer · `reference-app/` (mobile-first) · `adapters/storage/sqlite.py` | 예정 |
 | 9 | `core/interfaces/reporting.py` · `adapters/reporting/` | 예정 |

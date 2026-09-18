@@ -17,8 +17,11 @@
 ## 현재 상태
 
 **Phase 4 / 9 — Client Discovery & Priority.**
-버전 `0.4.0-alpha.1`. 분석 Engine은 아직 구현되지 않았다. 개발 순서는
-[docs/development-guide.md](docs/development-guide.md)를 참조한다.
+버전 `0.4.0-alpha.1`. Research · 진단 · Client Discovery는 동작하고, 심층분석 · 제안전략 ·
+Pricing은 아직이다. 개발 순서는 [docs/development-guide.md](docs/development-guide.md)를 참조한다.
+
+사용 예정: 독립 Public Harness · Web Application의 분석 Core · 영업조직 교육용 Mobile-first
+실습 도구. Core는 이 셋 모두에 대해 독립을 유지한다 — [HARNESS.md](HARNESS.md) 12절.
 
 | Phase | 범위 | 상태 |
 |---|---|---|

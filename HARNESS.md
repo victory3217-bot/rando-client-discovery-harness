@@ -36,9 +36,9 @@
 
 ---
 
-## 2. 원칙 9개
+## 2. 원칙 10개
 
-이 9개는 기능 요구사항보다 우선한다. 충돌하면 원칙이 이긴다.
+이 10개는 기능 요구사항보다 우선한다. 충돌하면 원칙이 이긴다.
 
 | 원칙 | 실무적 의미 |
 |---|---|
@@ -51,6 +51,7 @@
 | **Structured Data First** | HTML/DOCX/PDF는 Output이다. 원본 Data가 아니다 |
 | **Embeddable** | Reference App을 삭제해도 Core가 동작해야 한다 |
 | **Human Decision First** | 최종 판단은 사람이 한다. 점수 총합으로 결론을 대신하지 않는다 |
+| **Web-ready, UI-independent** | Web에 연결될 것을 전제로 설계하되, 특정 UI·Framework를 모른다. 12절 |
 
 ---
 
@@ -280,3 +281,40 @@ enum 값 번역 · Finding 자동 중복제거 · Priority 가중합 총점 · P
 - [ ] Reference Web App을 제거해도 Harness Core가 독립적으로 동작한다
 
 마지막 두 항목은 `tests/test_core_purity.py`와 `tests/test_core_standalone.py`가 자동 검증한다.
+
+---
+
+## 12. Web-ready, UI-independent
+
+Core는 **Web Application에 연결될 것을 전제로** 설계한다. 그러나 전제는 의존이 아니다.
+
+```
+Client Discovery Core      분석과 판단 로직
+        ↓
+Application / API Layer    Core를 호출하고 전송·인증·세션을 처리한다
+        ↓
+Web Application            Core를 사용하는 하나의 Interface
+        ↓
+User Experience
+```
+
+Core가 **몰라야 하는 것**:
+
+| | |
+|---|---|
+| Web Framework · Frontend Framework | FastAPI · Flask · Django · Next.js · React · Vue |
+| HTTP | request · response · route · status code |
+| Browser · Rendering | DOM · HTML 생성 · viewport |
+| Session · Authentication | 로그인 · 토큰 · 권한 · 계정 |
+| 배포 대상 | 특정 사이트의 URL · 도메인 · 데이터베이스 |
+| 운영 방식 | 교육 세션 · QR code · 팀 편성 |
+
+**Web UI는 Harness가 아니라 Harness를 쓰는 Interface다.** 사이트가 바뀌어도, Reference App을
+지워도 Core는 그대로 재사용된다 — 11절 성공기준의 마지막 항목이 이것이고,
+`tests/test_core_standalone.py`가 검사한다.
+
+이 원칙은 Embeddable의 UI 방향 확장이다. Embeddable이 "다른 조직의 Engine으로 넣을 수 있다"면,
+이것은 "어떤 Interface에도 붙일 수 있다"이다. 둘 다 같은 이유로 존재한다 — Core가 자신을
+호출하는 쪽을 알기 시작하면 재사용이 끝난다.
+
+제품 요구사항·UX·배포 대상은 여기 두지 않는다. `docs/product-spec.md`에 있다.
