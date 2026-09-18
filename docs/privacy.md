@@ -17,8 +17,34 @@
 | 로그·캐시·백업·Vector DB에 원문 기록 | **하지 않는다** |
 | 외부 LLM API로 추출 텍스트 전송 | **한다** — 설정한 Provider에 따라 |
 
-전송이 시작되는 지점은 `LLMProvider.analyze(evidence=[...])` **한 곳뿐**이다. Intake는 전송하지
-않는다.
+전송이 일어나는 지점은 `core/research/transmission.py`의 **`send()` 한 곳뿐**이다. Intake는
+전송하지 않는다 — 문서 텍스트가 외부로 나가는 것은 Phase 3의 분석 단계가 처음이다.
+
+`tests/test_research_boundary.py`가 `core/research/*.py`를 AST로 스캔해, `transmission.py`
+외의 모듈이 `analyze` · `generate_structured` · `generate` · `summarize`를 직접 호출하면
+실패시킨다. 규약이 아니라 통과 불가능한 경계다.
+
+전송 기록(`TransmissionRecord`)에는 **개수·문자수·stage·framework id·provider 이름만** 남는다.
+본문은 없다.
+
+거부 기록(`Rejection`)과 검토 플래그(`ReviewFlag`)도 마찬가지다 — **code · stage · reference**
+만 담고, reference는 `safe_reference()`가 식별자 형태가 아니면 `<omitted>`로 바꾼다. 진단
+기록이 문서를 인용하면 나머지 로깅 규칙이 무의미해진다.
+
+### 외부 Provider의 정책은 이 Harness가 보장하지 않는다
+
+받은 데이터를 provider가 어떻게 취급하는지는 이 코드의 통제 밖이다. 도입 시 **provider별로
+직접 확인해야 하는 항목**:
+
+| 항목 | 확인 내용 |
+|---|---|
+| retention | 요청·응답을 얼마나 보관하는가 |
+| training usage | 입력이 모델 학습에 쓰이는가, 옵트아웃이 가능한가 |
+| data residency | 어느 리전에서 처리되는가 |
+| enterprise privacy | 조직 계정에서 위 항목이 달라지는가 |
+
+특정 vendor의 정책을 코드에 하드코딩하지 않는다. 정책은 배포의 속성이지 이 코드의 속성이
+아니며, 하드코딩하면 바뀌었을 때 거짓말이 된다.
 
 `locales/*.json`의 `messages.ephemeral_notice`와 `messages.transmission_notice`가 이 두 가지를
 각각 알린다. **둘 중 하나만 표시하지 않는다** — `tests/test_locales.py`가 두 문구의 존재를

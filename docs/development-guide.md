@@ -45,7 +45,7 @@ PyMuPDF는 PDF 텍스트 추출 품질이 더 낫지만 **AGPL-3.0**이라 채�
 |---|---|---|---|
 | **1** | Architecture · 문서 · Interface 4개 · Entity/Schema 8개 · KO/EN · Ephemeral Storage · echo LLM | **완료** | `pytest` 통과 + 경계 테스트 통과 |
 | **2** | File Intake (8종) · 메모리 파싱 · Evidence Candidate · 버퍼 해제 | **완료** | canary 6개 표면 누출 0 · intake가 temp file을 만들지 않음 |
-| **3** | Market Research · Master Note Diagnosis · SWOT / Key Issues | 예정 | `finding_ids != []` 불변식 통과, `anthropic` adapter 1개 |
+| **3** | Master Note 진단 · Finding · SWOT · Key Issue · 전송 게이트웨이 | **완료** | hallucination 거부 · 전송 단일 경계 · 오프라인 E2E |
 | **4** | Client Discovery · Priority | 예정 | 가상 예제로 후보 5개 이상, `EVIDENCE_NEEDED` 정상 동작 |
 | **5** | Top 3 Client Analysis | 예정 | MN03–MN06 필드가 채워짐 |
 | **6** | Proposal Strategy | 예정 | `proposal_objective` 포함 전 필드 |
@@ -84,6 +84,10 @@ pytest -k evidence
 | `test_privacy.py` | `SourceMetadata`에 파일명·원문 필드가 없다, source_id가 랜덤이다 |
 | `test_intake.py` | 8종 파싱 · locator 형식 · 결정성 · 인코딩 · OOXML 판별 · 상한 · 에러 코드 · `display_label` |
 | `test_intake_canary.py` | **6개 표면 누출 검증** — 로그 · 파일시스템 · storage · `repr` · traceback · 직렬화 |
+| `test_research.py` | 파이프라인 4단계 · batching · framework 선택 · 검색결과 통합 · 오프라인 E2E |
+| `test_research_validation.py` | **hallucination 거부** · confidence cap · snippet 상한 · KeyIssue 전부-또는-전무 · directive는 flag이지 거부가 아님 · Entity 불변식 |
+| `test_research_boundary.py` | **LLM 호출이 단일 게이트웨이를 통과** (AST) · research 객체의 `repr` 은닉 |
+| `scripted_llm.py` | 준비된 응답을 돌려주는 테스트 double (테스트가 아니라 도구 모듈) |
 | `intake_fixtures.py` | 테스트 문서 8종을 메모리에서 생성 (테스트가 아니라 fixture 모듈) |
 
 `.gitignore`가 `*.pdf` `*.docx` `*.pptx` `*.xlsx`를 차단하므로 **바이너리 fixture를 커밋할 수

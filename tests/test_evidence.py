@@ -43,17 +43,53 @@ def test_grounded_finding_passes() -> None:
     assert evidence.check_finding(_finding()) == []
 
 
-@pytest.mark.parametrize("kind", [EvidenceType.FACT, EvidenceType.INFERENCE])
-def test_fact_and_inference_need_a_source(kind: EvidenceType) -> None:
+def test_fact_needs_a_source() -> None:
     """Prevents: an LLM stating a market fact that came from nowhere."""
-    violations = evidence.check_finding(_finding(evidence_type=kind, source_id=None))
+    violations = evidence.check_finding(_finding(evidence_type=EvidenceType.FACT, source_id=None))
     assert violations and "source_id" in violations[0]
 
 
-@pytest.mark.parametrize("kind", [EvidenceType.ASSUMPTION, EvidenceType.MISSING_EVIDENCE])
-def test_assumption_and_gap_may_have_no_source(kind: EvidenceType) -> None:
+def test_inference_needs_supporting_findings_not_a_source() -> None:
+    """An inference rests on other findings, and must not dress itself up as a quotation.
+
+    Copying the first supporting finding's source_id onto an inference would make a conclusion
+    look like something a document said - the most convincing way for an analysis to mislead.
+    """
+    borrowed = _finding(evidence_type=EvidenceType.INFERENCE, source_id="src_1")
+    assert evidence.check_finding(borrowed) != []
+
+    grounded = _finding(
+        evidence_type=EvidenceType.INFERENCE,
+        source_id=None,
+        supporting_finding_ids=["fnd_real"],
+    )
+    assert evidence.check_finding(grounded) == []
+
+    ungrounded = _finding(evidence_type=EvidenceType.INFERENCE, source_id=None)
+    assert evidence.check_finding(ungrounded) != []
+
+
+def test_assumption_may_have_no_source() -> None:
     """An honest gap is allowed; an unlabelled one is not."""
-    assert evidence.check_finding(_finding(evidence_type=kind, source_id=None)) == []
+    finding = _finding(
+        evidence_type=EvidenceType.ASSUMPTION, source_id=None, evidence_summary="가정임"
+    )
+    assert evidence.check_finding(finding) == []
+
+
+def test_missing_evidence_must_say_what_would_close_the_gap() -> None:
+    """"We don't know" without "what would tell us" is a shrug, not a research output."""
+    silent = _finding(
+        evidence_type=EvidenceType.MISSING_EVIDENCE, source_id=None, evidence_summary=None
+    )
+    assert evidence.check_finding(silent) != []
+
+    useful = _finding(
+        evidence_type=EvidenceType.MISSING_EVIDENCE,
+        source_id=None,
+        evidence_summary="조달 공고 이력이 있으면 확인 가능",
+    )
+    assert evidence.check_finding(useful) == []
 
 
 def test_finding_needs_a_framework_basis() -> None:
@@ -93,8 +129,7 @@ def test_swot_with_real_findings_passes() -> None:
         category=SWOTCategory.OPPORTUNITY,
         statement="scheduled procurement gives a predictable entry point",
         finding_ids=["fnd_real"],
-        key_issue="timing the approach to the procurement cycle",
-        strategic_implication="prepare the proposal one quarter ahead",
+        mn_basis=["MN03"],
     )
     assert evidence.check_swot_issue(issue, known_finding_ids=["fnd_real"]) == []
 

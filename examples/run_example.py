@@ -7,8 +7,13 @@ No API key, no network and no database: memory storage, static knowledge cards, 
 deterministic echo LLM and manual search. The intake path creates no temporary file.
 
 What this demonstrates is what exists today — adapter wiring, live file intake with provenance,
-entities, evidence invariants, framework access and localisation. The analysis engines arrive
-in Phases 3-6, and section 10 says so rather than faking them.
+the research pipeline running against an offline provider, evidence invariants, framework access
+and localisation. Client discovery onwards is not built, and the last section says so rather
+than faking it.
+
+Section 5 is worth reading carefully: the offline provider returns nothing, because it has no
+knowledge of this market and therefore no fact to establish. Section 6 shows what a completed
+diagnosis looks like, using the fictional sample project.
 
 The documents ingested in section 3 are built in memory here. Everything in
 examples/sample_project/ is invented too. See HARNESS.md section 9.
@@ -26,6 +31,7 @@ if hasattr(sys.stdout, "reconfigure"):  # Korean output on a cp949 console
     sys.stdout.reconfigure(encoding="utf-8")
 
 from adapters.intake import IntakeSession  # noqa: E402
+from adapters.prompts import load_prompt_set  # noqa: E402
 from adapters.knowledge.handbook import HandbookKnowledge  # noqa: E402
 from adapters.knowledge.static import StaticKnowledge  # noqa: E402
 from adapters.llm.echo import EchoLLM  # noqa: E402
@@ -33,12 +39,14 @@ from adapters.search.manual import ManualSearch  # noqa: E402
 from adapters.storage.memory import MemoryStorage  # noqa: E402
 from core import evidence  # noqa: E402
 from core.intake import IntakePolicy, provenance_of  # noqa: E402
+from core.research import ResearchPolicy, ingest_search_results, run_research  # noqa: E402
 from core.harness import create_harness  # noqa: E402
 from core.interfaces.search import SearchResult  # noqa: E402
 from core.models import (  # noqa: E402
     ClientAnalysis,
     ClientCandidate,
     FileType,
+    KeyIssue,
     MarketScope,
     Project,
     ProposalStrategy,
@@ -101,6 +109,7 @@ def main() -> int:
     sources = _load("source_metadata", SourceMetadata)
     findings = _load("research_finding", ResearchFinding)
     issues = _load("swot_issue", SWOTIssue)
+    sample_key_issues = _load("key_issue", KeyIssue)
     candidates = _load("client_candidate", ClientCandidate)
     analyses = _load("client_analysis", ClientAnalysis)
     strategies = _load("proposal_strategy", ProposalStrategy)
@@ -112,6 +121,8 @@ def main() -> int:
         harness.storage.save_finding(record)
     for record in issues:
         harness.storage.save_swot_issue(record)
+    for record in sample_key_issues:
+        harness.storage.save_key_issue(record)
     for record in candidates:
         harness.storage.save_client(record)
     for record in analyses:
@@ -207,17 +218,84 @@ def main() -> int:
 
     # ---- 4. sources: metadata only -----------------------------------------
     _rule("4. Sources on record (metadata only, no filenames, no document text)")
+    # A file and a retrieved page are different shapes, and the record says which it is rather
+    # than giving a web page a fabricated file type.
     for record in harness.storage.get_source_metadata(project.project_id):
         status = labels["enums"]["ProcessingStatus"][record.processing_status.value]
+        origin = labels["enums"]["SourceOrigin"][record.source_origin.value]
         detail = f" [{record.error_code}]" if record.error_code else ""
-        print(
-            f"  {record.source_id[:12]}…  {record.file_type.value:<5} {record.file_size:>9,}B  "
-            f"{status}{detail}"
-        )
 
-    # ---- 5. evidence invariants --------------------------------------------
+        if record.file_type is not None:
+            shape = f"{record.file_type.value:<5} {record.file_size:>9,}B"
+        else:
+            shape = f"{(record.publisher or '출처 미상')[:24]:<24}"
+
+        print(f"  {record.source_id[:12]}…  {origin:<10} {shape}  {status}{detail}")
+
+    # ---- 5. research pipeline (live, offline) -------------------------------
+    # Evidence -> Finding -> SWOT -> Key Issue. The offline provider has no knowledge, so it
+    # answers "not established" throughout - which is the honest result and still exercises
+    # every stage, every validation rule and every provenance link.
+    _rule("5. Research pipeline (live, offline provider)")
+
+    prompt_set = load_prompt_set(REPO_ROOT / "prompts")
+    research_candidates = [c for r in ingested for c in r.candidates]
+    research_sources = [r.source for r in ingested]
+
+    search_hits = harness.search.search("측정", scope=MarketScope.INTERNATIONAL)
+    found_sources, found_candidates = ingest_search_results(
+        search_hits, project_id=project.project_id, retrieved_at="2026-09-18T09:05:00+00:00"
+    )
+    for record in found_sources:
+        harness.storage.save_source_metadata(record)
+    research_sources += found_sources
+    research_candidates += found_candidates
+
+    print(f"  input: {len(research_candidates)} candidates from {len(research_sources)} sources")
+    print("         (uploaded files and a search result, one pipeline input type)")
+
+    outcome = run_research(
+        project=project,
+        candidates=research_candidates,
+        sources=research_sources,
+        knowledge=harness.knowledge,
+        llm=harness.llm,
+        prompts=prompt_set,
+        policy=ResearchPolicy(),
+        frameworks=["MN03", "MN06"],
+        today="2026-09-18",
+    )
+
+    summary = outcome.summary()
+    print(f"  calls: {summary['transmissions']} (2 frameworks x 1 batch, all through one gateway)")
+    print(f"  findings: {summary['findings']}  swot: {summary['swot_issues']}"
+          f"  key issues: {summary['key_issues']}  rejected: {summary['rejections']}")
+    print("  the offline provider produced nothing, which is the correct answer: it has no")
+    print("  knowledge of this market, so there is no fact for it to establish. A run that")
+    print("  returned findings here would be inventing them.")
+
+    for finding in outcome.findings[:2]:
+        print(f"    [{finding.mn_basis[0]}] {finding.evidence_type.value}"
+              f"/{finding.confidence.value}: {finding.finding[:44]}")
+
+    # ---- 6. what a completed diagnosis looks like ---------------------------
+    # From the fictional sample project, since the offline provider cannot produce one.
+    _rule("6. Key issues from the sample project (what a real run produces)")
+    for record in harness.storage.get_key_issues(project.project_id):
+        print(f"  [{record.decision_area}] {record.statement}")
+        print(f"      SWOT {len(record.swot_issue_ids)}건 · 근거 {len(record.finding_ids)}건 · "
+              f"{labels['fields']['confidence']}: "
+              f"{labels['enums']['Confidence'][record.confidence.value]}")
+        if record.strategic_implication:
+            print(f"      → {record.strategic_implication[:76]}…")
+        for gap in record.missing_evidence[:2]:
+            print(f"      ? {gap}")
+    print("\n  a key issue binds several SWOT items — it is the question a person must now")
+    print("  answer, and the implication supports that decision rather than making it")
+
+    # ---- 7. evidence invariants --------------------------------------------
     # The point of the harness: nothing gets past this without a traceable basis.
-    _rule("5. Evidence invariants")
+    _rule("7. Evidence invariants")
     known_ids = [f.finding_id for f in findings]
     violations: list[str] = []
     for record in findings:
@@ -248,8 +326,8 @@ def main() -> int:
         by_type[key] = by_type.get(key, 0) + 1
     print("  " + " / ".join(f"{k}: {v}" for k, v in sorted(by_type.items())))
 
-    # ---- 6. frameworks ------------------------------------------------------
-    _rule("6. Frameworks (analysis questions, not facts)")
+    # ---- 8. frameworks ------------------------------------------------------
+    _rule("8. Frameworks (analysis questions, not facts)")
     for framework in harness.research_frameworks():
         available = framework.reference.get("handbook_available")
         mark = "handbook found" if available else "cards only"
@@ -268,8 +346,8 @@ def main() -> int:
         print(f"    - {dimension.label(lang)}: {dimension.question(lang)}")
     print(f"    ... and {len(sample.dimensions) - 3} more")
 
-    # ---- 7. client pipeline -------------------------------------------------
-    _rule("7. Client pipeline")
+    # ---- 9. client pipeline -------------------------------------------------
+    _rule("9. Client pipeline")
     for record in harness.storage.get_clients(project.project_id):
         print(f"  {record.client_name}  ({record.country}, {record.industry})")
         print(
@@ -281,14 +359,14 @@ def main() -> int:
             f"{labels['enums']['SalesPriority'][record.priority.sales_priority.value]}"
         )
 
-    _rule("8. What is still missing (recorded, not hidden)")
+    _rule("10. What is still missing (recorded, not hidden)")
     for record in analyses:
         print(f"  {record.client_name}:")
         for item in record.missing_evidence:
             print(f"    - {item}")
 
-    # ---- 9. llm swap --------------------------------------------------------
-    _rule("9. LLM interface")
+    # ---- 11. llm swap -------------------------------------------------------
+    _rule("11. LLM interface")
     finding_schema_path = REPO_ROOT / "schemas" / "research_finding.schema.json"
     with finding_schema_path.open(encoding="utf-8") as fh:
         finding_schema = json.load(fh)
@@ -303,9 +381,8 @@ def main() -> int:
     print("  (the offline provider answers 'not established' rather than inventing a finding)")
     print(f"\n  {labels['messages']['transmission_notice']}")
 
-    _rule("10. Not built yet")
+    _rule("12. Not built yet")
     for phase, item in [
-        ("3", "Market research, Master Note diagnosis, SWOT generation"),
         ("4-5", "Client discovery, prioritisation, top-3 deep analysis"),
         ("6-7", "Proposal strategy generation, pricing adapter"),
         ("8-9", "Reference dashboard, report output"),

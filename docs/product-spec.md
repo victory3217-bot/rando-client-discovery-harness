@@ -4,8 +4,8 @@
 > `ARCHITECTURE.md`, 필드 정의는 `docs/data-model.md`에 있다. 이 문서는 그 사이의 **흐름**을
 > 다룬다.
 >
-> Phase 1 시점에서 구현된 것은 Entity · Interface · 불변식이며, 아래 단계들은 Phase 2–7에
-> 걸쳐 구현된다. 각 단계의 Phase를 표시했다.
+> Stage 1–4가 구현되어 있다 (Phase 2–3). Stage 5 이후는 Phase 4–9에 걸쳐 구현된다.
+> 각 단계에 Phase를 표시했다.
 
 ---
 
@@ -84,17 +84,26 @@ Core는 환경변수를 읽지 않는다. 다른 값이 필요하면 App이 `Int
 Stage 3에서만 일어난다. Phase 2가 보장하는 것은 그 판정이 **출처를 잃지 않는다**는 것이며,
 `core.intake.provenance_of()`가 그 인계 지점이다.
 
-## Stage 2 — Market Research *(Phase 3)*
+## Stage 2 — Market Research *(Phase 3 — 완료)*
 
 | | |
 |---|---|
 | 입력 | `EvidenceCandidate[]` + `SearchProvider` 결과 + `market_scope` / `target_countries` |
 | 출력 | 추가 Evidence 후보 (아직 Finding이 아니다) |
 
-- MVP 기본 Adapter는 `manual` — 사용자가 제공한 자료만 사용한다. 웹 검색은 선택이다.
+- 기본 Adapter는 `manual` — 사용자가 제공한 자료만 사용한다. Web Search Adapter는 아직 없다.
+- `SearchResult`는 **검색 결과 그 자체**이고 해석이 아니다. `core.research.ingest_search_results()`가
+  이를 `SourceMetadata`(`source_origin = SEARCH_RESULT`) + `EvidenceCandidate`로 바꾸므로,
+  파일에서 왔든 검색에서 왔든 **파이프라인 입력 타입이 하나**가 된다.
+- 검색 자료에 가짜 `file_type`·`file_size`를 넣지 않는다. 대신 `title` · `publisher` ·
+  `url` · `retrieved_at`을 채운다.
+- **snippet 기반 FACT는 `MEDIUM`을 넘지 못한다.** snippet은 검색엔진이 고른 몇 줄이고 이
+  Harness는 원문 페이지를 연 적이 없다. publisher·recency·corroboration과 무관하게 적용된다.
+  실제 원문을 retrieve 하는 Adapter가 생기면 별도의 verified origin을 추가할지 후속 Phase에서
+  검토한다.
 - 국내·해외를 같은 Engine으로 처리한다. `market_scope`와 국가 필드로만 구분한다.
 
-## Stage 3 — Master Note Diagnosis *(Phase 3)*
+## Stage 3 — Master Note Diagnosis *(Phase 3 — 완료)*
 
 | | |
 |---|---|
@@ -104,21 +113,47 @@ Stage 3에서만 일어난다. Phase 2가 보장하는 것은 그 판정이 **�
 각 MN의 dimension이 곧 질문이다. 질문에 답할 Evidence가 없으면 답을 만들지 않고
 `evidence_type = MISSING_EVIDENCE`로 남긴다.
 
-`FACT` · `INFERENCE`는 `source_id`가 필수다. 이 규칙은 `core/evidence.check_finding`이
-강제하고, `core.intake.provenance_of(candidate, source)`가 필요한 출처 필드를 통째로
-넘겨준다 — 손으로 복사하지 않는다.
+**2-pass로 동작한다.** Pass 1은 Evidence에서 직접 확인되는 것(`FACT`)과 정직한 비답변
+(`ASSUMPTION` · `MISSING_EVIDENCE`)만 만든다. Pass 2는 **Pass 1의 Finding을 인용해서**
+`INFERENCE`를 만든다 — 추론이 transient한 `EvidenceCandidate`가 아니라 영속 Finding을
+가리키게 하기 위해서다.
 
-## Stage 4 — SWOT / Key Issues *(Phase 3)*
+출처 규칙은 `docs/data-model.md` 3절의 표를 따른다: `FACT`만 `source_id`를 갖고,
+`INFERENCE`는 `supporting_finding_ids`로 추적하며 source 계열 필드를 비워 둔다.
+
+**모델이 만들 수 없는 것**: `mn_basis` · 모든 id · 출처 필드 · 타임스탬프 · `market_scope`.
+파이프라인이 이미 아는 값이라 축소 스키마에서 아예 제외했고, 그래서 지어낼 방법이 없다.
+모델이 인용한 evidence ref가 실재하지 않으면 그 Finding은 폐기되고 사유가 기록된다.
+
+Framework 선택 기본값은 **MN02–MN07 전부**다. 어느 Framework가 이 자료에 해당하는지 고르는 것
+자체가 분석 판단이므로, 키워드로 자동 축소하지 않는다 (`use_keyword_shortlist`는 기본 OFF).
+
+## Stage 4 — SWOT / Key Issues *(Phase 3 — 완료)*
 
 | | |
 |---|---|
 | 입력 | `ResearchFinding[]` |
-| 출력 | `SWOTIssue[]` (+ `key_issue`, `strategic_implication`) |
+| 출력 | `SWOTIssue[]` → `KeyIssue[]` |
 
 **SWOT을 작성하라고 LLM에 바로 요청하지 않는다.** Finding을 분류·압축하는 단계다.
 `finding_ids`가 비어 있으면 거부된다.
 
-추가 출력: Missing Evidence 목록 · Additional Research Required 목록.
+SWOT은 분류만 담는다. Key Issue는 **별도 Entity**이며 여러 SWOT을 묶는다 —
+`KeyIssue.swot_issue_ids`가 최소 1개를 요구하므로 SWOT 없는 Key Issue도 불가능하다.
+
+`strategic_implication`은 **필수**이며 의사결정 **지원**이다. 없는 후보는 필드를 비운 채
+저장하지 않고 **통째로 거부**한다 — 반쯤 채워진 레코드는 완성된 것처럼 읽힌다.
+
+의사결정 지원인지는 **어떤 동사를 피했는가가 아니라 무엇으로 구성됐는가**로 판단한다.
+Prompt가 4가지를 요구한다: ① 현재 Evidence가 시사하는 내용 ② 조건·제약 ③ 확인되지 않은
+Evidence ④ 다음 검증 포인트.
+
+지시문처럼 보이는 표현(`진출한다` `we will` 등)은 **review flag**일 뿐 거부 사유가 아니다.
+문자열 blacklist는 언어에 종속되고 양방향으로 틀린다 — "인증 요건을 먼저 확인해야 한다"는
+정확히 원하는 산출물인데 순진한 blacklist는 이를 거부한다.
+
+추가 출력: Missing Evidence 목록 · Additional Research Required 목록 · Rejection 목록
+(모델이 만들었지만 근거 검증에서 버려진 항목 — 조용히 사라지지 않는다).
 
 ## Stage 5 — Client Candidate Discovery *(Phase 4)*
 

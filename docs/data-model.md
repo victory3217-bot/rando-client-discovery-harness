@@ -4,17 +4,18 @@
 > 고친다** — 필드를 추가하면 dataclass · JSON Schema · 이 문서를 같이 수정한다.
 > `tests/test_schemas.py`가 앞의 두 곳이 어긋나면 실패한다.
 
-Entity는 8개다. 전부 `core/models.py`에 정의되어 있고, 워크플로 순서대로 나열한다.
+Entity는 9개다. 전부 `core/models.py`에 정의되어 있고, 워크플로 순서대로 나열한다.
 
 ```
 Project
-  └─ SourceMetadata        (업로드된 자료의 metadata. 원문·파일명 없음)
-       └─ ResearchFinding   (Evidence를 MN 기준으로 해석한 결과)
-            └─ SWOTIssue    (Finding의 압축)
-                 └─ ClientCandidate
-                      └─ ClientAnalysis
-                           └─ ProposalStrategy
-                                └─ PricingResult
+  └─ SourceMetadata         업로드 파일 또는 검색 자료의 출처. 원문·파일명 없음
+       └─ ResearchFinding   Evidence를 MN 기준으로 해석한 결과
+            └─ SWOTIssue    Finding의 압축 (S/W/O/T 분류만)
+                 └─ KeyIssue         여러 SWOT을 묶은 의사결정 질문 + 시사점
+                      └─ ClientCandidate
+                           └─ ClientAnalysis
+                                └─ ProposalStrategy
+                                     └─ PricingResult
 ```
 
 ---
@@ -23,7 +24,7 @@ Project
 
 | 항목 | 규칙 |
 |---|---|
-| ID | `new_id(prefix)` — `prj_` `src_` `fnd_` `swt_` `cli_` `cla_` `prp_` `prc_` + UUID4 hex. **원본 파일명에서 파생하지 않는다** |
+| ID | `new_id(prefix)` — `prj_` `src_` `fnd_` `swt_` `kis_` `cli_` `cla_` `prp_` `prc_` + UUID4 hex. **원본 파일명에서 파생하지 않는다** |
 | 시각 | `utc_now()` — ISO-8601, 초 단위, timezone 포함 |
 | `schema_version` | 모든 Entity에 존재. 현재 `"0.1"` |
 | `lang` | 자유 텍스트 필드가 어느 언어로 쓰였는지. 번역 추적용 |
@@ -43,6 +44,7 @@ Project
 | `SWOTCategory` | `STRENGTH` `WEAKNESS` `OPPORTUNITY` `THREAT` |
 | `SalesPriority` | `P1` `P2` `P3` `DEFERRED` `UNKNOWN` |
 | `SourceCategory` | `CONSULTING_OUTPUT` `COMPANY_DATA` `EXTERNAL_BUSINESS_DATA` `USER_PROVIDED` |
+| `SourceOrigin` | `UPLOADED_FILE` `SEARCH_RESULT` `USER_PROVIDED` — 자료가 **어떻게 들어왔는가** (`SourceCategory`는 **무엇인가**) |
 | `FileType` | `PDF` `DOCX` `PPTX` `XLSX` `HTML` `CSV` `TXT` `MD` |
 | `ProcessingStatus` | `PENDING` `EXTRACTED` `FAILED` `PURGED` |
 | `StorageMode` | `EPHEMERAL` `PERSISTENT` |
@@ -85,11 +87,16 @@ Project
 |---|---|---|---|
 | `source_id` | str | ✓ | 랜덤. 파일명에서 파생 금지 |
 | `project_id` | str | ✓ | |
+| `source_origin` | SourceOrigin | ✓ | `UPLOADED_FILE` / `SEARCH_RESULT` / `USER_PROVIDED` |
 | `display_label` | str? | | **사용자가 직접 입력한 표시명.** 파일명과 별개이며 자동 생성하지 않는다. 최대 100자, control character 제거. 로그 allowlist에 **없다** |
-| `file_type` | FileType | ✓ | |
-| `file_size` | int | ✓ | |
 | `source_category` | SourceCategory | ✓ | |
-| `page_count` | int? | | |
+| `file_type` | FileType? | | **`UPLOADED_FILE` 전용** |
+| `file_size` | int? | | **`UPLOADED_FILE` 전용** |
+| `page_count` | int? | | **`UPLOADED_FILE` 전용** |
+| `title` | str? | | **`SEARCH_RESULT` 전용** (최대 300자) |
+| `publisher` | str? | | **`SEARCH_RESULT` 전용.** 없으면 confidence 상한이 내려간다 |
+| `url` | str? | | **`SEARCH_RESULT` 전용** |
+| `retrieved_at` | str? | | **`SEARCH_RESULT` 전용.** 발행일과 다른 사실이다 |
 | `source_date` | str? | | 자료 자체의 날짜 |
 | `detected_lang` | str? | | |
 | `processing_status` | ProcessingStatus | ✓ | |
@@ -132,13 +139,27 @@ source_id · locator · text · kind · order
 | `mn_basis` | list[str] | ✓ | 최소 1개. 어느 MN 질문에서 나왔는가 |
 | `confidence` | Confidence | ✓ | |
 | `market_scope` | MarketScope | ✓ | |
-| `source_id` | str? | | `FACT`/`INFERENCE`는 필수 |
+| `supporting_finding_ids` | list[str] | | **`INFERENCE` 전용.** 추론의 근거가 된 Finding들 |
+| `source_id` | str? | | **`FACT`만** 가진다 |
 | `source_type` | SourceCategory? | | |
 | `page_or_section` | str? | | 출처 내 위치 |
 | `source_date` | str? | | |
 | `evidence_summary` | str? | | |
 | `country` | str? | | |
 | `lang` · `created_at` · `schema_version` | | | |
+
+### evidence_type별 provenance 규칙
+
+| type | `source_id` | `supporting_finding_ids` | 비고 |
+|---|---|---|---|
+| `FACT` | **필수** | 비어 있어야 함 | Evidence 1개에 직접 연결 |
+| `INFERENCE` | **None** | **1개 이상 필수** | source 계열 필드 전부 None |
+| `ASSUMPTION` | None | 비어 있어야 함 | `evidence_summary`에 가정임을 명시 |
+| `MISSING_EVIDENCE` | None | 비어 있어야 함 | `evidence_summary`에 **무엇이 필요한지** 필수 |
+
+> **INFERENCE가 source_id를 빌려오지 않는 이유.** 첫 근거 Finding의 `source_id`를 복사하면
+> 추론이 "문서가 말한 것"처럼 보인다. 분석이 사람을 오도하는 가장 설득력 있는 방법이고,
+> `core/evidence.py`가 이를 거부한다.
 
 ## 4. SWOTIssue
 
@@ -150,11 +171,37 @@ source_id · locator · text · kind · order
 | `category` | SWOTCategory | ✓ | |
 | `statement` | str | ✓ | |
 | `finding_ids` | list[str] | ✓ | **최소 1개** (스키마 `minItems: 1`) |
-| `key_issue` | str? | | |
-| `strategic_implication` | str? | | |
-| `mn_basis` | list[str] | | |
+| `mn_basis` | list[str] | | 인용한 Finding들의 `mn_basis` 합집합 |
 
-## 5. ClientCandidate
+> `key_issue`·`strategic_implication`은 **`SWOTIssue`에 없다.** 실제 이슈는 보통 여러 SWOT에
+> 걸쳐 있어서 카드 하나에 붙은 문자열로는 표현되지 않는다. 5절 `KeyIssue` 참조.
+
+## 5. KeyIssue
+
+`schemas/key_issue.schema.json`
+
+| 필드 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| `key_issue_id` · `project_id` | str | ✓ | |
+| `statement` | str | ✓ | **사람이 답해야 하는 질문.** "어느 시장을 먼저 볼 것인가" |
+| `decision_area` | str | ✓ | `market_priority` `buyer_selection` `competitive_position` `pricing_fit` `evidence_gap` 등 |
+| `swot_issue_ids` | list[str] | ✓ | **최소 1개** (스키마 `minItems: 1`) |
+| `finding_ids` | list[str] | | SWOT 뒤의 Finding들이 자동 포함된다 |
+| `strategic_implication` | str | ✓ | **필수. 의사결정 지원.** 없으면 KeyIssue 자체가 생성되지 않는다 |
+| `missing_evidence` | list[str] | | 결정 전에 확인해야 할 것 |
+| `confidence` | Confidence | ✓ | 근거 Finding 중 최저값을 넘지 못한다 |
+
+> **부분 Entity를 남기지 않는다.** `strategic_implication`이 없는 후보는 필드를 비운 채
+> 저장하는 대신 **통째로 거부**한다. 반쯤 채워진 레코드는 나중에 읽는 사람에게 완성된 것처럼
+>보이기 때문이다. Storage에 있는 KeyIssue는 항상 `key_issue.schema.json`을 **완전히**
+> 만족한다.
+>
+> 거부는 `ResearchOutcome.rejections`에 남고, 거기에는 **code · stage · reference만** 들어간다
+> (원문 없음).
+
+Phase 4 Client Discovery가 **안정적 입력 Entity로 사용**한다.
+
+## 6. ClientCandidate
 
 `schemas/client_candidate.schema.json`
 
@@ -176,7 +223,7 @@ source_id · locator · text · kind · order
 `fit_screening` 3개 + `priority` 5개 = `HARNESS.md` 7절의 **8개 기준**. `sales_priority`는
 **사람의 결정**이며 5개 평가에서 자동 계산하지 않는다.
 
-## 6. ClientAnalysis
+## 7. ClientAnalysis
 
 `schemas/client_analysis.schema.json` · MN03/04/05/06만 사용
 
@@ -202,7 +249,7 @@ source_id · locator · text · kind · order
 
 `evidence == []`이면 `missing_evidence`가 비어 있을 수 없다 (`core/evidence.py`).
 
-## 7. ProposalStrategy
+## 8. ProposalStrategy
 
 `schemas/proposal_strategy.schema.json`
 
@@ -221,7 +268,7 @@ source_id · locator · text · kind · order
 
 **제안서 문서를 먼저 만들지 않는다.** Strategy가 먼저다.
 
-## 8. PricingResult
+## 9. PricingResult
 
 `schemas/pricing_result.schema.json`
 

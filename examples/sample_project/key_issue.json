@@ -1,0 +1,56 @@
+[
+  {
+    "key_issue_id": "kis_s01",
+    "project_id": "prj_sample",
+    "statement": "국내 단가 경쟁 시장과 메콩델타 시장 중 어느 쪽을 먼저 공략할 것인가",
+    "decision_area": "market_priority",
+    "swot_issue_ids": ["swt_s01", "swt_s02", "swt_s03"],
+    "finding_ids": ["fnd_s01", "fnd_s02", "fnd_s03", "fnd_s04"],
+    "strategic_implication": "현재 근거로는 메콩델타 쪽이 단가 경쟁 압력이 낮아 보이고 문제 심각도도 확인되었으나, 구매 예산과 접근 경로가 미확인이다. 국내 시장은 마진 하락이 확인된 상태다. 두 시장의 우선순위는 예산·접근 경로가 확인된 뒤에 정하는 편이 낫다.",
+    "missing_evidence": [
+      "메콩델타 사업자의 구매 예산 규모와 집행 주기",
+      "현지 접근 경로 (직접 영업 가능 여부)"
+    ],
+    "confidence": "MEDIUM",
+    "mn_basis": ["MN02", "MN03", "MN04", "MN06", "MN07"],
+    "lang": "ko",
+    "created_at": "2026-09-18T09:15:00+00:00",
+    "schema_version": "0.1"
+  },
+  {
+    "key_issue_id": "kis_s02",
+    "project_id": "prj_sample",
+    "statement": "다항목 단일 모듈이라는 기술적 차이가 이 시장의 실제 구매결정요인과 연결되는가",
+    "decision_area": "competitive_position",
+    "swot_issue_ids": ["swt_s01", "swt_s03"],
+    "finding_ids": ["fnd_s01", "fnd_s04"],
+    "strategic_implication": "모듈 수 감소라는 구조적 차이는 확인되지만, 그것이 구매 기준인지는 확인되지 않았다. KBF가 단가 중심이라면 이 차이는 우위로 작동하지 않을 수 있으므로, 제안 전에 구매 기준을 먼저 확인할 필요가 있다.",
+    "missing_evidence": [
+      "KBF — 단가 중심인지 유지보수 편의 중심인지",
+      "현지 단항목 측정기 견적 수준"
+    ],
+    "confidence": "MEDIUM",
+    "mn_basis": ["MN02", "MN03", "MN04"],
+    "lang": "ko",
+    "created_at": "2026-09-18T09:15:10+00:00",
+    "schema_version": "0.1"
+  },
+  {
+    "key_issue_id": "kis_s03",
+    "project_id": "prj_sample",
+    "statement": "현지 인증 요건을 모르는 상태에서 제안 일정과 원가를 확정할 수 있는가",
+    "decision_area": "evidence_gap",
+    "swot_issue_ids": ["swt_s04"],
+    "finding_ids": ["fnd_s05", "fnd_s06"],
+    "strategic_implication": "형식승인·인증 요건이 확인되지 않아 일정과 원가 모두 근거가 없다. 이 항목은 Client Discovery보다 앞에 두고, 확인 전에는 제안서에 일정을 수치로 적지 않는 편이 안전하다.",
+    "missing_evidence": [
+      "베트남 공공 상수도 형식승인·인증 요건",
+      "인증 취득에 소요되는 기간과 비용"
+    ],
+    "confidence": "UNKNOWN",
+    "mn_basis": ["MN02", "MN05"],
+    "lang": "ko",
+    "created_at": "2026-09-18T09:15:20+00:00",
+    "schema_version": "0.1"
+  }
+]

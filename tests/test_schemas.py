@@ -25,6 +25,7 @@ SCHEMA_FOR_ENTITY = {
     "SourceMetadata": "source_metadata",
     "ResearchFinding": "research_finding",
     "SWOTIssue": "swot_issue",
+    "KeyIssue": "key_issue",
     "ClientCandidate": "client_candidate",
     "ClientAnalysis": "client_analysis",
     "ProposalStrategy": "proposal_strategy",
@@ -128,9 +129,10 @@ def test_default_instance_validates(entity, schemas: dict) -> None:
         "Project": dict(company_name="Fictional Co"),
         "SourceMetadata": dict(
             project_id="prj_1",
+            source_origin=models.SourceOrigin.UPLOADED_FILE,
+            source_category=models.SourceCategory.COMPANY_DATA,
             file_type=models.FileType.PDF,
             file_size=1024,
-            source_category=models.SourceCategory.COMPANY_DATA,
         ),
         "ResearchFinding": dict(
             project_id="prj_1",
@@ -143,6 +145,16 @@ def test_default_instance_validates(entity, schemas: dict) -> None:
             category=models.SWOTCategory.STRENGTH,
             statement="a strength",
             finding_ids=["fnd_1"],
+        ),
+        "KeyIssue": dict(
+            project_id="prj_1",
+            statement="which market do we approach first",
+            decision_area="market_priority",
+            swot_issue_ids=["swt_1"],
+            strategic_implication=(
+                "the evidence points one way but purchasing authority is unverified, "
+                "so it needs establishing first"
+            ),
         ),
         "ClientCandidate": dict(
             project_id="prj_1",
@@ -192,3 +204,68 @@ def test_sample_project_files_validate(repo_root: Path, schemas: dict) -> None:
         records = payload if isinstance(payload, list) else [payload]
         for record in records:
             validator.validate(record)
+
+
+# -- schemas the model is asked to fill ------------------------------------
+
+def test_llm_output_schemas_are_valid() -> None:
+    """The reduced schemas handed to a provider are schemas too, and can be wrong."""
+    from core.research.output_schemas import ALL_OUTPUT_SCHEMAS
+
+    for name, schema in ALL_OUTPUT_SCHEMAS.items():
+        Draft202012Validator.check_schema(schema)
+        assert schema.get("additionalProperties") is False, f"{name} root must be closed"
+
+
+def test_llm_output_enums_are_subsets_of_the_real_enums() -> None:
+    """A model's options must be drawn from the entity enums, never invented alongside them.
+
+    Subset rather than equality on purpose: FINDING_BATCH deliberately omits INFERENCE, because
+    pass 1 has no findings to reason from and the wrong answer should be unrepresentable.
+    """
+    from core.research.output_schemas import ALL_OUTPUT_SCHEMAS
+
+    known = [frozenset(m.value for m in cls) for cls in _python_enum_classes()]
+    problems: list[str] = []
+
+    for name, schema in ALL_OUTPUT_SCHEMAS.items():
+        for values in _walk_enum_lists(schema):
+            concrete = frozenset(v for v in values if v is not None)
+            if not any(concrete <= members for members in known):
+                problems.append(f"{name}: {sorted(concrete)}")
+
+    assert not problems, f"these output-schema enums match no entity enum: {problems}"
+
+
+def test_the_model_is_never_asked_for_a_field_the_pipeline_owns() -> None:
+    """Identifiers, framework ids, sources and timestamps are known already.
+
+    Asking for them invites invention: EchoLLM filling the full finding schema produces
+    mn_basis=["[echo] mn_basis[0]"], a framework id that does not exist.
+    """
+    from core.research.output_schemas import ALL_OUTPUT_SCHEMAS
+
+    owned = {
+        "finding_id", "issue_id", "key_issue_id", "project_id", "mn_basis", "source_id",
+        "source_type", "source_date", "page_or_section", "created_at", "schema_version",
+        "market_scope", "lang", "supporting_finding_ids", "finding_ids", "swot_issue_ids",
+    }
+    leaked: list[str] = []
+
+    def walk(node, path=""):
+        if isinstance(node, dict):
+            for key, value in (node.get("properties") or {}).items():
+                if key in owned:
+                    leaked.append(f"{path}.{key}")
+                walk(value, f"{path}.{key}")
+            for value in node.values():
+                if isinstance(value, (dict, list)):
+                    walk(value, path)
+        elif isinstance(node, list):
+            for value in node:
+                walk(value, path)
+
+    for name, schema in ALL_OUTPUT_SCHEMAS.items():
+        walk(schema, name)
+
+    assert not leaked, f"the model is being asked for pipeline-owned fields: {sorted(set(leaked))}"

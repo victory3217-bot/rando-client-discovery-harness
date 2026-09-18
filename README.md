@@ -17,15 +17,15 @@ other systems embed.
 
 ## Status
 
-**Phase 2 of 9 — file intake.**
-Version `0.2.0-alpha.1`. The analysis engines are not built yet; see
+**Phase 3 of 9 — research and diagnosis.**
+Version `0.3.0-alpha.1`. The analysis engines are not built yet; see
 [docs/development-guide.md](docs/development-guide.md) for the phase plan.
 
 | Phase | Scope | State |
 |---|---|---|
 | 1 | Architecture, docs, interfaces, schemas, KO/EN, ephemeral storage | **done** |
 | 2 | File intake (8 formats, in memory), evidence candidates | **done** |
-| 3 | Market research, Master Note diagnosis, SWOT / key issues | planned |
+| 3 | Master Note diagnosis, findings, SWOT, key issues | **done** |
 | 4–5 | Client discovery, prioritization, top-3 deep analysis | planned |
 | 6–7 | Proposal strategy, pricing adapter | planned |
 | 8–9 | Reference dashboard, report output | planned |
@@ -93,9 +93,9 @@ HARNESS.md              rules — single source of truth
 ARCHITECTURE.md         structure and boundaries
 CLAUDE.md AGENTS.md GEMINI.md    thin per-agent entry points
 
-core/                   pure logic: models, evidence invariants, intake, interfaces
+core/                   pure logic: models, evidence invariants, intake, research, interfaces
 adapters/               storage · knowledge · llm · search · intake implementations
-schemas/                JSON Schema (Draft 2020-12) for all 8 entities
+schemas/                JSON Schema (Draft 2020-12) for all 9 entities
 knowledge/master-notes/ public analysis-framework cards (MN02–MN07)
 prompts/                provider-neutral prompts, separated from code
 locales/                ko.json · en.json
