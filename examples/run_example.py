@@ -7,13 +7,16 @@ No API key, no network and no database: memory storage, static knowledge cards, 
 deterministic echo LLM and manual search. The intake path creates no temporary file.
 
 What this demonstrates is what exists today — adapter wiring, live file intake with provenance,
-the research pipeline running against an offline provider, evidence invariants, framework access
-and localisation. Client discovery onwards is not built, and the last section says so rather
-than faking it.
+the research pipeline running against an offline provider, evidence invariants, client
+prioritisation and localisation. Client analysis onwards is not built, and the last section says
+so rather than faking it.
 
 Section 5 is worth reading carefully: the offline provider returns nothing, because it has no
-knowledge of this market and therefore no fact to establish. Section 6 shows what a completed
-diagnosis looks like, using the fictional sample project.
+knowledge of this market and therefore no fact to establish. Sections 6 and 9 show what a
+completed diagnosis and a banded pipeline look like, using the fictional sample project.
+
+In section 9 the core wrote none of the Korean: the band comes from a rule, the reasons are
+codes, and locales/*.json renders them.
 
 The documents ingested in section 3 are built in memory here. Everything in
 examples/sample_project/ is invented too. See HARNESS.md section 9.
@@ -46,6 +49,7 @@ from core.models import (  # noqa: E402
     ClientAnalysis,
     ClientCandidate,
     FileType,
+    FitCriterion,
     KeyIssue,
     MarketScope,
     Project,
@@ -347,17 +351,34 @@ def main() -> int:
     print(f"    ... and {len(sample.dimensions) - 3} more")
 
     # ---- 9. client pipeline -------------------------------------------------
+    # The band is computed from the eight levels by a rule, and the reasons are codes that
+    # locales/*.json renders — so the core never wrote any of the Korean below.
     _rule("9. Client pipeline")
     for record in harness.storage.get_clients(project.project_id):
-        print(f"  {record.client_name}  ({record.country}, {record.industry})")
-        print(
-            f"    {labels['fields']['problem_fit']}: "
-            f"{labels['enums']['FitLevel'][record.fit_screening.problem_fit.value]}"
-            f" / {labels['fields']['purchasing_potential']}: "
-            f"{labels['enums']['FitLevel'][record.priority.purchasing_potential.value]}"
-            f" / {labels['fields']['sales_priority']}: "
-            f"{labels['enums']['SalesPriority'][record.priority.sales_priority.value]}"
-        )
+        band = labels["enums"]["SalesPriority"][record.priority.band.value]
+        print(f"  [{band}] {record.client_name}  ({record.country}, {record.industry})")
+        print(f"      {labels['screens']['pipeline']['discovery_rationale']}: "
+              f"{record.discovery_rationale[:64]}…")
+
+        shown = [
+            FitCriterion.PROBLEM_FIT,
+            FitCriterion.PURCHASING_POTENTIAL,
+            FitCriterion.ACCESSIBILITY,
+            FitCriterion.COMPETITIVE_SITUATION,
+        ]
+        for criterion in shown:
+            assessment = record.fit_for(criterion)
+            if assessment is None:
+                continue
+            print(
+                f"      {labels['enums']['FitCriterion'][criterion.value]:<12} "
+                f"{labels['enums']['FitLevel'][assessment.level.value]}"
+            )
+
+        for code in record.priority.reason_codes:
+            print(f"      → {labels['enums']['PriorityReasonCode'][code.value]}")
+        print(f"      {labels['fields']['source']}: {len(record.source_ids)}건 "
+              f"(이 조직이 등장한 자료) · 근거 {len(record.finding_ids)}건")
 
     _rule("10. What is still missing (recorded, not hidden)")
     for record in analyses:
@@ -383,7 +404,7 @@ def main() -> int:
 
     _rule("12. Not built yet")
     for phase, item in [
-        ("4-5", "Client discovery, prioritisation, top-3 deep analysis"),
+        ("5", "Top-3 client deep analysis"),
         ("6-7", "Proposal strategy generation, pricing adapter"),
         ("8-9", "Reference dashboard, report output"),
     ]:

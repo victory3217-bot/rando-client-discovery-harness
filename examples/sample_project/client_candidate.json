@@ -1,56 +1,258 @@
 [
   {
-    "client_id": "cli_s01",
     "project_id": "prj_sample",
     "client_name": "Mekong Aqua Utilities (가상)",
     "country": "VN",
     "industry": "상수도 운영",
-    "discovery_rationale": "건기 염분 상승 구간에서 측정 주기를 늘려야 하는데 수동 채수에 의존하고 있고(fnd_s03), 우리의 다항목 단일 모듈은 설치·유지보수 부담을 줄이는 방향이다(fnd_s01, fnd_s04). 즉 우리 역량이 이 사업자의 인력 부담 문제에 직접 대응한다.",
+    "discovery_rationale": "건기 염분 상승 구간에서 측정 주기를 늘려야 하는데 수동 채수에 의존하고 있고(fnd_s03), 우리의 다항목 단일 모듈은 설치·유지보수 부담을 줄이는 방향이다(fnd_s01, fnd_s04).",
+    "source_ids": [
+      "src_s03"
+    ],
     "market_scope": "INTERNATIONAL",
-    "finding_ids": ["fnd_s01", "fnd_s03", "fnd_s04"],
-    "fit_screening": {
-      "problem_fit": "STRONG",
-      "solution_fit": "STRONG",
-      "capability_fit": "MODERATE"
-    },
+    "finding_ids": [
+      "fnd_s01",
+      "fnd_s03",
+      "fnd_s04"
+    ],
+    "key_issue_ids": [
+      "kis_s01",
+      "kis_s02"
+    ],
+    "fit": [
+      {
+        "criterion": "PROBLEM_FIT",
+        "level": "STRONG",
+        "reason": "건기 구간 측정 주기 확대 필요가 운영 집계에서 확인된다.",
+        "finding_ids": [
+          "fnd_s03"
+        ],
+        "source_ids": [
+          "src_s03"
+        ],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "SOLUTION_FIT",
+        "level": "MODERATE",
+        "reason": "다항목 단일 모듈이 수동 채수 부담을 줄이는 방향이다.",
+        "finding_ids": [
+          "fnd_s04"
+        ],
+        "source_ids": [],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "CAPABILITY_FIT",
+        "level": "MODERATE",
+        "reason": "국내 상수도 납품 실적이 확인된다.",
+        "finding_ids": [
+          "fnd_s01"
+        ],
+        "source_ids": [
+          "src_s01"
+        ],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "MARKET_ATTRACTIVENESS",
+        "level": "MODERATE",
+        "reason": "메콩델타 운영 현황 자료가 수요를 지지한다.",
+        "finding_ids": [
+          "fnd_s03"
+        ],
+        "source_ids": [
+          "src_s03"
+        ],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "PURCHASING_POTENTIAL",
+        "level": "EVIDENCE_NEEDED",
+        "reason": null,
+        "finding_ids": [],
+        "source_ids": [],
+        "missing_evidence": [
+          "구매 예산 규모와 집행 주기",
+          "조달 공고 이력"
+        ]
+      },
+      {
+        "criterion": "ACCESSIBILITY",
+        "level": "EVIDENCE_NEEDED",
+        "reason": null,
+        "finding_ids": [],
+        "source_ids": [],
+        "missing_evidence": [
+          "직접 영업 가능 여부",
+          "유지보수 협업 가능한 현지 사업자"
+        ]
+      },
+      {
+        "criterion": "COMPETITIVE_SITUATION",
+        "level": "MODERATE",
+        "reason": "현지 경쟁사는 단항목 위주로, 차별화 여지가 있다.",
+        "finding_ids": [
+          "fnd_s04"
+        ],
+        "source_ids": [],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "EVIDENCE_QUALITY",
+        "level": "MODERATE",
+        "reason": "운영 집계표는 직접 근거이나 단일 출처다.",
+        "finding_ids": [
+          "fnd_s03"
+        ],
+        "source_ids": [
+          "src_s03"
+        ],
+        "missing_evidence": []
+      }
+    ],
     "priority": {
-      "market_attractiveness": "MODERATE",
-      "purchasing_potential": "EVIDENCE_NEEDED",
-      "accessibility": "EVIDENCE_NEEDED",
-      "competitive_situation": "MODERATE",
-      "evidence_quality": "MODERATE",
-      "sales_priority": "P1",
-      "rationale": "문제 정합성과 솔루션 정합성은 근거가 있으나 예산·접근경로는 미확인이다. 우선순위를 P1로 두는 이유는 점수 합계가 아니라 문제 심각도가 확인된 유일한 후보라는 점이다."
+      "band": "P2",
+      "reason_codes": [
+        "CORE_FIT_POSITIVE",
+        "PURCHASE_EVIDENCE_NEEDED",
+        "ACCESS_EVIDENCE_NEEDED"
+      ],
+      "missing_evidence": [
+        "구매 예산 규모와 집행 주기",
+        "유지보수 협업 가능한 현지 사업자",
+        "조달 공고 이력",
+        "직접 영업 가능 여부"
+      ]
     },
+    "identity": null,
+    "missing_evidence": [
+      "구매 예산 규모와 집행 주기",
+      "유지보수 협업 가능한 현지 사업자",
+      "조달 공고 이력",
+      "직접 영업 가능 여부"
+    ],
     "status": "PRIORITIZED",
+    "client_id": "cli_s01",
     "lang": "ko",
     "created_at": "2026-09-18T09:20:00+00:00",
     "schema_version": "0.1"
   },
   {
-    "client_id": "cli_s02",
     "project_id": "prj_sample",
     "client_name": "Delta Industrial Park Management (가상)",
     "country": "VN",
     "industry": "산업단지 관리",
-    "discovery_rationale": "방류수 수질 상시 감시 의무가 있을 가능성이 있어 동일 제품이 적용될 수 있다. 다만 이 의무의 존재 자체가 업로드 자료로 확인되지 않았다(fnd_s05).",
+    "discovery_rationale": "방류수 수질 상시 감시 의무가 있을 가능성이 있어 동일 제품이 적용될 수 있다. 다만 그 의무의 존재 자체가 업로드 자료로 확인되지 않았다(fnd_s05).",
+    "source_ids": [
+      "src_s03"
+    ],
     "market_scope": "INTERNATIONAL",
-    "finding_ids": ["fnd_s04", "fnd_s05"],
-    "fit_screening": {
-      "problem_fit": "EVIDENCE_NEEDED",
-      "solution_fit": "MODERATE",
-      "capability_fit": "MODERATE"
-    },
+    "finding_ids": [
+      "fnd_s01",
+      "fnd_s04",
+      "fnd_s05"
+    ],
+    "key_issue_ids": [
+      "kis_s01",
+      "kis_s02"
+    ],
+    "fit": [
+      {
+        "criterion": "PROBLEM_FIT",
+        "level": "EVIDENCE_NEEDED",
+        "reason": null,
+        "finding_ids": [],
+        "source_ids": [],
+        "missing_evidence": [
+          "방류수 상시 감시 의무의 존재 여부"
+        ]
+      },
+      {
+        "criterion": "SOLUTION_FIT",
+        "level": "MODERATE",
+        "reason": "동일 제품군이 적용될 수 있는 용도다.",
+        "finding_ids": [
+          "fnd_s04"
+        ],
+        "source_ids": [],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "CAPABILITY_FIT",
+        "level": "MODERATE",
+        "reason": "국내 실적이 확인된다.",
+        "finding_ids": [
+          "fnd_s01"
+        ],
+        "source_ids": [
+          "src_s01"
+        ],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "MARKET_ATTRACTIVENESS",
+        "level": "UNKNOWN",
+        "reason": null,
+        "finding_ids": [],
+        "source_ids": [],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "PURCHASING_POTENTIAL",
+        "level": "UNKNOWN",
+        "reason": null,
+        "finding_ids": [],
+        "source_ids": [],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "ACCESSIBILITY",
+        "level": "UNKNOWN",
+        "reason": null,
+        "finding_ids": [],
+        "source_ids": [],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "COMPETITIVE_SITUATION",
+        "level": "UNKNOWN",
+        "reason": null,
+        "finding_ids": [],
+        "source_ids": [],
+        "missing_evidence": []
+      },
+      {
+        "criterion": "EVIDENCE_QUALITY",
+        "level": "WEAK",
+        "reason": "규제 요건이 확인되지 않아 판단 근거가 약하다.",
+        "finding_ids": [
+          "fnd_s05"
+        ],
+        "source_ids": [],
+        "missing_evidence": [
+          "형식승인·인증 요건"
+        ]
+      }
+    ],
     "priority": {
-      "market_attractiveness": "UNKNOWN",
-      "purchasing_potential": "UNKNOWN",
-      "accessibility": "UNKNOWN",
-      "competitive_situation": "UNKNOWN",
-      "evidence_quality": "WEAK",
-      "sales_priority": "DEFERRED",
-      "rationale": "규제 요건이 확인되지 않아 문제 자체가 성립하는지 알 수 없다. 숫자를 만들어 채우지 않고 보류한다."
+      "band": "P3",
+      "reason_codes": [
+        "INSUFFICIENT_EVIDENCE",
+        "PURCHASE_EVIDENCE_NEEDED",
+        "ACCESS_EVIDENCE_NEEDED"
+      ],
+      "missing_evidence": [
+        "방류수 상시 감시 의무의 존재 여부",
+        "형식승인·인증 요건"
+      ]
     },
-    "status": "DEFERRED",
+    "identity": null,
+    "missing_evidence": [
+      "방류수 상시 감시 의무의 존재 여부",
+      "형식승인·인증 요건"
+    ],
+    "status": "PRIORITIZED",
+    "client_id": "cli_s02",
     "lang": "ko",
     "created_at": "2026-09-18T09:20:10+00:00",
     "schema_version": "0.1"

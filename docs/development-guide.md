@@ -46,7 +46,7 @@ PyMuPDF는 PDF 텍스트 추출 품질이 더 낫지만 **AGPL-3.0**이라 채�
 | **1** | Architecture · 문서 · Interface 4개 · Entity/Schema 8개 · KO/EN · Ephemeral Storage · echo LLM | **완료** | `pytest` 통과 + 경계 테스트 통과 |
 | **2** | File Intake (8종) · 메모리 파싱 · Evidence Candidate · 버퍼 해제 | **완료** | canary 6개 표면 누출 0 · intake가 temp file을 만들지 않음 |
 | **3** | Master Note 진단 · Finding · SWOT · Key Issue · 전송 게이트웨이 | **완료** | hallucination 거부 · 전송 단일 경계 · 오프라인 E2E |
-| **4** | Client Discovery · Priority | 예정 | 가상 예제로 후보 5개 이상, `EVIDENCE_NEEDED` 정상 동작 |
+| **4** | Client Discovery · Fit · Priority | **완료** | 근거 없는 회사명 저장 불가 · 숫자 없는 band · snippet P1 차단 |
 | **5** | Top 3 Client Analysis | 예정 | MN03–MN06 필드가 채워짐 |
 | **6** | Proposal Strategy | 예정 | `proposal_objective` 포함 전 필드 |
 | **7** | Pricing Adapter | 예정 | `pricing_payload`가 Pricing Harness 스키마 검증 통과 |
@@ -86,7 +86,10 @@ pytest -k evidence
 | `test_intake_canary.py` | **6개 표면 누출 검증** — 로그 · 파일시스템 · storage · `repr` · traceback · 직렬화 |
 | `test_research.py` | 파이프라인 4단계 · batching · framework 선택 · 검색결과 통합 · 오프라인 E2E |
 | `test_research_validation.py` | **hallucination 거부** · confidence cap · snippet 상한 · KeyIssue 전부-또는-전무 · directive는 flag이지 거부가 아님 · Entity 불변식 |
-| `test_research_boundary.py` | **LLM 호출이 단일 게이트웨이를 통과** (AST) · research 객체의 `repr` 은닉 |
+| `test_transmission_boundary.py` | **`core/` 전체에서 LLM 호출이 단일 게이트웨이를 통과** (AST) · 전송 객체의 `repr` 은닉 |
+| `test_client_discovery.py` | criteria · 조직 추출 · fit 8개 · 검색 통합 · 오프라인 E2E |
+| `test_client_validation.py` | **회사명 hallucination 거부** · **토큰 경계 공격** · signal 없는 STRONG 차단 · 파생 집계 일관성 · 잘림 없는 거부 |
+| `test_client_priority.py` | 규칙표 전 분기 · **snippet P1 차단** · reason code i18n · 결정성 |
 | `scripted_llm.py` | 준비된 응답을 돌려주는 테스트 double (테스트가 아니라 도구 모듈) |
 | `intake_fixtures.py` | 테스트 문서 8종을 메모리에서 생성 (테스트가 아니라 fixture 모듈) |
 

@@ -45,6 +45,8 @@ Project
 | `SalesPriority` | `P1` `P2` `P3` `DEFERRED` `UNKNOWN` |
 | `SourceCategory` | `CONSULTING_OUTPUT` `COMPANY_DATA` `EXTERNAL_BUSINESS_DATA` `USER_PROVIDED` |
 | `SourceOrigin` | `UPLOADED_FILE` `SEARCH_RESULT` `USER_PROVIDED` — 자료가 **어떻게 들어왔는가** (`SourceCategory`는 **무엇인가**) |
+| `FitCriterion` | `PROBLEM_FIT` `SOLUTION_FIT` `CAPABILITY_FIT` `MARKET_ATTRACTIVENESS` `PURCHASING_POTENTIAL` `ACCESSIBILITY` `COMPETITIVE_SITUATION` `EVIDENCE_QUALITY` |
+| `PriorityReasonCode` | `CORE_FIT_POSITIVE` `CORE_FIT_WEAK` `COMMERCIAL_SIGNAL_CONFIRMED` `PURCHASE_EVIDENCE_NEEDED` `ACCESS_EVIDENCE_NEEDED` `COMPETITIVE_BARRIER` `INSUFFICIENT_EVIDENCE` `SNIPPET_ONLY_LIMITATION` `IDENTITY_VERIFICATION_NEEDED` |
 | `FileType` | `PDF` `DOCX` `PPTX` `XLSX` `HTML` `CSV` `TXT` `MD` |
 | `ProcessingStatus` | `PENDING` `EXTRACTED` `FAILED` `PURGED` |
 | `StorageMode` | `EPHEMERAL` `PERSISTENT` |
@@ -210,18 +212,71 @@ Phase 4 Client Discovery가 **안정적 입력 Entity로 사용**한다.
 | `client_id` · `project_id` | str | ✓ | |
 | `client_name` · `country` · `industry` | str | ✓ | |
 | `discovery_rationale` | str | ✓ | 우리 무엇을 그들 어떤 문제에 |
+| `source_ids` | list[str] | ✓ | **최소 1개.** 아래 참조 |
 | `market_scope` | MarketScope | ✓ | |
 | `finding_ids` | list[str] | ✓ | 최소 1개 |
-| `fit_screening` | FitScreening | ✓ | `problem_fit` `solution_fit` `capability_fit` |
-| `priority` | PriorityEvaluation | ✓ | 아래 참조 |
+| `key_issue_ids` | list[str] | | 어떤 의사결정 때문에 이 조직을 찾았는가 |
+| `fit` | list[FitAssessment] | ✓ | **정확히 8개** |
+| `priority` | PriorityDecision | ✓ | `band` · `reason_codes[]` · `missing_evidence[]` |
+| `identity` | OrganizationIdentity? | | `legal_name` · `domain` · `organization_identifier` |
+| `missing_evidence` | list[str] | | |
 | `status` | ClientStatus | ✓ | |
 
-`PriorityEvaluation`: `market_attractiveness` · `purchasing_potential` · `accessibility` ·
-`competitive_situation` · `evidence_quality` (전부 `FitLevel`) + `sales_priority`
-(`SalesPriority`) + `rationale`.
+### "왜"가 세 가지이고, 답도 세 곳에 있다
 
-`fit_screening` 3개 + `priority` 5개 = `HARNESS.md` 7절의 **8개 기준**. `sales_priority`는
-**사람의 결정**이며 5개 평가에서 자동 계산하지 않는다.
+| 질문 | 답이 있는 곳 |
+|---|---|
+| **왜 이 회사가 후보 풀에 들어왔는가** | `ClientCandidate.source_ids` — 이 조직이 **실제로 등장한 자료**. 발굴·식별 provenance 전용이며, 기준별 근거를 모으는 필드가 **아니다** |
+| **왜 Problem Fit이 STRONG인가** | 해당 `FitAssessment.source_ids` / `finding_ids` |
+| **어떤 KeyIssue 때문에 찾았는가** | `ClientCandidate.key_issue_ids` |
+
+`source_ids`가 필수인 것이 **지어낸 회사명을 저장 불가능하게 만드는 통제**다. 아무 자료도
+언급하지 않는 이름에는 인용할 출처가 없다.
+
+### Candidate-level 집계는 파생 필드다
+
+`finding_ids`와 `missing_evidence`는 **모델이 만들지 않고 pipeline이 계산한다.**
+
+```
+ClientCandidate.finding_ids      = sorted(set(⋃ FitAssessment.finding_ids))
+ClientCandidate.missing_evidence = sorted(set(⋃ FitAssessment.missing_evidence))
+PriorityDecision.missing_evidence = 같은 canonical set
+```
+
+`core/models.py`의 `aggregate_finding_ids()` · `aggregate_missing_evidence()` 한 곳에서만
+계산되고, `check_client_candidate()`가 관계가 깨진 Candidate를 **거부한다.** LLM 출력 스키마에는
+candidate-level `finding_ids`·`missing_evidence`가 없다 — 물어보면 두 번째 답이 생기고, 그 둘은
+한쪽 assessment가 수정되는 순간 어긋난다.
+
+**canonical evidence relationship은 각 `FitAssessment`에 있다.** 집계는 읽는 사람과 이후
+Phase의 편의를 위한 것이며, Phase 5에서 사용해도 되지만 근거의 출처로 취급하지 않는다.
+
+정렬은 삽입 순서가 아니라 사전순이다. 같은 8개 assessment가 조립 순서에 상관없이 같은 목록을
+만들어야 재현 가능하다.
+
+### FitAssessment
+
+`criterion` · `level` · `reason`(최대 500자) · `finding_ids[]` · `source_ids[]` ·
+`missing_evidence[]`
+
+| 규칙 | |
+|---|---|
+| 8개 criterion 전부 존재 | 아무도 판단하지 않은 항목은 `UNKNOWN`으로 명시한다. 누락은 "안 봤다"와 "보고도 몰랐다"를 구분 불가능하게 만든다 |
+| `STRONG`/`MODERATE` | `finding_ids` 또는 `source_ids` 최소 1개 |
+| `EVIDENCE_NEEDED` | `missing_evidence` 최소 1개 |
+| `reason` | 해석 요약. 원문 복사 금지 (500자 상한) |
+
+**8개 기준의 방향은 전부 같다.** `STRONG` = 사업개발 관점에서 유리. 특히
+`COMPETITIVE_SITUATION`은 **경쟁이 강하면 `WEAK`** 다 — 강한 incumbency와 높은 전환장벽은
+불리한 상황이다.
+
+### PriorityDecision
+
+`band`(SalesPriority) · `reason_codes[]`(PriorityReasonCode) · `missing_evidence[]`
+
+숫자 score·weight 필드가 **없다.** band는 `core/client/priority.py`의 규칙표가 계산하며
+모델이 관여하지 않는다. `reason_codes`는 코드이고, 사람이 읽는 문장은 `locales/*.json`이
+렌더한다.
 
 ## 7. ClientAnalysis
 

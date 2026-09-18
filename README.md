@@ -17,8 +17,8 @@ other systems embed.
 
 ## Status
 
-**Phase 3 of 9 — research and diagnosis.**
-Version `0.3.0-alpha.1`. The analysis engines are not built yet; see
+**Phase 4 of 9 — client discovery and prioritisation.**
+Version `0.4.0-alpha.1`. The analysis engines are not built yet; see
 [docs/development-guide.md](docs/development-guide.md) for the phase plan.
 
 | Phase | Scope | State |
@@ -26,7 +26,8 @@ Version `0.3.0-alpha.1`. The analysis engines are not built yet; see
 | 1 | Architecture, docs, interfaces, schemas, KO/EN, ephemeral storage | **done** |
 | 2 | File intake (8 formats, in memory), evidence candidates | **done** |
 | 3 | Master Note diagnosis, findings, SWOT, key issues | **done** |
-| 4–5 | Client discovery, prioritization, top-3 deep analysis | planned |
+| 4 | Client discovery, fit assessment, deterministic priority | **done** |
+| 5 | Top-3 client deep analysis | planned |
 | 6–7 | Proposal strategy, pricing adapter | planned |
 | 8–9 | Reference dashboard, report output | planned |
 
@@ -93,7 +94,8 @@ HARNESS.md              rules — single source of truth
 ARCHITECTURE.md         structure and boundaries
 CLAUDE.md AGENTS.md GEMINI.md    thin per-agent entry points
 
-core/                   pure logic: models, evidence invariants, intake, research, interfaces
+core/                   pure logic: models, evidence invariants, intake, research,
+                        client discovery, interfaces
 adapters/               storage · knowledge · llm · search · intake implementations
 schemas/                JSON Schema (Draft 2020-12) for all 9 entities
 knowledge/master-notes/ public analysis-framework cards (MN02–MN07)

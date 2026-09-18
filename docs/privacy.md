@@ -17,12 +17,13 @@
 | 로그·캐시·백업·Vector DB에 원문 기록 | **하지 않는다** |
 | 외부 LLM API로 추출 텍스트 전송 | **한다** — 설정한 Provider에 따라 |
 
-전송이 일어나는 지점은 `core/research/transmission.py`의 **`send()` 한 곳뿐**이다. Intake는
-전송하지 않는다 — 문서 텍스트가 외부로 나가는 것은 Phase 3의 분석 단계가 처음이다.
+전송이 일어나는 지점은 `core/transmission.py`의 **`send()` 한 곳뿐**이다. Intake는 전송하지
+않는다 — 문서 텍스트가 외부로 나가는 것은 분석 단계(Phase 3·4)가 처음이다.
 
-`tests/test_research_boundary.py`가 `core/research/*.py`를 AST로 스캔해, `transmission.py`
+`tests/test_transmission_boundary.py`가 **`core/` 전체**를 AST로 스캔해, `transmission.py`
 외의 모듈이 `analyze` · `generate_structured` · `generate` · `summarize`를 직접 호출하면
-실패시킨다. 규약이 아니라 통과 불가능한 경계다.
+실패시킨다. 규약이 아니라 통과 불가능한 경계이며, 한 패키지가 아니라 core 전체를 보기 때문에
+새 Engine이 두 번째 통로를 조용히 열 수 없다.
 
 전송 기록(`TransmissionRecord`)에는 **개수·문자수·stage·framework id·provider 이름만** 남는다.
 본문은 없다.
@@ -152,6 +153,21 @@ parser · exception_type · segment_count · duration_ms
 ```
 
 **deny-list가 아니라 allow-list다.** deny-list는 새 필드가 추가될 때마다 조용히 누출된다.
+
+### `client_name`도 allowlist에 없다
+
+공개 기업명일 수도 있고 업로드된 비공개 고객 정보일 수도 있는데, 로그에서 그 둘을 구분할 방법이
+없다. Core가 추측해서 분류하는 기능은 만들지 않는다 — 출처는 `source_origin` ·
+`source_category` · provenance로 유지한다.
+
+Client discovery 단계에서 기록 가능한 것: `project_id` · `client_id` · `source_origin` ·
+`source_category` · `fit_criterion` · `fit_level` · `priority_band` · counts · rejection code.
+
+길이 상한을 넘긴 `reason`은 **잘라서 저장하지도, 로그에 남기지도 않는다.** 남는 것은
+`REASON_TOO_LONG` 코드와 criterion 값뿐이다. 잘린 앞부분을 진단용으로 남기는 것은 문서 텍스트를
+로그로 옮기는 가장 흔한 경로다.
+`OrganizationMention.verbatim`(원문 조각) · `FitAssessment.reason` · `discovery_rationale`은
+남기지 않는다. 전송·거부·플래그 객체는 전부 redacting `__repr__`를 정의한다.
 
 ### `display_label`은 allowlist에 없다
 

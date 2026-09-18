@@ -84,6 +84,9 @@ class ScriptedLLM:
             "Inference result": "infer",
             "SWOT classification result": "swot",
             "Key issue result": "key_issue",
+            "Client discovery criteria": "criteria",
+            "Organization mentions": "organizations",
+            "Client fit assessment": "fit",
         }.get(title, "unknown")
 
     @staticmethod
@@ -93,6 +96,9 @@ class ScriptedLLM:
             "infer": {"inferences": []},
             "swot": {"items": []},
             "key_issue": {"issues": []},
+            "criteria": {},
+            "organizations": {"mentions": []},
+            "fit": {"assessments": []},
         }.get(stage, {})
 
     # -- helpers for building payloads ------------------------------------

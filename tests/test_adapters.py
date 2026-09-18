@@ -242,8 +242,8 @@ def test_echo_output_satisfies_every_entity_schema(name: str, schemas: dict) -> 
 def test_echo_prefers_the_unanswered_enum_member(schemas: dict) -> None:
     """Placeholder output must never be mistakable for a judgement."""
     candidate = EchoLLM().generate_structured("x", schema=schemas["client_candidate"])
-    assert candidate["fit_screening"]["problem_fit"] == "UNKNOWN"
-    assert candidate["priority"]["sales_priority"] == "UNKNOWN"
+    assert all(assessment["level"] == "UNKNOWN" for assessment in candidate["fit"])
+    assert candidate["priority"]["band"] == "UNKNOWN"
 
     finding = EchoLLM().generate_structured("x", schema=schemas["research_finding"])
     assert finding["evidence_type"] == "MISSING_EVIDENCE"

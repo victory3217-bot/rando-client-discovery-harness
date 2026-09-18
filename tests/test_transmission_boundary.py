@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-"""One way out, and a test that keeps it that way.
+"""One way out of core, and a test that keeps it that way.
 
-Phase 3 is where document text first reaches an external provider. Every call goes through
-:func:`core.research.transmission.send`, so there is one place to audit, one place that records
+Research and client discovery both send evidence to a provider. Every call goes through
+:func:`core.transmission.send`, so there is one place to audit, one place that records
 what went out, and one place to change if redaction is ever needed.
 
 A convention would decay. This parses the modules and fails when one of them reaches for the
@@ -16,7 +16,7 @@ from pathlib import Path
 
 import pytest
 
-RESEARCH_DIR = Path(__file__).resolve().parent.parent / "core" / "research"
+CORE_DIR = Path(__file__).resolve().parent.parent / "core"
 
 #: Methods that send something to a provider.
 PROVIDER_CALLS = {"analyze", "generate_structured", "generate", "summarize"}
@@ -26,11 +26,11 @@ GATEWAY = "transmission.py"
 
 
 def _modules() -> list[Path]:
-    return [p for p in sorted(RESEARCH_DIR.rglob("*.py")) if p.name != GATEWAY]
+    return [p for p in sorted(CORE_DIR.rglob("*.py")) if p.name != GATEWAY]
 
 
 def test_the_gateway_exists_and_is_the_only_exception() -> None:
-    assert (RESEARCH_DIR / GATEWAY).is_file()
+    assert (CORE_DIR / GATEWAY).is_file()
     assert _modules(), "there should be other modules for this rule to apply to"
 
 
@@ -46,13 +46,13 @@ def test_no_module_calls_a_provider_directly(path: Path) -> None:
 
     assert not offenders, (
         f"{path.name} calls a provider directly: {offenders}. "
-        "Every external call goes through core.research.transmission.send()."
+        "Every external call goes through core.transmission.send()."
     )
 
 
 def test_the_gateway_really_does_call_the_provider() -> None:
     """Otherwise the rule above would pass on a codebase that sends nothing at all."""
-    tree = ast.parse((RESEARCH_DIR / GATEWAY).read_text(encoding="utf-8"), filename=GATEWAY)
+    tree = ast.parse((CORE_DIR / GATEWAY).read_text(encoding="utf-8"), filename=GATEWAY)
     called = {
         node.func.attr
         for node in ast.walk(tree)
@@ -66,7 +66,7 @@ def test_every_stage_records_what_it_sent() -> None:
     from adapters.llm.echo import EchoLLM
     from core.research.models import EvidenceBlock, EvidenceEntry
     from core.research.output_schemas import FINDING_BATCH
-    from core.research.transmission import send
+    from core.transmission import send
 
     block = EvidenceBlock(
         entries=[EvidenceEntry(ref="E1", text="본문", candidate=object())]
@@ -90,7 +90,7 @@ def test_transmission_records_carry_no_document_text() -> None:
     from adapters.llm.echo import EchoLLM
     from core.research.models import EvidenceBlock, EvidenceEntry
     from core.research.output_schemas import FINDING_BATCH
-    from core.research.transmission import send
+    from core.transmission import send
 
     secret = "ZQX-RESEARCH-CANARY-4a91"
     block = EvidenceBlock(entries=[EvidenceEntry(ref="E1", text=secret, candidate=object())])
@@ -117,12 +117,12 @@ def test_research_objects_do_not_print_their_text() -> None:
     assert secret not in repr(ResearchOutcome())
 
 
-def test_core_research_stays_pure() -> None:
+def test_core_engines_stay_pure() -> None:
     """The Phase 1 purity rules apply here too; this states it for the new package."""
     forbidden = {"os", "pathlib", "io", "logging", "requests", "httpx", "tempfile", "adapters"}
     offenders: list[str] = []
 
-    for path in sorted(RESEARCH_DIR.rglob("*.py")):
+    for path in sorted(CORE_DIR.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
@@ -136,10 +136,10 @@ def test_core_research_stays_pure() -> None:
     assert not offenders, offenders
 
 
-def test_core_research_does_not_read_prompt_files() -> None:
+def test_core_engines_do_not_read_prompt_files() -> None:
     """Prompt text is injected. The core cannot open ``prompts/*.md`` and must not try."""
     offenders: list[str] = []
-    for path in sorted(RESEARCH_DIR.rglob("*.py")):
+    for path in sorted(CORE_DIR.rglob("*.py")):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         for node in ast.walk(tree):
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):

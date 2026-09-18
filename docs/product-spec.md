@@ -155,42 +155,114 @@ Evidence ④ 다음 검증 포인트.
 추가 출력: Missing Evidence 목록 · Additional Research Required 목록 · Rejection 목록
 (모델이 만들었지만 근거 검증에서 버려진 항목 — 조용히 사라지지 않는다).
 
-## Stage 5 — Client Candidate Discovery *(Phase 4)*
+## Stage 5 — Client Candidate Discovery *(Phase 4 — 완료)*
 
 | | |
 |---|---|
-| 입력 | SWOT/Issues + Capability + Product/Solution + Market Opportunity |
-| 출력 | `ClientCandidate[]` (`status = CANDIDATE`) |
+| 입력 | `EvidenceCandidate[]` + `ResearchFinding[]` + `KeyIssue[]` + Capability/Solution |
+| 출력 | `ClientCandidate[]` + `DiscoveryHypothesis[]`(transient) |
 
-정합성 기준:
+**회사부터 찾지 않는다.** 먼저 `ClientDiscoveryCriteria`(transient DTO)로 "어떤 기업을 찾아야
+하는가"를 구조화한 뒤, Evidence에서 조직명을 추출한다.
+
+### 지어낸 회사명이 후보가 될 수 없는 이유
 
 ```
-Company Capability x Product/Solution x Market Opportunity
-                   x Customer Problem x Purchasing Possibility
+모델 출력   {name, evidence_ref}  ← 이 두 개만
+   ↓
+검증 1      evidence_ref가 블록에 존재하는가
+검증 2      name이 그 구절 텍스트에 **문자 그대로** 존재하는가
+   ↓
+VerifiedOrganization → ClientCandidate (source_ids 필수)
 ```
 
-`discovery_rationale`은 "우리 무엇을 그들 어떤 문제에"를 명시한다. 이것이 없으면 산업 내 기업
-목록이지 후보가 아니다.
+매칭은 **Unicode 정규화(NFKC) · casefold · 공백 정규화 · 토큰 단위 비교 · 제한적 법인격
+접미사 · 닫힌 한국어 조사 목록**까지만 허용한다.
 
-## Stage 6 — Fit Screening & Priority *(Phase 4)*
+### 허용/금지 매트릭스
+
+| Evidence | Model | | 이유 |
+|---|---|---|---|
+| `Mekong Aqua Utilities` | `Mekong Aqua Utilities` | 허용 | 같은 토큰 |
+| `Mekong Aqua Utilities Co., Ltd.` | `Mekong Aqua Utilities` | 허용 | 승인된 법인격 차이 |
+| `Mekong Aqua Utilities가 사업을 발표했다.` | `Mekong Aqua Utilities` | 허용 | 조사는 단어가 아니다 |
+| `Mekong Aqua Utilities` | `Mekong Aqua` | **거부** | `Utilities`는 이름의 일부다 |
+| `AlphaBeta Industrial` | `Alpha` | **거부** | 토큰조차 아니다 |
+
+아래 두 줄이 핵심이다. 단순 substring 검사는 둘 다 통과시키고 **검증이 성공한 것으로 보인다** —
+잘못된 조직이 출처까지 붙은 채로 내려가고, 의심스럽다는 표시가 아무데도 없다.
+
+**규칙은 "이름이 본문의 이름 전체를 설명해야 한다"다.** `Utilities`(이름의 일부)와
+`announced`(다음 단어)를 구분하는 데 세상에 대한 지식은 필요 없다 — 철자법만 있으면 된다.
+라틴 문자는 고유명사의 연속을 대문자로 표시하고, 한국어는 그 끝을 조사로 표시한다. 두 표시가
+모두 없는 문자(한글·CJK 본문)에서는 이름이 계속되는 것으로 가정하므로 **추측하지 않고 거부**한다.
+모든 판단은 "잘못된 조직"이 아니라 "놓친 조직" 방향으로 해소한다.
+
+fuzzy matching · embedding similarity · LLM 기반 entity resolution은 만들지 않았다. alias는
+실제 Evidence에 등장하거나 사용자가 mapping을 제공할 때만 인정한다.
+
+`ABC Corporation`과 `ABC Holdings`를 잇지 않는다 — 세상에 대한 주장이지 문자열 연산이 아니다.
+단일 토큰으로 줄어드는 이름은 전체 일치만 인정하고, 모델이 접미사를 준 이름이 본문에서 **다른**
+접미사를 달고 있으면 거부한다.
+
+검증을 통과하지 못한 이름은 `NAME_NOT_IN_EVIDENCE`로 기록되고 저장되지 않는다.
+
+`DiscoveryHypothesis`는 **조직의 유형**만 표현한다. `name` 필드가 아예 없어서 특정 회사를
+제안할 자리가 없고, Candidate로 승격하는 함수도 없다.
+
+## Stage 6 — Fit Screening & Priority *(Phase 4 — 완료)*
 
 | | |
 |---|---|
-| 입력 | `ClientCandidate[]` |
-| 출력 | `fit_screening` · `priority` 채워진 `ClientCandidate[]` |
+| 입력 | `VerifiedOrganization` + framework별로 선별된 `ResearchFinding[]` |
+| 출력 | `fit`(8개) · `priority` 채워진 `ClientCandidate[]` |
 
-8개 기준 (전부 `FitLevel` 순서형 enum):
+8개 기준 전부 `FitLevel` 순서형 enum이며, 각각 `reason` · `finding_ids` · `source_ids` ·
+`missing_evidence`를 동반한다. **방향은 전부 동일**하다 — `STRONG`은 언제나 사업개발에
+유리하다는 뜻이고, 경쟁이 강하면 `COMPETITIVE_SITUATION`은 `WEAK`다.
 
-| Screening | Priority |
+### 판단이 근거를 대체하기 쉬운 두 기준
+
+| 기준 | 막는 것 | 요구 |
+|---|---|---|
+| Purchasing Potential | "대기업이라 돈이 많다" | `PurchaseSignal` closed list 중 하나 + 참조 + 직접 근거 |
+| Accessibility | "공공기관이라 연락 가능하다" | `AccessRoute` closed list 중 하나 + 참조 + 직접 근거 |
+
+signal이 있다는 것만으로 자동 `STRONG`이 되지 않는다. snippet-only면 최대 `MODERATE`로
+내려가고 review flag가 남는다.
+
+### 계약을 위반한 출력은 잘라내지 않는다
+
+`reason`이 500자를 넘으면 **조용히 자르지 않는다.** 출력 스키마에 `maxLength: 500`이 명시되어
+있으므로 초과는 provider의 계약 위반이다. 500자에서 자르면 아무도 쓰지 않은 문장이 저장되고,
+잘린 절에 부정이 들어 있었다면 의미가 뒤집힌다. 그것도 조용히.
+
+| | |
 |---|---|
-| Problem Fit | Market Attractiveness |
-| Solution Fit | Purchasing Potential |
-| Capability Fit | Accessibility |
-| | Competitive Situation |
-| | Evidence Quality |
+| 해당 assessment | 전체 폐기 (level까지) |
+| 해당 criterion | `UNKNOWN`으로 degrade |
+| 기록 | `REASON_TOO_LONG` rejection code + criterion 값 |
+| `missing_evidence` | 비워 둔다 — provider 결함은 사람이 조사할 수 있는 gap이 아니다 |
 
-`sales_priority`(`P1`/`P2`/`P3`/`DEFERRED`)는 **사람이 정한다.** 8개 평가에서 계산하지 않는다.
-근거가 없는 항목은 `UNKNOWN` 또는 `EVIDENCE_NEEDED`로 둔다.
+`discovery_rationale`이 초과하면 degrade할 대상이 없다. rationale 없는 Candidate는 Candidate가
+아니므로 `RATIONALE_TOO_LONG`으로 **통째로 거부**한다. retry engine은 만들지 않았다.
+
+### Priority 규칙표
+
+숫자 가중합을 쓰지 않는다. band는 `core/client/priority.py`가 계산하고 모델은 관여하지 않는다.
+
+| band | 조건 |
+|---|---|
+| `DEFERRED` | 핵심 3개(문제·솔루션·역량) 중 `WEAK` 존재, 또는 경쟁상황 `WEAK` |
+| `P1` | 핵심 3개 전부 긍정 + 미확정 없음 + 구매/접근 중 ≥1 긍정 **+ Problem Fit과 그 commercial signal 모두 직접 근거** |
+| `P2` | 핵심 3개는 긍정이나 구매/접근이 미확정이거나 snippet 한정 |
+| `P3` | 결격은 없으나 여러 항목이 미확정 |
+| `UNKNOWN` | 핵심 3개 중 2개 이상이 미확정 |
+
+**검색 snippet만으로는 P1이 될 수 없다.** Candidate로 저장되고 P2/P3/UNKNOWN까지는 가능하되,
+최우선에 두려면 원문 확인이 필요하다. 이유는 `SNIPPET_ONLY_LIMITATION` 코드로 남는다.
+
+band는 **영업 지시가 아니라 검토 순서**다 (`HARNESS.md` Human Decision First).
 
 ## Stage 7 — Top 3 Client Analysis *(Phase 5)*
 

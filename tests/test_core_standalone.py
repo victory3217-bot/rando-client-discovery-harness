@@ -28,8 +28,9 @@ from core import evidence
 from core.errors import EvidenceRuleViolation
 from core.harness import CLIENT_ANALYSIS_FRAMEWORKS, RESEARCH_FRAMEWORKS
 from core.models import (
-    ClientAnalysis, ClientCandidate, Confidence, EvidenceType, FitScreening, MarketScope,
-    Project, ResearchFinding, SWOTCategory, SWOTIssue, as_dict,
+    ClientAnalysis, ClientCandidate, Confidence, EvidenceType, FitAssessment, FitCriterion,
+    FitLevel, MarketScope, PriorityDecision, Project, ResearchFinding, SWOTCategory, SWOTIssue,
+    aggregate_finding_ids, as_dict,
 )
 
 project = Project(company_name="Standalone Co", market_scope=[MarketScope.INTERNATIONAL])
@@ -71,12 +72,41 @@ analysis = ClientAnalysis(
 )
 assert evidence.check_client_analysis(analysis) == []
 
+fit = [
+    FitAssessment(
+        criterion=c,
+        level=FitLevel.MODERATE if c is FitCriterion.PROBLEM_FIT else FitLevel.UNKNOWN,
+        finding_ids=[finding.finding_id] if c is FitCriterion.PROBLEM_FIT else [],
+    )
+    for c in FitCriterion
+]
 candidate = ClientCandidate(
     project_id=project.project_id, client_name="Fictional Buyer", country="VN",
     industry="water treatment", discovery_rationale="their problem matches our capability",
-    finding_ids=[finding.finding_id], fit_screening=FitScreening(),
+    source_ids=["src_abc"],
+    # Derived from the assessments, not authored alongside them.
+    finding_ids=aggregate_finding_ids(fit),
+    fit=fit,
+    priority=PriorityDecision(),
 )
 assert evidence.check_client_candidate(candidate) == []
+assert len(candidate.fit) == 8
+assert candidate.fit_for(FitCriterion.PROBLEM_FIT) is not None
+assert candidate.finding_ids == [finding.finding_id]
+
+drifted = ClientCandidate(
+    project_id=project.project_id, client_name="Fictional Buyer", country="VN",
+    industry="water treatment", discovery_rationale="their problem matches our capability",
+    source_ids=["src_abc"], finding_ids=[finding.finding_id, "fnd_nobody_cited"], fit=fit,
+)
+assert evidence.check_client_candidate(drifted) != []
+
+sourceless = ClientCandidate(
+    project_id=project.project_id, client_name="Invented Co", country="VN", industry="x",
+    discovery_rationale="a name nothing mentions",
+    fit=[FitAssessment(criterion=c) for c in FitCriterion],
+)
+assert evidence.check_client_candidate(sourceless) != []
 
 assert RESEARCH_FRAMEWORKS == ("MN02", "MN03", "MN04", "MN05", "MN06", "MN07")
 assert CLIENT_ANALYSIS_FRAMEWORKS == ("MN03", "MN04", "MN05", "MN06")

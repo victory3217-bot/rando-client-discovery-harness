@@ -162,7 +162,12 @@ def test_default_instance_validates(entity, schemas: dict) -> None:
             country="KR",
             industry="manufacturing",
             discovery_rationale="their problem matches our capability",
+            source_ids=["src_1"],
             finding_ids=["fnd_1"],
+            fit=[
+                models.FitAssessment(criterion=criterion)
+                for criterion in models.FitCriterion
+            ],
         ),
         "ClientAnalysis": dict(
             project_id="prj_1",
