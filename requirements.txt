@@ -1,0 +1,5 @@
+# Phase 1 dependencies only. File-intake libraries (pypdf, python-docx,
+# python-pptx, openpyxl) are added in Phase 2 when core/intake/ is built —
+# see docs/development-guide.md.
+jsonschema>=4.20
+pytest>=8.0

@@ -1,0 +1,38 @@
+# --- Real business data: never public (HARNESS.md "Public Repository 원칙") ---
+# Only examples/ and schemas/examples/ are safe to publish. Everything below is
+# uploaded or client-specific material and must never reach a commit.
+clients/
+uploads/
+tmp/
+temp/
+*.pdf
+*.doc
+*.docx
+*.ppt
+*.pptx
+*.xls
+*.xlsx
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+service-account*.json
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+desktop.ini
