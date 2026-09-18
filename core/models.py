@@ -312,6 +312,12 @@ class SourceMetadata:
     There is no ``filename`` field and no text field on purpose. The original file name can
     itself be sensitive (client names, project codes) and document text must never be persisted
     in ephemeral mode. See ``docs/privacy.md``.
+
+    ``display_label`` is the one piece of human-chosen text kept here, and it is a different
+    thing from a filename: it is what the person uploading typed in order to recognise this
+    source later, and nothing derives it from the upload. Without it an analyst with a dozen
+    sources can still trace a finding — by ``source_id``, category, type and date — but cannot
+    easily tell which document that was.
     """
 
     project_id: str
@@ -319,6 +325,7 @@ class SourceMetadata:
     file_size: int
     source_category: SourceCategory
     source_id: str = field(default_factory=lambda: new_id("src"))
+    display_label: Optional[str] = None
     page_count: Optional[int] = None
     source_date: Optional[str] = None
     detected_lang: Optional[str] = None

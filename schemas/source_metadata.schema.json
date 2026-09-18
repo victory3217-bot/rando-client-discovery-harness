@@ -12,6 +12,11 @@
       "description": "Random opaque id. Must not be derived from the uploaded filename."
     },
     "project_id": { "type": "string" },
+    "display_label": {
+      "type": ["string", "null"],
+      "maxLength": 100,
+      "description": "A name the uploading person typed so they can recognise this source later. Never derived from the filename, never auto-filled, control characters stripped. It is not in the logging allowlist, and in PERSISTENT mode it is stored with the rest of this record - see docs/privacy.md."
+    },
     "file_type": {
       "type": "string",
       "enum": ["PDF", "DOCX", "PPTX", "XLSX", "HTML", "CSV", "TXT", "MD"]

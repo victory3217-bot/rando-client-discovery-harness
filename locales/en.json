@@ -93,6 +93,7 @@
     "market_scope": "Market scope",
     "target_countries": "Target countries",
     "target_industries": "Target industries",
+    "display_label": "Source label",
     "client_name": "Client",
     "country": "Country",
     "industry": "Industry",

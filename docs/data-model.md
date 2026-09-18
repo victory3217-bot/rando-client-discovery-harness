@@ -85,6 +85,7 @@ Project
 |---|---|---|---|
 | `source_id` | str | ✓ | 랜덤. 파일명에서 파생 금지 |
 | `project_id` | str | ✓ | |
+| `display_label` | str? | | **사용자가 직접 입력한 표시명.** 파일명과 별개이며 자동 생성하지 않는다. 최대 100자, control character 제거. 로그 allowlist에 **없다** |
 | `file_type` | FileType | ✓ | |
 | `file_size` | int | ✓ | |
 | `source_category` | SourceCategory | ✓ | |
@@ -98,7 +99,25 @@ Project
 
 > **`filename`도 `text`도 없다.** 파일명 자체가 민감할 수 있고(고객사명·프로젝트 코드),
 > 문서 원문은 ephemeral 모드에서 저장 대상이 아니다. 스키마의 `additionalProperties: false`가
-> Adapter가 몰래 추가하는 것도 막는다. `tests/test_privacy.py`가 검사한다.
+> Adapter가 몰래 추가하는 것도 막고, 파서와 `IntakeSession.ingest()` 시그니처에 `filename`
+> 파라미터가 아예 없어서 전달 경로 자체가 없다. `tests/test_privacy.py`가 검사한다.
+>
+> `display_label`은 파일명이 아니다. **사람이 타이핑한 값**이며, 자료 12개를 올린 분석가가
+> 어느 문서에서 나온 근거인지 알아보기 위한 것이다. PERSISTENT 모드에서는 이 값이 조직 DB에
+> 저장된다 — 사용자에게 알리는 것은 도입 조직의 책임이다 (`docs/privacy.md` 6절).
+
+### Transient: EvidenceCandidate (Entity 아님)
+
+Intake가 만드는 `EvidenceCandidate`는 문서 텍스트를 담으므로 **영속 Entity가 아니다.**
+`core/intake/models.py`에 있고, `schemas/`에 스키마가 없으며, `StorageProvider`에 저장
+메서드가 없다. 요청 수명 안에서 Phase 3로 전달되고 끝난다.
+
+```
+source_id · locator · text · kind · order
+```
+
+`core.intake.provenance_of(candidate, source)`가 이 중 출처 부분을 `ResearchFinding`이
+요구하는 형태(`source_id` `source_type` `page_or_section` `source_date`)로 변환한다.
 
 ## 3. ResearchFinding
 
