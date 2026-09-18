@@ -1,0 +1,55 @@
+{
+  "framework_id": "MN04",
+  "title_ko": "가치제안·경쟁우위·포지셔닝",
+  "title_en": "Value Proposition, Competitive Advantage, Positioning",
+  "reference": {
+    "handbook_repository": "business-planning-handbook",
+    "handbook_chapter": "CH04",
+    "handbook_paths": ["ko/chapters/CH04.md", "en/chapters/CH04.md", "ko/manual/CH04-worksheet.md"],
+    "note": "Also used for per-client deep analysis in ENGINE 2."
+  },
+  "dimensions": [
+    {
+      "key": "competitor",
+      "label_ko": "경쟁자",
+      "label_en": "Competitor",
+      "question_ko": "같은 문제를 같은 방식으로 해결하려는 공급자는 누구인가?",
+      "question_en": "Who else solves the same problem in the same way?"
+    },
+    {
+      "key": "substitute",
+      "label_ko": "대체재",
+      "label_en": "Substitute",
+      "question_ko": "다른 방식으로, 또는 아무것도 하지 않는 방식으로 그 문제를 처리하고 있는 대안은 무엇인가?",
+      "question_en": "What handles the problem a different way - including doing nothing?"
+    },
+    {
+      "key": "comparison_criteria",
+      "label_ko": "비교 기준",
+      "label_en": "Comparison Criteria",
+      "question_ko": "고객은 어떤 기준으로 우리와 대안을 비교하는가?",
+      "question_en": "On which criteria does the customer compare us with the alternatives?"
+    },
+    {
+      "key": "competitive_advantage",
+      "label_ko": "경쟁우위",
+      "label_en": "Competitive Advantage",
+      "question_ko": "그 비교 기준에서 우리가 실제로 우위인 항목은 무엇이며, 무엇이 그것을 입증하는가?",
+      "question_en": "On which of those criteria are we genuinely ahead, and what demonstrates it?"
+    },
+    {
+      "key": "value_proposition",
+      "label_ko": "가치제안",
+      "label_en": "Value Proposition",
+      "question_ko": "그 우위가 고객의 문제 해결에 어떤 가치로 연결되는가?",
+      "question_en": "How does that advantage translate into value for solving the customer's problem?"
+    },
+    {
+      "key": "positioning",
+      "label_ko": "포지셔닝",
+      "label_en": "Positioning",
+      "question_ko": "경쟁·대체재가 있는 구도 안에서 우리는 어디에 서는가?",
+      "question_en": "Where do we stand within the field of competitors and substitutes?"
+    }
+  ]
+}

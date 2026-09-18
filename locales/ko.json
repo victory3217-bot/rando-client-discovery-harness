@@ -1,0 +1,178 @@
+{
+  "lang": "ko",
+  "_note": "UI 문구는 코드에 하드코딩하지 않는다. core/는 enum·code만 반환하고, 표시는 이 파일이 담당한다. en.json과 키 구조가 완전히 동일해야 하며 tests/test_locales.py가 이를 검사한다. enum 값 자체(FACT, HIGH, STRONG …)는 번역하지 않는다 — 여기 있는 것은 라벨뿐이다.",
+
+  "enums": {
+    "EvidenceType": {
+      "FACT": "확인된 사실",
+      "INFERENCE": "추론",
+      "ASSUMPTION": "가정",
+      "MISSING_EVIDENCE": "근거 없음"
+    },
+    "Confidence": {
+      "HIGH": "높음",
+      "MEDIUM": "보통",
+      "LOW": "낮음",
+      "UNKNOWN": "미확인"
+    },
+    "FitLevel": {
+      "STRONG": "강함",
+      "MODERATE": "보통",
+      "WEAK": "약함",
+      "UNKNOWN": "미확인",
+      "EVIDENCE_NEEDED": "근거 필요"
+    },
+    "MarketScope": {
+      "DOMESTIC": "국내",
+      "INTERNATIONAL": "해외"
+    },
+    "SWOTCategory": {
+      "STRENGTH": "강점",
+      "WEAKNESS": "약점",
+      "OPPORTUNITY": "기회",
+      "THREAT": "위협"
+    },
+    "SalesPriority": {
+      "P1": "1순위",
+      "P2": "2순위",
+      "P3": "3순위",
+      "DEFERRED": "보류",
+      "UNKNOWN": "미정"
+    },
+    "SourceCategory": {
+      "CONSULTING_OUTPUT": "컨설팅 결과",
+      "COMPANY_DATA": "회사자료",
+      "EXTERNAL_BUSINESS_DATA": "외부 시장자료",
+      "USER_PROVIDED": "사용자 입력"
+    },
+    "FileType": {
+      "PDF": "PDF",
+      "DOCX": "Word",
+      "PPTX": "PowerPoint",
+      "XLSX": "Excel",
+      "HTML": "HTML",
+      "CSV": "CSV",
+      "TXT": "텍스트",
+      "MD": "Markdown"
+    },
+    "ProcessingStatus": {
+      "PENDING": "대기",
+      "EXTRACTED": "추출 완료",
+      "FAILED": "처리 실패",
+      "PURGED": "원본 삭제됨"
+    },
+    "StorageMode": {
+      "EPHEMERAL": "저장하지 않음",
+      "PERSISTENT": "저장"
+    },
+    "ClientStatus": {
+      "CANDIDATE": "후보",
+      "SCREENED": "1차 검토",
+      "PRIORITIZED": "우선순위 확정",
+      "ANALYZED": "분석 완료",
+      "PROPOSAL_DRAFTED": "제안전략 작성",
+      "DEFERRED": "보류",
+      "REJECTED": "제외"
+    },
+    "ProposalStatus": {
+      "NOT_STARTED": "미착수",
+      "STRATEGY_DRAFTED": "전략 작성",
+      "PRICING_REQUESTED": "가격 요청",
+      "PROPOSAL_DRAFTED": "제안서 초안"
+    },
+    "PricingStatus": {
+      "NOT_REQUESTED": "미요청",
+      "PAYLOAD_READY": "전달 준비",
+      "COMPLETED": "완료",
+      "FAILED": "실패"
+    }
+  },
+
+  "fields": {
+    "company_name": "회사명",
+    "market_scope": "시장 범위",
+    "target_countries": "대상 국가",
+    "target_industries": "대상 산업",
+    "client_name": "고객사명",
+    "country": "국가",
+    "industry": "산업",
+    "finding": "발견사항",
+    "evidence": "근거",
+    "evidence_summary": "근거 요약",
+    "missing_evidence": "필요한 추가 근거",
+    "source": "출처",
+    "page_or_section": "페이지·섹션",
+    "confidence": "신뢰도",
+    "key_issue": "핵심 이슈",
+    "strategic_implication": "전략적 시사점",
+    "problem": "문제",
+    "problem_severity": "문제 심각도",
+    "user": "사용자",
+    "buyer": "구매자",
+    "decision_maker": "의사결정자",
+    "current_solution": "현재 해결방식",
+    "competitor": "경쟁자",
+    "substitute": "대체재",
+    "kbf": "구매결정요인",
+    "our_solution": "우리 솔루션",
+    "value_proposition": "가치제안",
+    "competitive_advantage": "경쟁우위",
+    "sales_access_route": "영업 접근경로",
+    "potential_partner": "잠재 파트너",
+    "pricing_implication": "가격 시사점",
+    "sales_priority": "영업 우선순위",
+    "problem_fit": "문제 정합성",
+    "solution_fit": "솔루션 정합성",
+    "capability_fit": "역량 정합성",
+    "market_attractiveness": "시장 매력도",
+    "purchasing_potential": "구매 가능성",
+    "accessibility": "접근 가능성",
+    "competitive_situation": "경쟁 상황",
+    "evidence_quality": "근거 품질",
+    "proposal_objective": "제안 목표",
+    "proposed_solution": "제안 솔루션",
+    "key_message": "핵심 메시지",
+    "proposal_storyline": "제안 스토리라인",
+    "expected_objection": "예상 반론",
+    "response_logic": "대응 논리",
+    "status": "상태"
+  },
+
+  "screens": {
+    "project": {
+      "title": "프로젝트",
+      "research_status": "리서치 진행상태",
+      "swot_status": "SWOT 진행상태",
+      "client_candidate_count": "Client 후보 수",
+      "proposal_status": "제안 진행상태"
+    },
+    "swot": {
+      "title": "SWOT · 핵심 이슈",
+      "sources": "출처"
+    },
+    "pipeline": {
+      "title": "Client 파이프라인",
+      "priority": "우선순위"
+    },
+    "proposal": {
+      "title": "제안전략",
+      "pricing": "가격"
+    }
+  },
+
+  "actions": {
+    "upload": "자료 업로드",
+    "analyze": "분석 실행",
+    "export": "내려받기",
+    "request_pricing": "가격 검토 요청"
+  },
+
+  "messages": {
+    "evidence_required": "근거가 없어 이 항목을 생성할 수 없습니다.",
+    "unknown_value": "확인되지 않았습니다.",
+    "evidence_needed": "판단하려면 추가 근거가 필요합니다.",
+    "ephemeral_notice": "업로드한 원본 파일은 분석 후 서버에서 삭제되며 저장되지 않습니다.",
+    "transmission_notice": "분석을 위해 추출된 텍스트는 설정된 LLM Provider로 전송됩니다.",
+    "processing_failed": "파일을 처리할 수 없습니다. 형식을 확인해 주세요."
+  }
+}

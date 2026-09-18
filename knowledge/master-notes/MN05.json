@@ -1,0 +1,55 @@
+{
+  "framework_id": "MN05",
+  "title_ko": "비즈니스모델",
+  "title_en": "Business Model",
+  "reference": {
+    "handbook_repository": "business-planning-handbook",
+    "handbook_chapter": "CH05",
+    "handbook_paths": ["ko/chapters/CH05.md", "en/chapters/CH05.md", "ko/manual/CH05-worksheet.md"],
+    "note": "Also used for per-client deep analysis in ENGINE 2, where the operative question is the sales access route."
+  },
+  "dimensions": [
+    {
+      "key": "channel",
+      "label_ko": "채널",
+      "label_en": "Channel",
+      "question_ko": "제품이 고객에게 도달하는 경로는 무엇인가?",
+      "question_en": "By which route does the product reach the customer?"
+    },
+    {
+      "key": "customer_relationship",
+      "label_ko": "고객관계",
+      "label_en": "Customer Relationship",
+      "question_ko": "고객과의 관계는 어떤 방식으로 형성·유지되는가?",
+      "question_en": "How is the relationship with the customer formed and maintained?"
+    },
+    {
+      "key": "resource",
+      "label_ko": "핵심자원",
+      "label_en": "Resource",
+      "question_ko": "이 모델을 돌리는 데 반드시 필요한 자원은 무엇인가?",
+      "question_en": "Which resources does running this model require?"
+    },
+    {
+      "key": "activity",
+      "label_ko": "핵심활동",
+      "label_en": "Activity",
+      "question_ko": "반드시 직접 수행해야 하는 활동은 무엇인가?",
+      "question_en": "Which activities must be performed in-house?"
+    },
+    {
+      "key": "partner",
+      "label_ko": "파트너",
+      "label_en": "Partner",
+      "question_ko": "직접 하지 않는 부분은 누가 채우는가?",
+      "question_en": "Who covers the parts we do not do ourselves?"
+    },
+    {
+      "key": "bm_alignment",
+      "label_ko": "BM 정합성",
+      "label_en": "BM Alignment",
+      "question_ko": "채널·관계·자원·활동·파트너가 서로 모순 없이 맞물리는가?",
+      "question_en": "Do channel, relationship, resources, activities and partners fit together without contradiction?"
+    }
+  ]
+}

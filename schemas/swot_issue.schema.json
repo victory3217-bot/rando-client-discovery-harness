@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rando/client-discovery-harness/schemas/swot_issue.schema.json",
+  "title": "Client Discovery Harness - SWOT Issue",
+  "description": "A compressed conclusion, never a starting point. finding_ids has minItems 1 so that the schema itself rejects a SWOT item produced by asking a model to 'write a SWOT'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["issue_id", "project_id", "category", "statement", "finding_ids", "schema_version"],
+  "properties": {
+    "issue_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "category": { "type": "string", "enum": ["STRENGTH", "WEAKNESS", "OPPORTUNITY", "THREAT"] },
+    "statement": { "type": "string", "minLength": 1 },
+    "finding_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" },
+      "description": "The findings this item compresses. Must not be empty."
+    },
+    "key_issue": { "type": ["string", "null"] },
+    "strategic_implication": { "type": ["string", "null"] },
+    "mn_basis": { "type": "array", "items": { "type": "string" } },
+    "lang": { "type": "string" },
+    "created_at": { "type": "string" },
+    "schema_version": { "type": "string" }
+  }
+}

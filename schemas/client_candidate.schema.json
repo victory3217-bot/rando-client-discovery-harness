@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rando/client-discovery-harness/schemas/client_candidate.schema.json",
+  "title": "Client Discovery Harness - Client Candidate",
+  "description": "A prospect found by aligning capability, solution, market opportunity, customer problem and purchasing possibility. The eight prioritisation criteria are ordinal enums, never numbers: there is no total score field because no total is computed. UNKNOWN and EVIDENCE_NEEDED keep a missing answer visible instead of rounding it into a percentage.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["client_id", "project_id", "client_name", "country", "industry", "discovery_rationale", "market_scope", "finding_ids", "fit_screening", "priority", "status", "schema_version"],
+  "$defs": {
+    "fitLevel": {
+      "type": "string",
+      "enum": ["STRONG", "MODERATE", "WEAK", "UNKNOWN", "EVIDENCE_NEEDED"]
+    }
+  },
+  "properties": {
+    "client_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "client_name": { "type": "string", "minLength": 1 },
+    "country": { "type": "string" },
+    "industry": { "type": "string" },
+    "discovery_rationale": {
+      "type": "string",
+      "minLength": 1,
+      "description": "What of ours can be sold to which problem of theirs. A name without this is an industry list entry, not a candidate."
+    },
+    "market_scope": { "type": "string", "enum": ["DOMESTIC", "INTERNATIONAL"] },
+    "finding_ids": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+    "fit_screening": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["problem_fit", "solution_fit", "capability_fit"],
+      "properties": {
+        "problem_fit": { "$ref": "#/$defs/fitLevel" },
+        "solution_fit": { "$ref": "#/$defs/fitLevel" },
+        "capability_fit": { "$ref": "#/$defs/fitLevel" }
+      }
+    },
+    "priority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["market_attractiveness", "purchasing_potential", "accessibility", "competitive_situation", "evidence_quality", "sales_priority"],
+      "properties": {
+        "market_attractiveness": { "$ref": "#/$defs/fitLevel" },
+        "purchasing_potential": { "$ref": "#/$defs/fitLevel" },
+        "accessibility": { "$ref": "#/$defs/fitLevel" },
+        "competitive_situation": { "$ref": "#/$defs/fitLevel" },
+        "evidence_quality": { "$ref": "#/$defs/fitLevel" },
+        "sales_priority": {
+          "type": "string",
+          "enum": ["P1", "P2", "P3", "DEFERRED", "UNKNOWN"],
+          "description": "A human decision. Nothing in this harness derives it from the five ratings above."
+        },
+        "rationale": { "type": ["string", "null"] }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["CANDIDATE", "SCREENED", "PRIORITIZED", "ANALYZED", "PROPOSAL_DRAFTED", "DEFERRED", "REJECTED"]
+    },
+    "lang": { "type": "string" },
+    "created_at": { "type": "string" },
+    "schema_version": { "type": "string" }
+  }
+}

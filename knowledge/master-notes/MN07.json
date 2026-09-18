@@ -1,0 +1,55 @@
+{
+  "framework_id": "MN07",
+  "title_ko": "사업타당성·유효시장·추정재무",
+  "title_en": "Feasibility, Effective Market, Estimated Financials",
+  "reference": {
+    "handbook_repository": "business-planning-handbook",
+    "handbook_chapter": "CH07",
+    "handbook_paths": ["ko/chapters/CH07.md", "en/chapters/CH07.md", "ko/manual/CH07-worksheet.md"],
+    "note": "Company-level diagnosis. Not repeated per client in ENGINE 2."
+  },
+  "dimensions": [
+    {
+      "key": "feasibility",
+      "label_ko": "사업타당성",
+      "label_en": "Feasibility",
+      "question_ko": "이 사업이 실행 가능하다고 볼 근거는 무엇인가? 무엇이 아직 확인되지 않았는가?",
+      "question_en": "What supports the view that this business is executable, and what is still unverified?"
+    },
+    {
+      "key": "sales_quantity",
+      "label_ko": "판매수량",
+      "label_en": "Sales Quantity",
+      "question_ko": "판매수량 추정은 무엇을 근거로 하는가? 근거가 없다면 가정으로 명시한다.",
+      "question_en": "On what is the sales-quantity estimate based? If there is none, it is recorded as an assumption."
+    },
+    {
+      "key": "price_times_quantity",
+      "label_ko": "P x Qty",
+      "label_en": "P x Qty",
+      "question_ko": "가격과 수량의 조합이 만들어내는 매출 규모는 얼마인가?",
+      "question_en": "What revenue does the price-quantity combination produce?"
+    },
+    {
+      "key": "estimated_profit",
+      "label_ko": "추정이익",
+      "label_en": "Estimated Profit",
+      "question_ko": "그 매출에서 비용을 차감한 추정이익은 얼마인가?",
+      "question_en": "What is the estimated profit once costs are deducted from that revenue?"
+    },
+    {
+      "key": "valid_market",
+      "label_ko": "유효시장",
+      "label_en": "Valid Market",
+      "question_ko": "전체 시장이 아니라 실제로 도달·판매 가능한 시장은 얼마나 되는가?",
+      "question_en": "Not the total market - how large is the market actually reachable and sellable?"
+    },
+    {
+      "key": "scalability",
+      "label_ko": "확장성",
+      "label_en": "Scalability",
+      "question_ko": "규모를 키울 때 무엇이 먼저 한계에 부딪히는가?",
+      "question_en": "When scaling up, what hits its limit first?"
+    }
+  ]
+}

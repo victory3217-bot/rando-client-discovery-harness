@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rando/client-discovery-harness/schemas/pricing_result.schema.json",
+  "title": "Client Discovery Harness - Pricing Result",
+  "description": "The hand-off to, and answer from, the separate pricing harness. This repository contains no pricing engine. pricing_payload must satisfy that harness's client_input.schema.json (required: schema_version, client_id, case_id, product, tax, fx, costs). commercial_context carries the sales context the pricing engine does not consume but the proposal does. Keeping the two apart is what lets both harnesses version independently - see ARCHITECTURE.md section 6.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["pricing_result_id", "project_id", "client_id", "pricing_payload", "commercial_context", "status", "schema_version"],
+  "properties": {
+    "pricing_result_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "client_id": { "type": "string" },
+    "pricing_payload": {
+      "type": "object",
+      "description": "Validated against the pricing harness's own schema, not here. This schema does not restate a contract it does not own."
+    },
+    "commercial_context": {
+      "type": "object",
+      "description": "client, country, problem, buyer, value_proposition, competitive_advantage, competitor, channel, expected_quantity, commercial_conditions - consumed by the proposal, not by the pricing engine."
+    },
+    "engine_result": {
+      "type": ["object", "null"],
+      "description": "The pricing harness's analysis_result, stored verbatim."
+    },
+    "engine_version": { "type": ["string", "null"] },
+    "status": {
+      "type": "string",
+      "enum": ["NOT_REQUESTED", "PAYLOAD_READY", "COMPLETED", "FAILED"]
+    },
+    "error_code": { "type": ["string", "null"] },
+    "created_at": { "type": "string" },
+    "schema_version": { "type": "string" }
+  }
+}

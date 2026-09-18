@@ -1,0 +1,178 @@
+{
+  "lang": "en",
+  "_note": "UI wording is never hardcoded. core/ returns enums and codes; this file supplies what people read. The key structure must match ko.json exactly - tests/test_locales.py checks that. Enum values themselves (FACT, HIGH, STRONG, ...) are never translated; only their labels live here.",
+
+  "enums": {
+    "EvidenceType": {
+      "FACT": "Fact",
+      "INFERENCE": "Inference",
+      "ASSUMPTION": "Assumption",
+      "MISSING_EVIDENCE": "No evidence"
+    },
+    "Confidence": {
+      "HIGH": "High",
+      "MEDIUM": "Medium",
+      "LOW": "Low",
+      "UNKNOWN": "Unknown"
+    },
+    "FitLevel": {
+      "STRONG": "Strong",
+      "MODERATE": "Moderate",
+      "WEAK": "Weak",
+      "UNKNOWN": "Unknown",
+      "EVIDENCE_NEEDED": "Evidence needed"
+    },
+    "MarketScope": {
+      "DOMESTIC": "Domestic",
+      "INTERNATIONAL": "International"
+    },
+    "SWOTCategory": {
+      "STRENGTH": "Strength",
+      "WEAKNESS": "Weakness",
+      "OPPORTUNITY": "Opportunity",
+      "THREAT": "Threat"
+    },
+    "SalesPriority": {
+      "P1": "Priority 1",
+      "P2": "Priority 2",
+      "P3": "Priority 3",
+      "DEFERRED": "Deferred",
+      "UNKNOWN": "Undecided"
+    },
+    "SourceCategory": {
+      "CONSULTING_OUTPUT": "Consulting output",
+      "COMPANY_DATA": "Company data",
+      "EXTERNAL_BUSINESS_DATA": "External business data",
+      "USER_PROVIDED": "User provided"
+    },
+    "FileType": {
+      "PDF": "PDF",
+      "DOCX": "Word",
+      "PPTX": "PowerPoint",
+      "XLSX": "Excel",
+      "HTML": "HTML",
+      "CSV": "CSV",
+      "TXT": "Text",
+      "MD": "Markdown"
+    },
+    "ProcessingStatus": {
+      "PENDING": "Pending",
+      "EXTRACTED": "Extracted",
+      "FAILED": "Processing failed",
+      "PURGED": "Original deleted"
+    },
+    "StorageMode": {
+      "EPHEMERAL": "Not stored",
+      "PERSISTENT": "Stored"
+    },
+    "ClientStatus": {
+      "CANDIDATE": "Candidate",
+      "SCREENED": "Screened",
+      "PRIORITIZED": "Prioritised",
+      "ANALYZED": "Analysed",
+      "PROPOSAL_DRAFTED": "Strategy drafted",
+      "DEFERRED": "Deferred",
+      "REJECTED": "Excluded"
+    },
+    "ProposalStatus": {
+      "NOT_STARTED": "Not started",
+      "STRATEGY_DRAFTED": "Strategy drafted",
+      "PRICING_REQUESTED": "Pricing requested",
+      "PROPOSAL_DRAFTED": "Proposal drafted"
+    },
+    "PricingStatus": {
+      "NOT_REQUESTED": "Not requested",
+      "PAYLOAD_READY": "Ready to send",
+      "COMPLETED": "Completed",
+      "FAILED": "Failed"
+    }
+  },
+
+  "fields": {
+    "company_name": "Company",
+    "market_scope": "Market scope",
+    "target_countries": "Target countries",
+    "target_industries": "Target industries",
+    "client_name": "Client",
+    "country": "Country",
+    "industry": "Industry",
+    "finding": "Finding",
+    "evidence": "Evidence",
+    "evidence_summary": "Evidence summary",
+    "missing_evidence": "Evidence still needed",
+    "source": "Source",
+    "page_or_section": "Page / section",
+    "confidence": "Confidence",
+    "key_issue": "Key issue",
+    "strategic_implication": "Strategic implication",
+    "problem": "Problem",
+    "problem_severity": "Problem severity",
+    "user": "User",
+    "buyer": "Buyer",
+    "decision_maker": "Decision maker",
+    "current_solution": "Current solution",
+    "competitor": "Competitor",
+    "substitute": "Substitute",
+    "kbf": "Key buying factor",
+    "our_solution": "Our solution",
+    "value_proposition": "Value proposition",
+    "competitive_advantage": "Competitive advantage",
+    "sales_access_route": "Sales access route",
+    "potential_partner": "Potential partner",
+    "pricing_implication": "Pricing implication",
+    "sales_priority": "Sales priority",
+    "problem_fit": "Problem fit",
+    "solution_fit": "Solution fit",
+    "capability_fit": "Capability fit",
+    "market_attractiveness": "Market attractiveness",
+    "purchasing_potential": "Purchasing potential",
+    "accessibility": "Accessibility",
+    "competitive_situation": "Competitive situation",
+    "evidence_quality": "Evidence quality",
+    "proposal_objective": "Proposal objective",
+    "proposed_solution": "Proposed solution",
+    "key_message": "Key message",
+    "proposal_storyline": "Proposal storyline",
+    "expected_objection": "Expected objection",
+    "response_logic": "Response logic",
+    "status": "Status"
+  },
+
+  "screens": {
+    "project": {
+      "title": "Project",
+      "research_status": "Research status",
+      "swot_status": "SWOT status",
+      "client_candidate_count": "Client candidates",
+      "proposal_status": "Proposal status"
+    },
+    "swot": {
+      "title": "SWOT and key issues",
+      "sources": "Sources"
+    },
+    "pipeline": {
+      "title": "Client pipeline",
+      "priority": "Priority"
+    },
+    "proposal": {
+      "title": "Proposal strategy",
+      "pricing": "Pricing"
+    }
+  },
+
+  "actions": {
+    "upload": "Upload material",
+    "analyze": "Run analysis",
+    "export": "Download",
+    "request_pricing": "Request pricing review"
+  },
+
+  "messages": {
+    "evidence_required": "This item cannot be produced without evidence.",
+    "unknown_value": "Not established.",
+    "evidence_needed": "More evidence is needed before this can be judged.",
+    "ephemeral_notice": "Uploaded originals are deleted from the server after analysis and are not stored.",
+    "transmission_notice": "Extracted text is sent to the configured LLM provider for analysis.",
+    "processing_failed": "This file could not be processed. Please check its format."
+  }
+}

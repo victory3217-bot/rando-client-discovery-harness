@@ -1,0 +1,55 @@
+{
+  "framework_id": "MN06",
+  "title_ko": "원가·가격·수익모델",
+  "title_en": "Cost, Price, Revenue Model",
+  "reference": {
+    "handbook_repository": "business-planning-handbook",
+    "handbook_chapter": "CH06",
+    "handbook_paths": ["ko/chapters/CH06.md", "en/chapters/CH06.md", "ko/manual/CH06-worksheet.md"],
+    "note": "This harness records pricing implications only. Calculation belongs to the separate pricing harness - see ARCHITECTURE.md section 6."
+  },
+  "dimensions": [
+    {
+      "key": "cost",
+      "label_ko": "원가",
+      "label_en": "Cost",
+      "question_ko": "이 제품을 공급하는 데 드는 원가는 어떻게 구성되는가?",
+      "question_en": "How is the cost of supplying this product composed?"
+    },
+    {
+      "key": "price",
+      "label_ko": "가격",
+      "label_en": "Price",
+      "question_ko": "현재 가격은 어떻게 정해져 있으며, 무엇을 근거로 하는가?",
+      "question_en": "How is the current price set, and on what basis?"
+    },
+    {
+      "key": "margin",
+      "label_ko": "마진",
+      "label_en": "Margin",
+      "question_ko": "그 가격에서 실제로 남는 마진은 얼마이며, 목표 마진과 얼마나 벌어져 있는가?",
+      "question_en": "What margin actually remains at that price, and how far is it from the target?"
+    },
+    {
+      "key": "channel_cost",
+      "label_ko": "채널비용",
+      "label_en": "Channel Cost",
+      "question_ko": "채널을 거치면서 발생하는 수수료·비용은 무엇인가?",
+      "question_en": "Which fees and costs arise from passing through the channel?"
+    },
+    {
+      "key": "revenue_model",
+      "label_ko": "수익모델",
+      "label_en": "Revenue Model",
+      "question_ko": "매출이 발생하는 구조는 무엇인가? 일회성인가 반복성인가?",
+      "question_en": "How is revenue generated - one-time, recurring, or a mix?"
+    },
+    {
+      "key": "pricing_structure",
+      "label_ko": "가격구조",
+      "label_en": "Pricing Structure",
+      "question_ko": "가격이 어떤 구성요소로 나뉘며, 고객·물량·조건에 따라 어떻게 달라지는가?",
+      "question_en": "Into which components does the price break down, and how does it vary by customer, volume and conditions?"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "framework_id": "MN03",
+  "title_ko": "고객·구매자·문제",
+  "title_en": "Customer, Buyer, Problem",
+  "reference": {
+    "handbook_repository": "business-planning-handbook",
+    "handbook_chapter": "CH03",
+    "handbook_paths": ["ko/chapters/CH03.md", "en/chapters/CH03.md", "ko/manual/CH03-worksheet.md"],
+    "note": "Also used for per-client deep analysis in ENGINE 2."
+  },
+  "dimensions": [
+    {
+      "key": "user",
+      "label_ko": "사용자",
+      "label_en": "User",
+      "question_ko": "실제로 사용하는 사람은 누구인가?",
+      "question_en": "Who actually uses it?"
+    },
+    {
+      "key": "buyer",
+      "label_ko": "구매자",
+      "label_en": "Buyer",
+      "question_ko": "비용을 지불하는 주체는 누구인가? 사용자와 같은가 다른가?",
+      "question_en": "Who pays? Is that the same party as the user or a different one?"
+    },
+    {
+      "key": "customer",
+      "label_ko": "고객",
+      "label_en": "Customer",
+      "question_ko": "구매 의사결정에 관여하는 조직·역할은 누구인가?",
+      "question_en": "Which organisation and roles take part in the purchase decision?"
+    },
+    {
+      "key": "problem",
+      "label_ko": "문제",
+      "label_en": "Problem",
+      "question_ko": "그 고객이 실제로 겪고 있는 문제는 무엇인가? 우리 제품 설명이 아니라 고객의 언어로 기술한다.",
+      "question_en": "What problem does that customer actually have? Stated in their language, not as a description of our product."
+    },
+    {
+      "key": "problem_severity",
+      "label_ko": "문제 심각도",
+      "label_en": "Problem Severity",
+      "question_ko": "그 문제는 돈·시간·리스크 측면에서 얼마나 심각한가? 지금 해결할 이유가 있는가?",
+      "question_en": "How severe is that problem in money, time or risk terms? Is there a reason to solve it now?"
+    },
+    {
+      "key": "kbf",
+      "label_ko": "구매결정요인 (KBF)",
+      "label_en": "Key Buying Factor (KBF)",
+      "question_ko": "그 고객이 공급자를 선택할 때 실제로 기준이 되는 요인은 무엇인가?",
+      "question_en": "What actually decides which supplier that customer chooses?"
+    },
+    {
+      "key": "customer_touchpoint",
+      "label_ko": "고객 접점",
+      "label_en": "Customer Touchpoint",
+      "question_ko": "그 고객과 접촉이 일어나는 실제 지점은 어디인가?",
+      "question_en": "Where does contact with that customer actually happen?"
+    }
+  ]
+}

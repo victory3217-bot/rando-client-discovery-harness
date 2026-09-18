@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rando/client-discovery-harness/schemas/source_metadata.schema.json",
+  "title": "Client Discovery Harness - Source Metadata",
+  "description": "What is kept about an uploaded document. There is deliberately no filename field and no text field: the original name can itself be sensitive, and document text is never persisted in ephemeral mode. additionalProperties is false so that a well-meaning adapter cannot add one.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source_id", "project_id", "file_type", "file_size", "source_category", "processing_status", "schema_version"],
+  "properties": {
+    "source_id": {
+      "type": "string",
+      "description": "Random opaque id. Must not be derived from the uploaded filename."
+    },
+    "project_id": { "type": "string" },
+    "file_type": {
+      "type": "string",
+      "enum": ["PDF", "DOCX", "PPTX", "XLSX", "HTML", "CSV", "TXT", "MD"]
+    },
+    "file_size": { "type": "integer", "minimum": 0 },
+    "source_category": {
+      "type": "string",
+      "enum": ["CONSULTING_OUTPUT", "COMPANY_DATA", "EXTERNAL_BUSINESS_DATA", "USER_PROVIDED"]
+    },
+    "page_count": { "type": ["integer", "null"], "minimum": 0 },
+    "source_date": { "type": ["string", "null"] },
+    "detected_lang": { "type": ["string", "null"] },
+    "processing_status": {
+      "type": "string",
+      "enum": ["PENDING", "EXTRACTED", "FAILED", "PURGED"],
+      "description": "PURGED means extraction finished and the original was deleted - the normal terminal state in ephemeral mode."
+    },
+    "error_code": {
+      "type": ["string", "null"],
+      "description": "Short non-sensitive code. Never an exception message, which can carry document content."
+    },
+    "ingested_at": { "type": "string" },
+    "schema_version": { "type": "string" }
+  }
+}

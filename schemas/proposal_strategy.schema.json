@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/rando/client-discovery-harness/schemas/proposal_strategy.schema.json",
+  "title": "Client Discovery Harness - Proposal Strategy",
+  "description": "The strategy that precedes a proposal document. No HTML or DOCX is generated before this exists. pricing_input is the hand-off to the separate pricing harness and stays null until that step runs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["strategy_id", "project_id", "client_id", "client_name", "country", "status", "schema_version"],
+  "$defs": {
+    "evidenceRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["finding_id"],
+      "properties": {
+        "finding_id": { "type": "string" },
+        "source_id": { "type": ["string", "null"] },
+        "note": { "type": ["string", "null"] }
+      }
+    }
+  },
+  "properties": {
+    "strategy_id": { "type": "string" },
+    "project_id": { "type": "string" },
+    "client_id": { "type": "string" },
+    "client_name": { "type": "string", "minLength": 1 },
+    "country": { "type": "string" },
+    "problem": { "type": ["string", "null"] },
+    "buyer": { "type": ["string", "null"] },
+    "decision_maker": { "type": ["string", "null"] },
+    "proposal_objective": {
+      "type": ["string", "null"],
+      "description": "What this proposal is trying to achieve. Required in practice by core/evidence.py before the status may leave NOT_STARTED."
+    },
+    "proposed_solution": { "type": ["string", "null"] },
+    "value_proposition": { "type": ["string", "null"] },
+    "competitive_advantage": { "type": ["string", "null"] },
+    "key_message": { "type": ["string", "null"] },
+    "proposal_storyline": { "type": "array", "items": { "type": "string" }, "description": "Ordered sections of the argument." },
+    "expected_objection": { "type": "array", "items": { "type": "string" } },
+    "response_logic": { "type": "array", "items": { "type": "string" } },
+    "additional_evidence_required": { "type": "array", "items": { "type": "string" } },
+    "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRef" } },
+    "pricing_input": {
+      "type": ["object", "null"],
+      "description": "Opaque here on purpose: its shape is owned by the pricing harness contract, not by this schema. See PricingResult."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["NOT_STARTED", "STRATEGY_DRAFTED", "PRICING_REQUESTED", "PROPOSAL_DRAFTED"]
+    },
+    "lang": { "type": "string" },
+    "created_at": { "type": "string" },
+    "schema_version": { "type": "string" }
+  }
+}

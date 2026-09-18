@@ -1,0 +1,69 @@
+{
+  "framework_id": "MN02",
+  "title_ko": "역량·아이템·산업·시장",
+  "title_en": "Capability, Item, Industry, Market",
+  "reference": {
+    "handbook_repository": "business-planning-handbook",
+    "handbook_chapter": "CH02",
+    "handbook_paths": ["ko/chapters/CH02.md", "en/chapters/CH02.md", "ko/manual/CH02-worksheet.md"],
+    "note": "TPM = Technology/Capability - Product - Market."
+  },
+  "dimensions": [
+    {
+      "key": "capability",
+      "label_ko": "역량",
+      "label_en": "Capability",
+      "question_ko": "이 회사가 실제로 수행할 수 있는 역량은 무엇인가? 보유 목록이 아니라 실행 가능한 것으로 한정한다.",
+      "question_en": "What can this company actually execute? Limited to what it can do, not what it owns."
+    },
+    {
+      "key": "product_solution",
+      "label_ko": "제품·솔루션",
+      "label_en": "Product / Solution",
+      "question_ko": "그 역량은 어떤 형태의 제품·서비스·솔루션으로 전환되어 있는가?",
+      "question_en": "Into which product, service or solution has that capability been converted?"
+    },
+    {
+      "key": "industry",
+      "label_ko": "산업",
+      "label_en": "Industry",
+      "question_ko": "그 제품이 들어가는 산업은 어디이며, 그 산업의 구조는 어떤가?",
+      "question_en": "Which industry does that product enter, and how is that industry structured?"
+    },
+    {
+      "key": "market_opportunity",
+      "label_ko": "시장기회",
+      "label_en": "Market Opportunity",
+      "question_ko": "그 산업·시장에서 확인되는 기회는 무엇인가? 어떤 자료가 그것을 뒷받침하는가?",
+      "question_en": "What opportunity is observable in that industry or market, and what evidence supports it?"
+    },
+    {
+      "key": "tpm_alignment",
+      "label_ko": "TPM 정합성",
+      "label_en": "TPM Alignment",
+      "question_ko": "역량·제품·시장 세 요소가 서로 맞물리는가? 개별 매력도가 아니라 연결이 성립하는지를 본다.",
+      "question_en": "Do capability, product and market interlock? The question is the connection, not each element's separate appeal."
+    },
+    {
+      "key": "market_risk",
+      "label_ko": "시장 리스크",
+      "label_en": "Market Risk",
+      "question_ko": "시장 쪽에서 이 기회를 무너뜨릴 수 있는 요인은 무엇인가?",
+      "question_en": "What on the market side could undo this opportunity?"
+    },
+    {
+      "key": "product_risk",
+      "label_ko": "제품 리스크",
+      "label_en": "Product Risk",
+      "question_ko": "제품·솔루션 쪽의 미검증 지점은 무엇인가?",
+      "question_en": "What remains unvalidated on the product or solution side?"
+    },
+    {
+      "key": "route_risk",
+      "label_ko": "경로 리스크",
+      "label_en": "Route Risk",
+      "question_ko": "고객에게 도달하는 경로에서 막힐 수 있는 지점은 무엇인가?",
+      "question_en": "Where could the route to the customer be blocked?"
+    }
+  ]
+}
