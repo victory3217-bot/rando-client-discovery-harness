@@ -15,8 +15,24 @@ python examples/run_example.py
 | 항목 | 값 |
 |---|---|
 | Python | 3.11+ (개발 환경 3.13에서 검증) |
-| 의존성 | `jsonschema` (스키마 검증) · `pytest` (테스트). **Core는 표준 라이브러리만 쓴다** |
+| 의존성 | `jsonschema` · `pytest` · intake 파서 4종(`pypdf` `python-docx` `python-pptx` `openpyxl`). **Core는 표준 라이브러리만 쓴다** |
 | 패키징 | pip-installable하지 않다. 저장소 루트를 `sys.path`에 두고 쓴다 (`tests/conftest.py` 참조) |
+
+intake 파서 4종은 BSD-3/MIT이며, **이 프로젝트는 별도의 시스템 바이너리 설치를 요구하지
+않는다.** 현재 지원 환경에서는 일반적으로 pip wheel로 설치된다.
+
+다만 **의존성 트리 전체가 순수 Python인 것은 아니다.** `python-docx`는 `lxml`을,
+`python-pptx`는 `lxml` · `Pillow` · `XlsxWriter`를 요구하며 이 중 일부는 컴파일된 확장을
+포함한다. 주요 플랫폼에는 wheel이 제공되지만, 어떤 환경에서도 소스 빌드가 일어나지 않는다고
+보장하지는 않는다.
+
+**OCR은 쓰지 않는다** — Tesseract 같은 외부 시스템 바이너리는 Phase 2 범위 밖이다.
+
+각 파서가 **lazy import**하므로 CSV·TXT만 처리하는 배포는 넷 다 설치하지 않아도 되고, 없으면
+`PARSER_UNAVAILABLE` 코드가 나올 뿐 startup이 깨지지 않는다.
+
+PyMuPDF는 PDF 텍스트 추출 품질이 더 낫지만 **AGPL-3.0**이라 채택하지 않았다. MIT 저장소를
+임베드하는 쪽의 배포 조건을 바꾸는 의존성은 품질보다 우선해서 거른다.
 
 `pyproject.toml`을 만들지 않는 이유: 이 Harness는 clone 또는 vendor 해서 삽입하는 방식이고,
 자매 저장소인 `pricing-harness-public`도 같은 방식이다. PyPI 배포는 MVP 범위 밖이다.
@@ -28,7 +44,7 @@ python examples/run_example.py
 | Phase | 내용 | 상태 | 완료 기준 |
 |---|---|---|---|
 | **1** | Architecture · 문서 · Interface 4개 · Entity/Schema 8개 · KO/EN · Ephemeral Storage · echo LLM | **완료** | `pytest` 통과 + 경계 테스트 통과 |
-| **2** | File Intake · Temporary Processing · Evidence Extraction · Cleanup | 예정 | canary 누출 테스트 통과 |
+| **2** | File Intake (8종) · 메모리 파싱 · Evidence Candidate · 버퍼 해제 | **완료** | canary 6개 표면 누출 0 · intake가 temp file을 만들지 않음 |
 | **3** | Market Research · Master Note Diagnosis · SWOT / Key Issues | 예정 | `finding_ids != []` 불변식 통과, `anthropic` adapter 1개 |
 | **4** | Client Discovery · Priority | 예정 | 가상 예제로 후보 5개 이상, `EVIDENCE_NEEDED` 정상 동작 |
 | **5** | Top 3 Client Analysis | 예정 | MN03–MN06 필드가 채워짐 |
@@ -66,6 +82,14 @@ pytest -k evidence
 | `test_knowledge_cards.py` | MN 카드 형식과 dimension 목록이 `HARNESS.md` 5절과 일치 |
 | `test_docs_no_duplication.py` | AI 진입점 3개가 얇게 유지되고 Required Reading이 실존 파일을 가리킨다 |
 | `test_privacy.py` | `SourceMetadata`에 파일명·원문 필드가 없다, source_id가 랜덤이다 |
+| `test_intake.py` | 8종 파싱 · locator 형식 · 결정성 · 인코딩 · OOXML 판별 · 상한 · 에러 코드 · `display_label` |
+| `test_intake_canary.py` | **6개 표면 누출 검증** — 로그 · 파일시스템 · storage · `repr` · traceback · 직렬화 |
+| `intake_fixtures.py` | 테스트 문서 8종을 메모리에서 생성 (테스트가 아니라 fixture 모듈) |
+
+`.gitignore`가 `*.pdf` `*.docx` `*.pptx` `*.xlsx`를 차단하므로 **바이너리 fixture를 커밋할 수
+없다.** 그래서 `intake_fixtures.py`가 8종을 코드로 만든다 — Public 저장소에 정체불명의
+바이너리가 남지 않고, 테스트가 파싱하는 모든 바이트를 리뷰할 수 있다. PDF는 의존성 없이 손으로
+조립한다 (비압축 content stream).
 
 **경계 테스트가 실패하면 테스트를 고치지 않는다.** `test_core_purity`와
 `test_core_standalone`은 `HARNESS.md` 11절 성공기준의 마지막 두 항목을 자동 검증하는

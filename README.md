@@ -17,14 +17,14 @@ other systems embed.
 
 ## Status
 
-**Phase 1 of 9 — architecture, data model, interfaces, ephemeral storage.**
-Version `0.1.0-alpha.1`. The analysis engines are not built yet; see
+**Phase 2 of 9 — file intake.**
+Version `0.2.0-alpha.1`. The analysis engines are not built yet; see
 [docs/development-guide.md](docs/development-guide.md) for the phase plan.
 
 | Phase | Scope | State |
 |---|---|---|
 | 1 | Architecture, docs, interfaces, schemas, KO/EN, ephemeral storage | **done** |
-| 2 | File intake, temporary processing, evidence extraction, cleanup | planned |
+| 2 | File intake (8 formats, in memory), evidence candidates | **done** |
 | 3 | Market research, Master Note diagnosis, SWOT / key issues | planned |
 | 4–5 | Client discovery, prioritization, top-3 deep analysis | planned |
 | 6–7 | Proposal strategy, pricing adapter | planned |
@@ -59,9 +59,10 @@ pytest
 python examples/run_example.py
 ```
 
-`examples/run_example.py` runs the Phase 1 pipeline skeleton end to end with a **fully fictional**
-company, using the in-memory storage adapter and the deterministic `echo` LLM adapter — no API
-key and no network required.
+`examples/run_example.py` runs the pipeline end to end with a **fully fictional** company —
+ingesting documents it generates in memory, then walking the Phase 1 structures — using the
+in-memory storage adapter and the deterministic `echo` LLM adapter. No API key and no network
+required, and the intake path creates no temporary file.
 
 Assembling a harness with your own adapters:
 
@@ -92,8 +93,8 @@ HARNESS.md              rules — single source of truth
 ARCHITECTURE.md         structure and boundaries
 CLAUDE.md AGENTS.md GEMINI.md    thin per-agent entry points
 
-core/                   pure logic: models, evidence invariants, interfaces
-adapters/               storage · knowledge · llm · search implementations
+core/                   pure logic: models, evidence invariants, intake, interfaces
+adapters/               storage · knowledge · llm · search · intake implementations
 schemas/                JSON Schema (Draft 2020-12) for all 8 entities
 knowledge/master-notes/ public analysis-framework cards (MN02–MN07)
 prompts/                provider-neutral prompts, separated from code

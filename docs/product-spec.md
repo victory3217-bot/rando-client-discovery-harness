@@ -28,25 +28,68 @@ BM As-Is · BM To-Be · 가격전략 · 가격정책 · 기타 컨설팅 결과
 
 ---
 
-## Stage 1 — File Intake *(Phase 2)*
+## Stage 1 — File Intake *(Phase 2 — 완료)*
 
 | | |
 |---|---|
-| 입력 | 업로드된 파일 + `source_category` |
-| 출력 | `SourceMetadata` + 메모리상의 추출 텍스트·표 |
-| 규칙 | `docs/privacy.md`의 Upload Flow를 그대로 따른다 |
+| 입력 | 파일 `bytes` + `file_type` + `source_category` (+ 선택: `display_label`, `source_date`) |
+| 출력 | `SourceMetadata` (저장 가능) + `EvidenceCandidate[]` (transient) |
+| 규칙 | `docs/privacy.md` 1–5절 |
 
-- `source_id`는 랜덤. 파일명은 즉시 폐기한다.
-- 텍스트 레이어가 없는 스캔 PDF는 `processing_status = FAILED` + `error_code`. **OCR은 MVP
-  범위 밖이다.**
-- 처리 종료 후 `PURGED`.
+- `source_id`는 랜덤 UUID. **파일명은 전달 경로 자체가 없다** — 파서와 `IntakeSession.ingest()`
+  시그니처에 `filename` 파라미터가 존재하지 않는다.
+- 8종 전부 메모리에서 파싱된다. **이 구현은 temp file을 만들지 않는다** (memory-first).
+  라이브러리·runtime·OS 내부까지 disk write 0을 보장한다는 뜻은 아니다 — `docs/privacy.md` 1절.
+- 성공 시 `PURGED`, 실패 시 `FAILED` + `error_code`. 한 파일의 실패가 배치를 끝내지 않는다.
+- 텍스트 레이어가 없는 스캔 PDF → `EXTRACT_NO_TEXT_LAYER`. **OCR은 범위 밖이다.**
+- `detected_lang`은 항상 `None`이다 — 언어 판별 엔진을 넣지 않았고, 틀린 태그는 없는 태그보다
+  나쁘다.
+
+### Locator 형식
+
+Locator가 `ResearchFinding.page_or_section`이 되어 결론의 추적 경로를 만든다.
+
+| Type | Locator 예 | Segment 단위 |
+|---|---|---|
+| PDF | `p.7` | 페이지 내 문단 |
+| DOCX | `¶12` · `table 2` | 문단, 표 |
+| PPTX | `slide 4` · `slide 4 notes` | 슬라이드 본문, 발표자 노트 |
+| XLSX | `utilities-ops!A1:C50` | 시트별 50행 블록 |
+| CSV | `row 2-51` | 헤더 + 50행 블록 |
+| TXT | `line 40-58` | 빈 줄로 구분된 블록 |
+| MD | `## 운영 현황` | ATX 제목 구간 |
+| HTML | `운영 현황 > p#4` | 블록 요소 (script·style·noscript·주석 제외) |
+
+### 타입 판별
+
+확장자는 주장일 뿐이므로 magic byte로 검증한다. DOCX·PPTX·XLSX는 **전부 ZIP이라 magic byte가
+동일**하므로, package를 열어 `word/document.xml` · `ppt/presentation.xml` · `xl/workbook.xml`을
+확인한다. 같은 한 번의 central directory 읽기로 zip bomb 상한도 함께 검사한다.
+
+### 상한 (IntakePolicy)
+
+| 항목 | 기본값 |
+|---|---|
+| `max_file_bytes` | 25 MB |
+| `max_uncompressed_bytes` | 200 MB |
+| `max_batch_bytes` | 100 MB |
+| `max_display_label_chars` | 100 |
+
+Core는 환경변수를 읽지 않는다. 다른 값이 필요하면 App이 `IntakePolicy`를 만들어 주입한다.
+
+### Phase 2가 하지 않는 것
+
+**`evidence_type`을 부여하지 않는다.** 문서에서 뽑은 조각은 `FACT`가 아니라 `FACT`가 될
+재료다. FACT / INFERENCE / ASSUMPTION / MISSING_EVIDENCE 판정은 Master Note 질문을 적용하는
+Stage 3에서만 일어난다. Phase 2가 보장하는 것은 그 판정이 **출처를 잃지 않는다**는 것이며,
+`core.intake.provenance_of()`가 그 인계 지점이다.
 
 ## Stage 2 — Market Research *(Phase 3)*
 
 | | |
 |---|---|
-| 입력 | 추출 텍스트 + `SearchProvider` 결과 + `market_scope` / `target_countries` |
-| 출력 | Evidence 후보 (아직 Finding이 아니다) |
+| 입력 | `EvidenceCandidate[]` + `SearchProvider` 결과 + `market_scope` / `target_countries` |
+| 출력 | 추가 Evidence 후보 (아직 Finding이 아니다) |
 
 - MVP 기본 Adapter는 `manual` — 사용자가 제공한 자료만 사용한다. 웹 검색은 선택이다.
 - 국내·해외를 같은 Engine으로 처리한다. `market_scope`와 국가 필드로만 구분한다.
@@ -55,14 +98,15 @@ BM As-Is · BM To-Be · 가격전략 · 가격정책 · 기타 컨설팅 결과
 
 | | |
 |---|---|
-| 입력 | Evidence + `KnowledgeProvider.get_framework("MN02".."MN07")` |
+| 입력 | `EvidenceCandidate[]` + `KnowledgeProvider.get_framework("MN02".."MN07")` |
 | 출력 | `ResearchFinding[]` |
 
 각 MN의 dimension이 곧 질문이다. 질문에 답할 Evidence가 없으면 답을 만들지 않고
 `evidence_type = MISSING_EVIDENCE`로 남긴다.
 
 `FACT` · `INFERENCE`는 `source_id`가 필수다. 이 규칙은 `core/evidence.check_finding`이
-강제한다.
+강제하고, `core.intake.provenance_of(candidate, source)`가 필요한 출처 필드를 통째로
+넘겨준다 — 손으로 복사하지 않는다.
 
 ## Stage 4 — SWOT / Key Issues *(Phase 3)*
 

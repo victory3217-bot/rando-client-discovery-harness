@@ -16,14 +16,14 @@
 
 ## 현재 상태
 
-**Phase 1 / 9 — Architecture · Data Model · Interface · Ephemeral Storage.**
-버전 `0.1.0-alpha.1`. 분석 Engine은 아직 구현되지 않았다. 개발 순서는
+**Phase 2 / 9 — File Intake.**
+버전 `0.2.0-alpha.1`. 분석 Engine은 아직 구현되지 않았다. 개발 순서는
 [docs/development-guide.md](docs/development-guide.md)를 참조한다.
 
 | Phase | 범위 | 상태 |
 |---|---|---|
 | 1 | Architecture · 문서 · Interface · Schema · KO/EN · Ephemeral Storage | **완료** |
-| 2 | File Intake · Temporary Processing · Evidence Extraction · Cleanup | 예정 |
+| 2 | File Intake (8종, 메모리 파싱) · Evidence Candidate | **완료** |
 | 3 | Market Research · Master Note Diagnosis · SWOT / Key Issues | 예정 |
 | 4–5 | Client Discovery · Prioritization · Top 3 Deep Analysis | 예정 |
 | 6–7 | Proposal Strategy · Pricing Adapter | 예정 |
@@ -58,9 +58,10 @@ pytest
 python examples/run_example.py
 ```
 
-`examples/run_example.py`는 **완전히 가상의** 회사 데이터로 Phase 1 파이프라인 골격을 끝까지
-실행한다. Memory Storage Adapter와 결정적(deterministic) `echo` LLM Adapter를 사용하므로
-**API 키도 네트워크도 필요하지 않다.**
+`examples/run_example.py`는 **완전히 가상의** 회사 데이터로 파이프라인을 끝까지 실행한다.
+메모리에서 생성한 문서를 intake한 뒤 Phase 1 구조를 따라간다. Memory Storage Adapter와
+결정적(deterministic) `echo` LLM Adapter를 쓰므로 **API 키도 네트워크도 필요 없고, intake
+구현이 temp file을 만들지 않는다.**
 
 자기 Adapter로 Harness를 조립하는 방법:
 
@@ -91,8 +92,8 @@ HARNESS.md              공통 규칙 — Single Source of Truth
 ARCHITECTURE.md         구조와 경계
 CLAUDE.md AGENTS.md GEMINI.md    AI별 얇은 진입점
 
-core/                   순수 로직: Entity · Evidence 불변식 · Interface
-adapters/               storage · knowledge · llm · search 구현체
+core/                   순수 로직: Entity · Evidence 불변식 · Intake · Interface
+adapters/               storage · knowledge · llm · search · intake 구현체
 schemas/                Entity 8개의 JSON Schema (Draft 2020-12)
 knowledge/master-notes/ 공개용 분석 프레임워크 카드 (MN02–MN07)
 prompts/                코드와 분리된 provider 중립 Prompt
