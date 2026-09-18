@@ -23,7 +23,8 @@
   |    interfaces/   Protocol (Core가 소유하는 계약)                       |
   |                                                                        |
   |    intake/       policy · models(전송객체) · extract   (순수)          |
-  |    research/     Phase 3 예정  (ENGINE 1)                              |
+  |    research/     policy · select · extract · classify · synthesize     |
+  |                  · confidence · transmission · pipeline   (ENGINE 1)   |
   |    client/       Phase 4-6 예정 (ENGINE 2)                             |
   |    pricing_bridge/ Phase 7 예정                                        |
   +--------+------------+------------+------------+------------------------+
@@ -35,6 +36,7 @@
   |    llm/      echo                     (+ anthropic → Phase 3)         |
   |    search/   manual                   (+ web → Phase 3)               |
   |    intake/   text · html · pdf · office · session · registry          |
+  |    prompts/  prompt 파일 로딩 (core는 파일을 읽지 않는다)              |
   |                                       (+ pricing/ → Phase 7)          |
   +-----------------------------------------------------------------------+
 ```
@@ -147,6 +149,8 @@ provider가 아니다. 나머지 2개는 이 문서에 정의만 둔다 (구현 
 | 다른 LLM을 붙인다 | `adapters/llm/` 에 모듈 추가 |
 | 자체 방법론을 붙인다 | `adapters/knowledge/` 에 모듈 추가 |
 | 새 파일 형식을 지원한다 | `adapters/intake/` 에 파서 추가 + `registry.py` 등록 |
+| Prompt를 고친다 | `prompts/**/*.md`. 코드에 프롬프트 문자열을 쓰지 않는다 |
+| LLM 호출을 추가한다 | **`core/research/transmission.send()`를 거친다.** 다른 곳에서 provider를 직접 호출하면 `test_research_boundary.py`가 실패한다 |
 | 업로드 상한을 바꾼다 | `IntakePolicy`를 만들어 주입한다. `core/`는 환경변수를 읽지 않는다 |
 | UI 문구를 바꾼다 | `locales/ko.json` · `locales/en.json` |
 | MN 프레임워크 항목을 바꾼다 | `knowledge/master-notes/MN0*.json` |
@@ -203,7 +207,8 @@ chapters와 worksheet이 존재한다. `adapters/knowledge/handbook.py`는 그 *
 | Phase | 추가 | 상태 |
 |---|---|---|
 | 2 | `core/intake/` · `adapters/intake/` | **완료** |
-| 3 | `core/research/` · `adapters/llm/anthropic.py` · `adapters/search/web.py` | 예정 |
+| 3 | `core/research/` · `adapters/prompts/` | **완료** |
+| 3+ | `adapters/llm/anthropic.py` · `adapters/search/web.py` | 예정 |
 | 4–6 | `core/client/` | 예정 |
 | 7 | `core/pricing_bridge/` · `adapters/pricing/` | 예정 |
 | 8 | `reference-app/` · `adapters/storage/sqlite.py` | 예정 |
