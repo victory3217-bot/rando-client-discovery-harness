@@ -29,7 +29,7 @@ from core.research.confidence import cap, weakest
 from core.research.models import FlagCode, Rejection, RejectionCode, ReviewFlag
 from core.research.output_schemas import KEY_ISSUE_BATCH
 from core.research.policy import DEFAULT_RESEARCH_POLICY, PromptSet, ResearchPolicy
-from core.research.transmission import send
+from core.transmission import send
 
 #: Wordings that often signal a decision being asserted rather than supported.
 #:

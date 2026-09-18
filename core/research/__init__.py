@@ -7,7 +7,7 @@ is enforced by the type of thing each function accepts rather than by a rule in 
 
 Pure, like the rest of ``core``: no file access, no environment, no network, no logging. The
 LLM arrives as an injected provider and every call to it goes through
-:mod:`core.research.transmission`, the single point at which document text leaves this process.
+:mod:`core.transmission`, the single point at which document text leaves this process.
 
 Prompts are passed in as text (:class:`~core.research.policy.PromptSet`). The core cannot read
 ``prompts/*.md`` itself, and inventing a provider interface to fetch three strings would be
@@ -57,7 +57,7 @@ from core.research.sources import (
     source_from_search_result,
 )
 from core.research.synthesize import derive_key_issues, looks_like_a_directive
-from core.research.transmission import TransmissionRecord, send
+from core.transmission import TransmissionRecord, send
 
 __all__ = [
     "ALL_OUTPUT_SCHEMAS",

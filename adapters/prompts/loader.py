@@ -11,13 +11,21 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from core.client.policy import ClientPromptSet
 from core.research.policy import PromptSet
 
-#: Stage name -> path relative to the prompts directory.
+#: Research stage -> path relative to the prompts directory.
 PROMPT_FILES = {
     "extract_findings": "research/extract-findings.md",
     "classify_swot": "diagnosis/classify-swot.md",
     "derive_key_issues": "diagnosis/derive-key-issues.md",
+}
+
+#: Client discovery stage -> path relative to the prompts directory.
+CLIENT_PROMPT_FILES = {
+    "build_criteria": "discovery/build-criteria.md",
+    "find_organizations": "discovery/find-organizations.md",
+    "assess_fit": "discovery/assess-fit.md",
 }
 
 
@@ -42,3 +50,10 @@ def load_prompt_set(prompts_dir: str | Path) -> PromptSet:
     root = Path(prompts_dir)
     texts = {stage: load_prompt_text(root / rel) for stage, rel in PROMPT_FILES.items()}
     return PromptSet(**texts)
+
+
+def load_client_prompt_set(prompts_dir: str | Path) -> ClientPromptSet:
+    """Every prompt the client-discovery pipeline needs, read the same way."""
+    root = Path(prompts_dir)
+    texts = {stage: load_prompt_text(root / rel) for stage, rel in CLIENT_PROMPT_FILES.items()}
+    return ClientPromptSet(**texts)

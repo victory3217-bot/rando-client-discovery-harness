@@ -66,7 +66,7 @@ assert isinstance(MyOrgStorage(), StorageProvider)   # 런타임 구조 검사
 | `intake/office.py` | DocumentParser | DOCX · PPTX · XLSX. package 내부로 타입 판별 |
 | `intake/session.py` | — | request 수명 · batch 상한 · 버퍼 해제 |
 | `intake/safe_logging.py` | — | 로그 allowlist |
-| `prompts/loader.py` | — | `prompts/**/*.md` 로딩. core는 파일을 읽지 않으므로 여기서 읽어 주입한다 |
+| `prompts/loader.py` | — | `prompts/**/*.md` 로딩 (research + discovery). core는 파일을 읽지 않으므로 여기서 읽어 주입한다 |
 
 ### Intake adapter를 추가할 때
 

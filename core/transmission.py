@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 """The one place document text leaves this process.
 
-Phase 3 is where extracted text first reaches an external provider. Rather than let each stage
-call the LLM itself, every stage goes through :func:`send`. One funnel means one place to audit,
-one place to add redaction if it is ever needed, and one place that records what went out.
+Research (Phase 3) and client discovery (Phase 4) both send evidence to a provider, and both
+go through :func:`send`. One funnel means one place to audit, one place to add redaction if it
+is ever needed, and one place that records what went out.
 
-``tests/test_research_boundary.py`` parses ``core/research/*.py`` and fails if any module other
-than this one calls ``analyze`` or ``generate_structured``. A boundary nobody can bypass is
-worth more than a boundary everyone is asked to respect.
+``tests/test_transmission_boundary.py`` parses **every module under ``core/``** and fails if any
+of them other than this one calls ``analyze`` or ``generate_structured``. A boundary nobody can
+bypass is worth more than a boundary everyone is asked to respect — and scanning all of ``core``
+rather than one package means a new engine cannot quietly open a second channel.
 
 Zero-persistence is not zero-transmission, and this harness cannot make promises about what a
 provider does with what it receives. Retention, training use, data residency and enterprise

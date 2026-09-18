@@ -196,6 +196,22 @@ Company Capability x Product/Solution x Market Opportunity
 Problem Fit · Solution Fit · Capability Fit · Market Attractiveness ·
 Purchasing Potential · Accessibility · Competitive Situation · Evidence Quality
 
+조직명에 대한 두 가지 규칙:
+
+| 규칙 | |
+|---|---|
+| **근거에 없는 이름은 후보가 아니다** | 조직명은 인용된 구절에 **토큰 단위로**, **본문의 이름 전체를 설명하며** 존재해야 한다. Unicode·공백 정규화, 제한적 법인격 접미사, 닫힌 조사 목록까지만 허용하고, alias·fuzzy·embedding·LLM entity resolution은 쓰지 않는다. 모델의 일반지식은 여기서 근거가 아니다 |
+| **검색 snippet만으로는 최우선이 되지 못한다** | 후보로 남고 P2까지 갈 수 있으나, P1에는 원문 확인이 필요하다 |
+
+`sales_priority`는 **숫자 가중합이 아니라 규칙표**로 정한다 (`core/client/priority.py`). Band는
+**영업 지시가 아니라 검토 순서**이며, 접근 여부는 사람이 결정한다.
+
+Entity-level 집계 필드(`finding_ids` · `missing_evidence`)는 **pipeline이 파생**시킨다. 같은
+관계를 두 곳에 따로 쓰면 어긋나므로, canonical 관계는 하위 구조에 한 번만 둔다.
+
+모델 출력이 스키마의 길이 계약을 위반하면 **잘라서 저장하지 않는다.** 잘린 문장은 아무도 쓰지
+않은 주장이다. 해당 출력을 폐기하고 safe code를 기록한 뒤 안전한 값으로 degrade한다.
+
 국내·외는 **같은 Engine**을 쓴다. `market_scope`와 국가 필드로 구분하고, International일 때만
 regulation · certification · tariff · logistics · exchange_rate · local_partner ·
 distribution_structure · local_price · purchasing_power · entry_barrier 필드를 추가로 채운다.
@@ -226,7 +242,9 @@ distribution_structure · local_price · purchasing_power · entry_barrier 필�
 - 비공개 제안서 · 비공개 Master Note 전문
 - 특정 조직의 Production 정보 · Credential · 내부 설정
 
-`examples/`의 Sample Data는 **완전히 가상의 정보만** 사용한다. `.gitignore`가 업로드 확장자와
+`examples/`의 Sample Data와 `tests/`의 Fixture는 **완전히 가상의 정보만** 사용한다. 거부되는
+쪽의 예시도 마찬가지다 — hallucination 테스트에 실제 기업명을 쓸 이유가 없고, 검증은 그 이름이
+유명한지가 아니라 구절에 있는지만 본다. `.gitignore`가 업로드 확장자와
 `clients/` · `uploads/`를 선제적으로 차단하지만, 최종 책임은 커밋하는 사람에게 있다.
 
 ---

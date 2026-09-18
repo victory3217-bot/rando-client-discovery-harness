@@ -92,6 +92,23 @@ class RejectionCode:
     MISSING_DECISION_AREA = "MISSING_DECISION_AREA"
     MISSING_STRATEGIC_IMPLICATION = "MISSING_STRATEGIC_IMPLICATION"
 
+    # -- client discovery --------------------------------------------------
+    #: A name the evidence does not contain. The characteristic discovery failure: a
+    #: plausible, often real company that no supplied document mentions.
+    NAME_NOT_IN_EVIDENCE = "NAME_NOT_IN_EVIDENCE"
+    DUPLICATE_ASSESSMENT = "DUPLICATE_ASSESSMENT"
+    #: A favourable purchasing or accessibility rating with no named signal behind it.
+    NO_QUALIFYING_SIGNAL = "NO_QUALIFYING_SIGNAL"
+    #: The assembled candidate failed its own invariants, so nothing is stored.
+    CANDIDATE_INVALID = "CANDIDATE_INVALID"
+    #: A reason longer than the schema allows. Recorded rather than trimmed: shortening a
+    #: provider's text changes what the record claims, and a claim nobody wrote is worse than
+    #: a criterion that honestly reads UNKNOWN.
+    REASON_TOO_LONG = "REASON_TOO_LONG"
+    #: The same for the candidate's discovery rationale, which has no degraded form to fall
+    #: back on — a candidate without one is not a candidate, so it is refused whole.
+    RATIONALE_TOO_LONG = "RATIONALE_TOO_LONG"
+
 
 REJECTION_CODES = frozenset(
     value

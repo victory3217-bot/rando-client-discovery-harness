@@ -18,7 +18,7 @@ from core.models import SWOTCategory, SWOTIssue, ResearchFinding
 from core.research.models import Rejection, RejectionCode
 from core.research.output_schemas import SWOT_BATCH
 from core.research.policy import DEFAULT_RESEARCH_POLICY, PromptSet, ResearchPolicy
-from core.research.transmission import send
+from core.transmission import send
 
 
 def classify_swot(

@@ -30,7 +30,7 @@ from core.research.models import EvidenceBlock, EvidenceEntry, Rejection, Reject
 from core.research.output_schemas import FINDING_BATCH, INFERENCE_BATCH
 from core.research.policy import DEFAULT_RESEARCH_POLICY, PromptSet, ResearchPolicy
 from core.research.select import dimension_brief
-from core.research.transmission import send
+from core.transmission import send
 
 #: Types pass 1 may emit. INFERENCE is not among them and is not in the schema either.
 _PASS1_TYPES = {
