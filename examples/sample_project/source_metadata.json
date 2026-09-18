@@ -1,0 +1,58 @@
+[
+  {
+    "source_id": "src_s01",
+    "project_id": "prj_sample",
+    "file_type": "PDF",
+    "file_size": 2418562,
+    "source_category": "COMPANY_DATA",
+    "page_count": 28,
+    "source_date": "2026-03-11",
+    "detected_lang": "ko",
+    "processing_status": "PURGED",
+    "error_code": null,
+    "ingested_at": "2026-09-18T09:02:00+00:00",
+    "schema_version": "0.1"
+  },
+  {
+    "source_id": "src_s02",
+    "project_id": "prj_sample",
+    "file_type": "PPTX",
+    "file_size": 9114003,
+    "source_category": "CONSULTING_OUTPUT",
+    "page_count": 41,
+    "source_date": "2026-06-30",
+    "detected_lang": "ko",
+    "processing_status": "PURGED",
+    "error_code": null,
+    "ingested_at": "2026-09-18T09:02:11+00:00",
+    "schema_version": "0.1"
+  },
+  {
+    "source_id": "src_s03",
+    "project_id": "prj_sample",
+    "file_type": "XLSX",
+    "file_size": 184320,
+    "source_category": "EXTERNAL_BUSINESS_DATA",
+    "page_count": null,
+    "source_date": "2026-05-20",
+    "detected_lang": "en",
+    "processing_status": "PURGED",
+    "error_code": null,
+    "ingested_at": "2026-09-18T09:02:25+00:00",
+    "schema_version": "0.1"
+  },
+  {
+    "source_id": "src_s04",
+    "project_id": "prj_sample",
+    "file_type": "PDF",
+    "file_size": 51200,
+    "source_category": "EXTERNAL_BUSINESS_DATA",
+    "page_count": null,
+    "source_date": null,
+    "detected_lang": null,
+    "processing_status": "FAILED",
+    "error_code": "EXTRACT_NO_TEXT_LAYER",
+    "ingested_at": "2026-09-18T09:02:31+00:00",
+    "schema_version": "0.1"
+  }
+]

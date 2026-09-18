@@ -1,0 +1,54 @@
+[
+  {
+    "issue_id": "swt_s01",
+    "project_id": "prj_sample",
+    "category": "STRENGTH",
+    "statement": "다항목 단일 모듈 측정 역량과 국내 상수도 납품 실적을 함께 보유하고 있다.",
+    "finding_ids": ["fnd_s01"],
+    "key_issue": "이 역량이 국내 단가 경쟁이 아닌 시장에서 값을 받을 수 있는가",
+    "strategic_implication": "동일 제품으로 단가 경쟁이 덜한 시장을 찾는 것이 우선 과제다.",
+    "mn_basis": ["MN02"],
+    "lang": "ko",
+    "created_at": "2026-09-18T09:10:00+00:00",
+    "schema_version": "0.1"
+  },
+  {
+    "issue_id": "swt_s02",
+    "project_id": "prj_sample",
+    "category": "WEAKNESS",
+    "statement": "국내 매출 구조가 조달 단가에 묶여 있어 매출이 늘어도 마진이 줄고 있다.",
+    "finding_ids": ["fnd_s02"],
+    "key_issue": "마진을 회복할 수 있는 가격구조·시장을 확보하지 못하면 성장이 손실을 키운다",
+    "strategic_implication": "가격 결정권을 가질 수 있는 거래 구조가 필요하다. 가격 검토는 Pricing Harness로 넘긴다.",
+    "mn_basis": ["MN06", "MN07"],
+    "lang": "ko",
+    "created_at": "2026-09-18T09:10:10+00:00",
+    "schema_version": "0.1"
+  },
+  {
+    "issue_id": "swt_s03",
+    "project_id": "prj_sample",
+    "category": "OPPORTUNITY",
+    "statement": "메콩델타 상수도 사업자는 수동 채수에 의존하고 있고, 현지 경쟁사는 단항목 측정기 위주다.",
+    "finding_ids": ["fnd_s03", "fnd_s04"],
+    "key_issue": "수동 채수 부담이 실제 구매 예산으로 이어지는 조직이 어디인가",
+    "strategic_implication": "문제 심각도가 확인된 사업자를 우선 Client 후보로 본다.",
+    "mn_basis": ["MN03", "MN04"],
+    "lang": "ko",
+    "created_at": "2026-09-18T09:10:20+00:00",
+    "schema_version": "0.1"
+  },
+  {
+    "issue_id": "swt_s04",
+    "project_id": "prj_sample",
+    "category": "THREAT",
+    "statement": "현지 인증·형식승인 요건과 실제 접근 채널이 확인되지 않아 진입 경로가 불확실하다.",
+    "finding_ids": ["fnd_s05", "fnd_s06"],
+    "key_issue": "인증 요건을 모르는 상태에서는 제안 일정과 원가를 확정할 수 없다",
+    "strategic_implication": "제안 전에 인증 요건 확인을 선행 과제로 둔다. 근거 없는 일정 약속을 하지 않는다.",
+    "mn_basis": ["MN02", "MN05"],
+    "lang": "ko",
+    "created_at": "2026-09-18T09:10:30+00:00",
+    "schema_version": "0.1"
+  }
+]

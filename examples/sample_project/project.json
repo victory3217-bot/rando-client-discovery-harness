@@ -1,0 +1,12 @@
+{
+  "project_id": "prj_sample",
+  "company_name": "리버스톤센싱 (Riverstone Sensing) — 가상 회사",
+  "market_scope": ["DOMESTIC", "INTERNATIONAL"],
+  "target_countries": ["VN", "ID"],
+  "target_industries": ["상하수도", "환경계측"],
+  "ui_lang": "ko",
+  "output_lang": "ko",
+  "storage_mode": "EPHEMERAL",
+  "created_at": "2026-09-18T09:00:00+00:00",
+  "schema_version": "0.1"
+}
