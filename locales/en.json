@@ -38,6 +38,27 @@
       "DEFERRED": "Deferred",
       "UNKNOWN": "Undecided"
     },
+    "FitCriterion": {
+      "PROBLEM_FIT": "Problem fit",
+      "SOLUTION_FIT": "Solution fit",
+      "CAPABILITY_FIT": "Capability fit",
+      "MARKET_ATTRACTIVENESS": "Market attractiveness",
+      "PURCHASING_POTENTIAL": "Purchasing potential",
+      "ACCESSIBILITY": "Accessibility",
+      "COMPETITIVE_SITUATION": "Competitive situation",
+      "EVIDENCE_QUALITY": "Evidence quality"
+    },
+    "PriorityReasonCode": {
+      "CORE_FIT_POSITIVE": "Problem, solution and capability fit are supported by evidence.",
+      "CORE_FIT_WEAK": "At least one of the core fits is clearly unfavourable.",
+      "COMMERCIAL_SIGNAL_CONFIRMED": "Purchasing potential or an access route is backed by direct evidence.",
+      "PURCHASE_EVIDENCE_NEEDED": "More evidence is needed before purchasing potential can be judged.",
+      "ACCESS_EVIDENCE_NEEDED": "More evidence is needed to establish a route to the buyer.",
+      "COMPETITIVE_BARRIER": "An entrenched supplier or switching barrier has been found.",
+      "INSUFFICIENT_EVIDENCE": "There is not enough evidence to judge this candidate.",
+      "SNIPPET_ONLY_LIMITATION": "The evidence is search snippets only, so this is not placed first before the sources are read.",
+      "IDENTITY_VERIFICATION_NEEDED": "Which legal entity this is has not been established."
+    },
     "SourceCategory": {
       "CONSULTING_OUTPUT": "Consulting output",
       "COMPANY_DATA": "Company data",
@@ -163,7 +184,10 @@
     },
     "pipeline": {
       "title": "Client pipeline",
-      "priority": "Priority"
+      "priority": "Priority",
+      "fit": "Fit",
+      "discovery_rationale": "Discovery rationale",
+      "identity": "Organization identity"
     },
     "proposal": {
       "title": "Proposal strategy",

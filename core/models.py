@@ -28,7 +28,7 @@ import types
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any, Optional, Union, get_args, get_origin, get_type_hints
+from typing import Any, Iterable, Optional, Union, get_args, get_origin, get_type_hints
 from uuid import uuid4
 
 SCHEMA_VERSION = "0.1"
@@ -159,11 +159,57 @@ class SWOTCategory(str, Enum):
 
 
 class SalesPriority(str, Enum):
+    """A review band, not an instruction.
+
+    ``P1`` says the evidence currently supports looking at this client first — not that anyone
+    should sell to them. The decision stays with a person.
+    """
+
     P1 = "P1"
     P2 = "P2"
     P3 = "P3"
     DEFERRED = "DEFERRED"
     UNKNOWN = "UNKNOWN"
+
+
+class FitCriterion(str, Enum):
+    """The eight things a client candidate is assessed on.
+
+    **All eight point the same way.** ``STRONG`` always means favourable for business
+    development, never "a lot of" whatever the criterion measures. ``COMPETITIVE_SITUATION`` is
+    the one that catches people out: strong competition is ``WEAK``, because the criterion asks
+    whether the competitive landscape favours us — a dominant incumbent with high switching
+    costs is a bad situation, however impressive it is.
+    """
+
+    PROBLEM_FIT = "PROBLEM_FIT"
+    SOLUTION_FIT = "SOLUTION_FIT"
+    CAPABILITY_FIT = "CAPABILITY_FIT"
+    MARKET_ATTRACTIVENESS = "MARKET_ATTRACTIVENESS"
+    PURCHASING_POTENTIAL = "PURCHASING_POTENTIAL"
+    ACCESSIBILITY = "ACCESSIBILITY"
+    COMPETITIVE_SITUATION = "COMPETITIVE_SITUATION"
+    EVIDENCE_QUALITY = "EVIDENCE_QUALITY"
+
+
+class PriorityReasonCode(str, Enum):
+    """Why a candidate landed in the band it did.
+
+    Codes rather than sentences. The core does not write prose a person reads — it returns
+    stable values and ``locales/*.json`` renders them, the same rule that applies to every other
+    enum here. A Korean-language sentence baked into a priority engine would be a user-facing
+    string in the one layer that is supposed to have none.
+    """
+
+    CORE_FIT_POSITIVE = "CORE_FIT_POSITIVE"
+    CORE_FIT_WEAK = "CORE_FIT_WEAK"
+    COMMERCIAL_SIGNAL_CONFIRMED = "COMMERCIAL_SIGNAL_CONFIRMED"
+    PURCHASE_EVIDENCE_NEEDED = "PURCHASE_EVIDENCE_NEEDED"
+    ACCESS_EVIDENCE_NEEDED = "ACCESS_EVIDENCE_NEEDED"
+    COMPETITIVE_BARRIER = "COMPETITIVE_BARRIER"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    SNIPPET_ONLY_LIMITATION = "SNIPPET_ONLY_LIMITATION"
+    IDENTITY_VERIFICATION_NEEDED = "IDENTITY_VERIFICATION_NEEDED"
 
 
 class SourceCategory(str, Enum):
@@ -250,30 +296,92 @@ class EvidenceRef:
     note: Optional[str] = None
 
 
+#: Longest interpretation kept on a fit assessment.
+#:
+#: A reason is a reading of the evidence, not a copy of it. The cap is what stops a long
+#: passage being pasted into a persisted record and quietly becoming a second store of document
+#: text — see ``docs/privacy.md``.
+MAX_FIT_REASON_CHARS = 500
+
+
 @dataclass
-class FitScreening:
-    """First three of the eight prioritisation criteria (HARNESS.md section 7)."""
+class FitAssessment:
+    """One of the eight criteria, with the evidence behind the judgement.
 
-    problem_fit: FitLevel = FitLevel.UNKNOWN
-    solution_fit: FitLevel = FitLevel.UNKNOWN
-    capability_fit: FitLevel = FitLevel.UNKNOWN
+    A bare level says nothing a reader can check. ``STRONG`` with no reference is an opinion;
+    ``STRONG`` with two finding ids is a claim someone can go and verify.
 
-
-@dataclass
-class PriorityEvaluation:
-    """Remaining five criteria plus the human-assigned priority.
-
-    ``sales_priority`` is a decision, not a computed value. Nothing in this harness derives it
-    from the five ratings — a person does.
+    ``source_ids`` and ``finding_ids`` here are the evidence for *this criterion*, which is a
+    different question from why the organization is in the pool at all — that is
+    :attr:`ClientCandidate.source_ids`.
     """
 
-    market_attractiveness: FitLevel = FitLevel.UNKNOWN
-    purchasing_potential: FitLevel = FitLevel.UNKNOWN
-    accessibility: FitLevel = FitLevel.UNKNOWN
-    competitive_situation: FitLevel = FitLevel.UNKNOWN
-    evidence_quality: FitLevel = FitLevel.UNKNOWN
-    sales_priority: SalesPriority = SalesPriority.UNKNOWN
-    rationale: Optional[str] = None
+    criterion: FitCriterion
+    level: FitLevel = FitLevel.UNKNOWN
+    reason: Optional[str] = None
+    finding_ids: list[str] = field(default_factory=list)
+    source_ids: list[str] = field(default_factory=list)
+    missing_evidence: list[str] = field(default_factory=list)
+
+
+def aggregate_finding_ids(fit: Iterable["FitAssessment"]) -> list[str]:
+    """The canonical candidate-level ``finding_ids``: sorted unique union of the assessments'.
+
+    Candidate-level evidence fields are **derived, not authored.** The same ids otherwise get
+    produced twice — once per criterion and once for the candidate — and the two copies drift
+    the moment an assessment is revised. So there is one canonical place for the evidence
+    relationship (each :class:`FitAssessment`) and one function that rolls it up.
+
+    Sorted rather than insertion-ordered so that the same eight assessments always produce the
+    same list, whatever order they were assembled in.
+    """
+    return sorted({fid for assessment in fit for fid in assessment.finding_ids if fid})
+
+
+def aggregate_missing_evidence(fit: Iterable["FitAssessment"]) -> list[str]:
+    """The canonical missing-evidence set: sorted unique union of the assessments'.
+
+    :attr:`ClientCandidate.missing_evidence` and :attr:`PriorityDecision.missing_evidence` both
+    come from here, so a gap is stated once and cannot be reported differently in two places.
+    """
+    return sorted(
+        {
+            gap.strip()
+            for assessment in fit
+            for gap in assessment.missing_evidence
+            if gap and gap.strip()
+        }
+    )
+
+
+@dataclass
+class PriorityDecision:
+    """Which review band this candidate falls in, and why.
+
+    Computed by an explicit rule table (``core/client/priority.py``), never by a model and never
+    by a weighted score. The reasons are codes; the sentences a person reads come from
+    ``locales/*.json``.
+    """
+
+    band: SalesPriority = SalesPriority.UNKNOWN
+    reason_codes: list[PriorityReasonCode] = field(default_factory=list)
+    #: Derived from the assessments by :func:`aggregate_missing_evidence`, never written
+    #: independently — see that function for why.
+    missing_evidence: list[str] = field(default_factory=list)
+
+
+@dataclass
+class OrganizationIdentity:
+    """What is actually known about which legal entity this is.
+
+    Two firms share a brand, one group has a dozen subsidiaries, and picking the wrong one
+    wastes an approach. Every field is optional and stays ``None`` when the evidence does not
+    say — a guessed domain is worse than an absent one, because it looks like a fact.
+    """
+
+    legal_name: Optional[str] = None
+    domain: Optional[str] = None
+    organization_identifier: Optional[str] = None
 
 
 @dataclass
@@ -463,6 +571,24 @@ class ClientCandidate:
     ``discovery_rationale`` answers the only question that matters here: what of ours can be
     sold to which problem of theirs. A name with no rationale is a company list entry, not a
     candidate.
+
+    Three different "why" questions have three different answers, and keeping them apart is
+    what makes a candidate auditable:
+
+    ``source_ids``
+        **Discovery and identity provenance only.** The sources in which this organization was
+        actually named, which is what proves it exists rather than having been invented. It is
+        *not* a bucket for every piece of evidence behind every criterion.
+    ``FitAssessment.source_ids`` / ``FitAssessment.finding_ids``
+        Why a particular criterion got the level it did.
+    ``key_issue_ids``
+        Which decisions from the diagnosis sent us looking for an organization like this.
+
+    ``finding_ids`` and ``missing_evidence`` are **derived** from the assessments by
+    :func:`aggregate_finding_ids` and :func:`aggregate_missing_evidence`. They are a convenience
+    for readers and for later phases; the canonical evidence relationship lives on each
+    :class:`FitAssessment`, and ``core.evidence.check_client_candidate`` refuses a candidate
+    whose aggregates disagree with it. Nothing asks a model for them.
     """
 
     project_id: str
@@ -470,15 +596,28 @@ class ClientCandidate:
     country: str
     industry: str
     discovery_rationale: str
+    #: Sources that name this organization. At least one is required — see the class docstring.
+    source_ids: list[str] = field(default_factory=list)
     market_scope: MarketScope = MarketScope.DOMESTIC
+    #: Derived: the sorted union of every assessment's finding_ids.
     finding_ids: list[str] = field(default_factory=list)
-    fit_screening: FitScreening = field(default_factory=FitScreening)
-    priority: PriorityEvaluation = field(default_factory=PriorityEvaluation)
+    key_issue_ids: list[str] = field(default_factory=list)
+    fit: list[FitAssessment] = field(default_factory=list)
+    priority: PriorityDecision = field(default_factory=PriorityDecision)
+    identity: Optional[OrganizationIdentity] = None
+    #: Derived: the sorted union of every assessment's missing_evidence.
+    missing_evidence: list[str] = field(default_factory=list)
     status: ClientStatus = ClientStatus.CANDIDATE
     client_id: str = field(default_factory=lambda: new_id("cli"))
     lang: str = "ko"
     created_at: str = field(default_factory=utc_now)
     schema_version: str = SCHEMA_VERSION
+
+    def fit_for(self, criterion: FitCriterion) -> Optional[FitAssessment]:
+        for assessment in self.fit:
+            if assessment.criterion is criterion:
+                return assessment
+        return None
 
 
 @dataclass

@@ -17,15 +17,20 @@ from typing import Iterable, Optional
 
 from core.errors import EvidenceRuleViolation
 from core.models import (
+    MAX_FIT_REASON_CHARS,
     ClientAnalysis,
     ClientCandidate,
     EvidenceType,
+    FitCriterion,
+    FitLevel,
     KeyIssue,
     ProposalStrategy,
     ResearchFinding,
     SourceMetadata,
     SourceOrigin,
     SWOTIssue,
+    aggregate_finding_ids,
+    aggregate_missing_evidence,
 )
 
 #: The only evidence type that names a source document directly.
@@ -245,8 +250,22 @@ def check_key_issue(
 def check_client_candidate(
     candidate: ClientCandidate,
     known_finding_ids: Optional[Iterable[str]] = None,
+    known_source_ids: Optional[Iterable[str]] = None,
 ) -> list[str]:
-    """A candidate needs a rationale and at least one finding behind it."""
+    """A named organization has to be one the evidence actually names.
+
+    ``source_ids`` is the control that matters most here. It means **discovery and identity
+    provenance**: the sources in which this organization appeared. Requiring at least one is
+    what makes an invented company name unable to become a stored candidate, because a name
+    nothing mentions has no source to cite.
+
+    Evidence for a *criterion* lives on the assessment, not here. The two answer different
+    questions and conflating them would hide the first behind the volume of the second.
+
+    ``finding_ids`` and ``missing_evidence`` are checked against the assessments rather than
+    read as independent facts. They are derived fields, and a derived field that disagrees with
+    its source is how a record starts claiming two different things at once.
+    """
     violations: list[str] = []
 
     if not candidate.discovery_rationale.strip():
@@ -254,6 +273,19 @@ def check_client_candidate(
             f"client {candidate.client_id}: discovery_rationale is empty — a company name "
             "without a rationale is an industry list entry, not a candidate"
         )
+
+    if not candidate.source_ids:
+        violations.append(
+            f"client {candidate.client_id}: source_ids is empty — a candidate must name the "
+            "sources this organization appeared in, or it is a name somebody made up"
+        )
+    elif known_source_ids is not None:
+        known = set(known_source_ids)
+        unknown = [sid for sid in candidate.source_ids if sid not in known]
+        if unknown:
+            violations.append(
+                f"client {candidate.client_id}: references unknown source_ids {unknown}"
+            )
 
     if not candidate.finding_ids:
         violations.append(f"client {candidate.client_id}: finding_ids is empty")
@@ -263,6 +295,73 @@ def check_client_candidate(
         if unknown:
             violations.append(
                 f"client {candidate.client_id}: references unknown finding_ids {unknown}"
+            )
+
+    violations.extend(_check_fit(candidate))
+    violations.extend(_check_derived_aggregates(candidate))
+    return violations
+
+
+def _check_derived_aggregates(candidate: ClientCandidate) -> list[str]:
+    """The candidate-level roll-ups must be exactly what the assessments add up to."""
+    violations: list[str] = []
+
+    expected_findings = aggregate_finding_ids(candidate.fit)
+    if candidate.finding_ids and candidate.finding_ids != expected_findings:
+        violations.append(
+            f"client {candidate.client_id}: finding_ids is not the sorted union of the "
+            "assessments' finding_ids — it is derived from them, not authored separately"
+        )
+
+    expected_missing = aggregate_missing_evidence(candidate.fit)
+    if candidate.missing_evidence != expected_missing:
+        violations.append(
+            f"client {candidate.client_id}: missing_evidence is not the sorted union of the "
+            "assessments' missing_evidence"
+        )
+    if candidate.priority.missing_evidence != expected_missing:
+        violations.append(
+            f"client {candidate.client_id}: priority.missing_evidence diverges from the "
+            "assessments — both derive from the same canonical set"
+        )
+
+    return violations
+
+
+def _check_fit(candidate: ClientCandidate) -> list[str]:
+    """All eight criteria, each with what its level requires."""
+    violations: list[str] = []
+
+    seen = [assessment.criterion for assessment in candidate.fit]
+    missing = [c.value for c in FitCriterion if c not in seen]
+    if missing:
+        violations.append(
+            f"client {candidate.client_id}: no assessment for {missing} — a criterion nobody "
+            "looked at must say UNKNOWN, not be absent"
+        )
+    duplicated = sorted({c.value for c in seen if seen.count(c) > 1})
+    if duplicated:
+        violations.append(f"client {candidate.client_id}: duplicate assessments for {duplicated}")
+
+    for assessment in candidate.fit:
+        name = assessment.criterion.value
+        if assessment.level in (FitLevel.STRONG, FitLevel.MODERATE):
+            if not (assessment.finding_ids or assessment.source_ids):
+                violations.append(
+                    f"client {candidate.client_id}: {name} is {assessment.level.value} with no "
+                    "finding_ids or source_ids — a favourable rating nobody can check is an "
+                    "opinion"
+                )
+        if assessment.level is FitLevel.EVIDENCE_NEEDED and not assessment.missing_evidence:
+            violations.append(
+                f"client {candidate.client_id}: {name} is EVIDENCE_NEEDED but does not say "
+                "what evidence would settle it"
+            )
+        if assessment.reason and len(assessment.reason) > MAX_FIT_REASON_CHARS:
+            violations.append(
+                f"client {candidate.client_id}: {name} reason exceeds "
+                f"{MAX_FIT_REASON_CHARS} characters — a reason is an interpretation, not a "
+                "copy of the passage"
             )
 
     return violations

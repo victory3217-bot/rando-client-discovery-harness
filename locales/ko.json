@@ -38,6 +38,27 @@
       "DEFERRED": "보류",
       "UNKNOWN": "미정"
     },
+    "FitCriterion": {
+      "PROBLEM_FIT": "문제 정합성",
+      "SOLUTION_FIT": "솔루션 정합성",
+      "CAPABILITY_FIT": "역량 정합성",
+      "MARKET_ATTRACTIVENESS": "시장 매력도",
+      "PURCHASING_POTENTIAL": "구매 가능성",
+      "ACCESSIBILITY": "접근 가능성",
+      "COMPETITIVE_SITUATION": "경쟁 상황",
+      "EVIDENCE_QUALITY": "근거 품질"
+    },
+    "PriorityReasonCode": {
+      "CORE_FIT_POSITIVE": "핵심 정합성(문제·솔루션·역량)이 근거로 확인되었습니다.",
+      "CORE_FIT_WEAK": "핵심 정합성 중 부적합이 확인된 항목이 있습니다.",
+      "COMMERCIAL_SIGNAL_CONFIRMED": "구매 가능성 또는 접근경로가 직접 근거로 확인되었습니다.",
+      "PURCHASE_EVIDENCE_NEEDED": "구매 가능성을 판단할 근거가 더 필요합니다.",
+      "ACCESS_EVIDENCE_NEEDED": "실제 접근경로를 확인할 근거가 더 필요합니다.",
+      "COMPETITIVE_BARRIER": "기존 공급자·전환장벽 등 불리한 경쟁구조가 확인되었습니다.",
+      "INSUFFICIENT_EVIDENCE": "판단에 필요한 근거가 전반적으로 부족합니다.",
+      "SNIPPET_ONLY_LIMITATION": "근거가 검색 요약뿐이어서 원문 확인 전에는 최우선으로 두지 않습니다.",
+      "IDENTITY_VERIFICATION_NEEDED": "어느 법인인지 확인이 필요합니다."
+    },
     "SourceCategory": {
       "CONSULTING_OUTPUT": "컨설팅 결과",
       "COMPANY_DATA": "회사자료",
@@ -163,7 +184,10 @@
     },
     "pipeline": {
       "title": "Client 파이프라인",
-      "priority": "우선순위"
+      "priority": "우선순위",
+      "fit": "정합성",
+      "discovery_rationale": "발굴 근거",
+      "identity": "조직 식별"
     },
     "proposal": {
       "title": "제안전략",
