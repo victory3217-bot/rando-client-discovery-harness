@@ -19,10 +19,10 @@
   |    models.py     Entity 8개 + enum                                     |
   |    evidence.py   Evidence 불변식 검사                                  |
   |    harness.py    create_harness() — Adapter 조립 지점                  |
-  |    errors.py     예외 계층                                             |
+  |    errors.py     예외 계층 + Intake error code                         |
   |    interfaces/   Protocol (Core가 소유하는 계약)                       |
   |                                                                        |
-  |    intake/       Phase 2 예정                                          |
+  |    intake/       policy · models(전송객체) · extract   (순수)          |
   |    research/     Phase 3 예정  (ENGINE 1)                              |
   |    client/       Phase 4-6 예정 (ENGINE 2)                             |
   |    pricing_bridge/ Phase 7 예정                                        |
@@ -34,6 +34,7 @@
   |    knowledge/ static · handbook                                       |
   |    llm/      echo                     (+ anthropic → Phase 3)         |
   |    search/   manual                   (+ web → Phase 3)               |
+  |    intake/   text · html · pdf · office · session · registry          |
   |                                       (+ pricing/ → Phase 7)          |
   +-----------------------------------------------------------------------+
 ```
@@ -68,19 +69,30 @@
 
 ---
 
-## 3. Interface 6개
+## 3. Interface
 
-Core가 소유하는 계약이다. **Phase 1에서는 4개를 Protocol로 확정**하고, 나머지 2개는 이 문서에
-정의만 둔다 (구현 시점에 코드로 옮긴다).
+Core가 소유하는 계약이다. **4개가 harness로 조립되고**, `DocumentParser`는 계약이지만
+provider가 아니다. 나머지 2개는 이 문서에 정의만 둔다 (구현 시점에 코드로 옮긴다).
 
 | Interface | 상태 | 주요 메서드 | 파일 |
 |---|---|---|---|
-| **StorageProvider** | 구현 | `save_project` `get_project` `save_source_metadata` `get_source_metadata` `save_finding` `get_findings` `save_swot_issue` `get_swot_issues` `save_client` `get_clients` `save_client_analysis` `get_client_analysis` `save_proposal_strategy` `get_proposal_strategies` `save_pricing_result` `get_pricing_results` | `core/interfaces/storage.py` |
+| **StorageProvider** | 구현 | `save_project` `get_project` `save_source_metadata` `get_source_metadata` `save_finding` `get_findings` `save_swot_issue` `get_swot_issues` `save_client` `get_clients` `save_client_analysis` `get_client_analyses` `save_proposal_strategy` `get_proposal_strategies` `save_pricing_result` `get_pricing_results` | `core/interfaces/storage.py` |
 | **KnowledgeProvider** | 구현 | `get_framework(framework_id)` `list_frameworks()` | `core/interfaces/knowledge.py` |
 | **LLMProvider** | 구현 | `generate` `generate_structured` `analyze` `summarize` | `core/interfaces/llm.py` |
 | **SearchProvider** | 구현 | `search(query, scope, country, limit)` | `core/interfaces/search.py` |
+| **DocumentParser** | 구현 | `parse(data: bytes, *, file_type)` | `core/interfaces/intake.py` |
 | PricingProvider | Phase 7 | `to_pricing_input(strategy, cost_input)` `run_pricing(pricing_input)` | — |
 | ReportProvider | Phase 9 | `render(entity, lang, output_format)` | — |
+
+### DocumentParser는 provider가 아니다
+
+`create_harness()`는 여전히 **4개 provider**만 받는다. Intake는 request-scoped다 — 파일마다
+파서를 골라 쓰고 버린다. Harness 수명에 묶으면 있지도 않은 지속성을 암시하게 된다. 파서 선택은
+`adapters/intake/registry.py`가 담당한다.
+
+계약의 경계가 **경로가 아니라 `bytes`인 것**도 의도적이다. Core는 `bytes` 타입을 언급할 뿐
+아무것도 열지 않으며, 8종 전부 메모리에서 파싱되므로 이 구현이 임시 파일을 만들지 않는다.
+파서 시그니처에 `filename` 파라미터가 없어서 **원본 파일명이 구조적으로 유입 불가능**하다.
 
 ### Protocol을 쓰는 이유
 
@@ -105,6 +117,11 @@ Core가 소유하는 계약이다. **Phase 1에서는 4개를 Protocol로 확정
 | `adapters/knowledge/handbook.py` | Knowledge | 1 | `business-planning-handbook` 경로를 주입받아 CH 매핑을 덧붙인다 |
 | `adapters/llm/echo.py` | LLM | 1 | **결정적**. API 키·네트워크 없이 CI에서 전체 파이프라인을 돌린다 |
 | `adapters/search/manual.py` | Search | 1 | 사용자가 직접 붙여넣은 자료만 반환. 웹 검색을 하지 않는다 |
+| `adapters/intake/text.py` | DocumentParser | 2 | TXT · MD · CSV. stdlib만 사용 |
+| `adapters/intake/html.py` | DocumentParser | 2 | stdlib `html.parser`. script·style·noscript·주석 제외 |
+| `adapters/intake/pdf.py` | DocumentParser | 2 | pypdf. 텍스트 레이어만, OCR 없음 |
+| `adapters/intake/office.py` | DocumentParser | 2 | DOCX · PPTX · XLSX. package 내부로 타입 판별 + zip bomb 방어 |
+| `adapters/intake/session.py` | — | 2 | request 수명 · batch 상한 · 버퍼 해제 |
 | `adapters/llm/anthropic.py` | LLM | 3 | 예정 |
 | `adapters/search/web.py` | Search | 3 | 예정 |
 | `adapters/pricing/file.py` | Pricing | 7 | 예정. JSON 파일 계약 |
@@ -129,6 +146,8 @@ Core가 소유하는 계약이다. **Phase 1에서는 4개를 Protocol로 확정
 | 새 DB를 연결한다 | `adapters/storage/` 에 모듈 추가. `core/`는 건드리지 않는다 |
 | 다른 LLM을 붙인다 | `adapters/llm/` 에 모듈 추가 |
 | 자체 방법론을 붙인다 | `adapters/knowledge/` 에 모듈 추가 |
+| 새 파일 형식을 지원한다 | `adapters/intake/` 에 파서 추가 + `registry.py` 등록 |
+| 업로드 상한을 바꾼다 | `IntakePolicy`를 만들어 주입한다. `core/`는 환경변수를 읽지 않는다 |
 | UI 문구를 바꾼다 | `locales/ko.json` · `locales/en.json` |
 | MN 프레임워크 항목을 바꾼다 | `knowledge/master-notes/MN0*.json` |
 | Prompt를 바꾼다 | `prompts/<stage>/*.md` (코드에 프롬프트를 쓰지 않는다) |
@@ -179,13 +198,13 @@ chapters와 worksheet이 존재한다. `adapters/knowledge/handbook.py`는 그 *
 
 ## 7. Phase별로 추가될 디렉토리
 
-Phase 1은 **실제로 동작하는 것만** 만든다. 빈 패키지를 미리 만들어 두지 않는다.
+**실제로 동작하는 것만** 만든다. 빈 패키지를 미리 만들어 두지 않는다.
 
-| Phase | 추가 |
-|---|---|
-| 2 | `core/intake/` · `adapters/` 파일 파서 의존성 |
-| 3 | `core/research/` · `adapters/llm/anthropic.py` · `adapters/search/web.py` |
-| 4–6 | `core/client/` |
-| 7 | `core/pricing_bridge/` · `adapters/pricing/` |
-| 8 | `reference-app/` · `adapters/storage/sqlite.py` |
-| 9 | `core/interfaces/reporting.py` · `adapters/reporting/` |
+| Phase | 추가 | 상태 |
+|---|---|---|
+| 2 | `core/intake/` · `adapters/intake/` | **완료** |
+| 3 | `core/research/` · `adapters/llm/anthropic.py` · `adapters/search/web.py` | 예정 |
+| 4–6 | `core/client/` | 예정 |
+| 7 | `core/pricing_bridge/` · `adapters/pricing/` | 예정 |
+| 8 | `reference-app/` · `adapters/storage/sqlite.py` | 예정 |
+| 9 | `core/interfaces/reporting.py` · `adapters/reporting/` | 예정 |

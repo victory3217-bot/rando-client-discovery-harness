@@ -60,6 +60,34 @@ assert isinstance(MyOrgStorage(), StorageProvider)   # 런타임 구조 검사
 | `knowledge/handbook.py` | Knowledge | handbook 경로 주입. 다른 provider를 감싼다 |
 | `llm/echo.py` | LLM | 오프라인·결정적. API 키 불필요 |
 | `search/manual.py` | Search | 사용자가 제공한 자료만 반환 |
+| `intake/text.py` | DocumentParser | TXT · MD · CSV. stdlib만 |
+| `intake/html.py` | DocumentParser | stdlib `html.parser`. script·style·noscript·주석 제외 |
+| `intake/pdf.py` | DocumentParser | pypdf. 텍스트 레이어만 (OCR 없음) |
+| `intake/office.py` | DocumentParser | DOCX · PPTX · XLSX. package 내부로 타입 판별 |
+| `intake/session.py` | — | request 수명 · batch 상한 · 버퍼 해제 |
+| `intake/safe_logging.py` | — | 로그 allowlist |
+
+### Intake adapter를 추가할 때
+
+`DocumentParser`는 harness provider가 아니다 — `create_harness()`에 넣지 않고
+`adapters/intake/registry.py`에 등록한다.
+
+```python
+class MyFormatParser:
+    name = "myformat"
+    supported_types = frozenset({FileType.TXT})
+    def parse(self, data: bytes, *, file_type: FileType) -> ExtractedDocument: ...
+```
+
+지켜야 할 것 4가지:
+
+1. **`filename` 파라미터를 만들지 않는다.** 원본 파일명이 유입될 경로 자체를 두지 않는다.
+2. **파일을 직접 만들거나 열지 않는다.** `BytesIO`로 처리한다. `tests/test_intake_canary.py`가
+   `adapters/intake/**`의 `open()`·`tempfile`·`shutil` 사용을 AST로 금지한다. (라이브러리·런타임
+   내부 동작까지 통제하는 것은 아니다 — `docs/privacy.md` 1절.)
+3. **라이브러리 예외를 그대로 올리지 않는다.** `parser_guard`로 감싸 `IntakeError(code)`로
+   변환한다 — 예외 메시지에 문서 원문이 들어 있다.
+4. **라이브러리를 lazy import한다.** 미설치 시 `PARSER_UNAVAILABLE`이지 startup crash가 아니다.
 
 ## Phase별 예정
 

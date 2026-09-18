@@ -1,5 +1,25 @@
-# Phase 1 dependencies only. File-intake libraries (pypdf, python-docx,
-# python-pptx, openpyxl) are added in Phase 2 when core/intake/ is built —
-# see docs/development-guide.md.
-jsonschema>=4.20
-pytest>=8.0
+# Core has no third-party dependencies at all - tests/test_core_standalone.py enforces that.
+# Everything below is used by adapters or tests.
+
+jsonschema>=4.20      # schema validation (tests, adapters)
+pytest>=8.0           # tests
+
+# --- File intake parsers (Phase 2) ---
+# Licensing: BSD-3 / MIT, compatible with this repository's MIT licence. PyMuPDF extracts PDF
+# text better than pypdf but is AGPL-3.0, so it is deliberately not used - a dependency that
+# changes the terms for anyone embedding this harness outweighs extraction quality.
+#
+# Installation: this project requires no separate system binary. On the environments it targets
+# these install from pip wheels in the normal way. Note that the transitive tree is not
+# dependency-free: python-docx pulls in lxml, and python-pptx pulls in lxml, Pillow and
+# XlsxWriter, some of which ship compiled extensions. Wheels are published for the common
+# platforms, but this is not a guarantee that nothing is ever built from source.
+#
+# No OCR: Tesseract or any other external system binary is out of scope for Phase 2.
+#
+# Each parser imports its library lazily, so a deployment that only ingests CSV and TXT can
+# leave these uninstalled and gets a PARSER_UNAVAILABLE code instead of a startup failure.
+pypdf>=5.0            # BSD-3  PDF text layer (no OCR). No required runtime deps on Python 3.11+
+python-docx>=1.1      # MIT    DOCX. Requires lxml
+python-pptx>=1.0      # MIT    PPTX. Requires lxml, Pillow, XlsxWriter
+openpyxl>=3.1         # MIT    XLSX. Requires et-xmlfile
