@@ -23,3 +23,16 @@ pypdf>=5.0            # BSD-3  PDF text layer (no OCR). No required runtime deps
 python-docx>=1.1      # MIT    DOCX. Requires lxml
 python-pptx>=1.0      # MIT    PPTX. Requires lxml, Pillow, XlsxWriter
 openpyxl>=3.1         # MIT    XLSX. Requires et-xmlfile
+
+# --- LLM adapters (Phase 8) ---
+# Nothing here. adapters/llm/anthropic.py speaks to the Messages API with the standard
+# library: it is one POST with a JSON body, and it takes its transport as a constructor
+# argument, so an organisation that prefers the official SDK installs and injects it without
+# this file changing. The SDK was measured rather than guessed at - it resolves to 13
+# packages including two compiled extensions - and its default retry behaviour is not zero,
+# which this harness needs it to be: a retry re-sends the client's evidence. See
+# adapters/README.md.
+#
+# jsonschema above is what validates structured output against the requested schema. Without
+# it the adapter stops with LLM_SCHEMA_VALIDATOR_UNAVAILABLE rather than returning a value it
+# has not checked.

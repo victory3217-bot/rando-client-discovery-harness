@@ -60,6 +60,7 @@ assert isinstance(MyOrgStorage(), StorageProvider)   # 런타임 구조 검사
 | `knowledge/static.py` | Knowledge | `knowledge/master-notes/*.json` 로드 |
 | `knowledge/handbook.py` | Knowledge | handbook 경로 주입. 다른 provider를 감싼다 |
 | `llm/echo.py` | LLM | 오프라인·결정적. API 키 불필요 |
+| `llm/anthropic.py` | LLM | **첫 production provider.** Messages API. 키·모델은 호출자가 준다 — 아래 |
 | `search/manual.py` | Search | 사용자가 제공한 자료만 반환 |
 | `intake/text.py` | DocumentParser | TXT · MD · CSV. stdlib만 |
 | `intake/html.py` | DocumentParser | stdlib `html.parser`. script·style·noscript·주석 제외 |
@@ -103,6 +104,66 @@ stable code와 원래 예외의 **클래스명만** 남긴다 (`IntakeError`와 
 
 한계: SQLite는 동시 쓰기가 많은 부하에 맞지 않는다. 교육 세션 규모를 전제로 하며, 그 이상이
 필요하면 같은 Protocol의 다른 구현체로 바꾼다 — Database Agnostic 원칙이 그것을 위해 있다.
+
+### Anthropic LLM adapter
+
+`adapters/llm/anthropic.py`는 이 저장소에서 **실제로 네트워크로 나가는 유일한 adapter**다.
+SQLite adapter가 "남기면 안 되는 것을 남기는" 위험이라면, 이쪽은 **"보내면 안 되는 것을
+보내고, 보낸 사실이 로그에 남는"** 위험이다.
+
+```python
+from adapters.llm.anthropic import AnthropicLLM, RetryPolicy
+
+llm = AnthropicLLM(
+    api_key=os.environ["..."],      # Application이 읽어서 주입한다. adapter는 env를 안 읽는다
+    model="...",                     # 호출자가 명시. 기본값 없음
+    max_tokens=...,                  # 호출자가 명시. 기본값 없음 — Application이 고른다
+    timeout_seconds=60.0,            # socket 연산 단위. 전체 deadline이 아니다
+    retry=RetryPolicy(max_attempts=1),   # 기본값이 이미 이것이다 — 재시도 안 함
+)
+# temperature·top_p·top_k·thinking은 인자로 존재하지 않는다 (아래 표)
+```
+
+| 결정 | 이유 |
+|---|---|
+| **api_key·model·max_tokens 기본값 없음** | env를 adapter가 읽으면 다른 작업에서 남은 키로 과금된다. 모델을 adapter가 고르면 기본값이 바뀌는 날 **분석 내용이 조용히 달라진다**. 셋 다 필수 keyword 인자다 |
+| **생성자에서 키 검증, 네트워크는 호출 시에만** | 자격증명 부재를 evidence 배치가 끝난 뒤에 발견하면 비용이 든 부분을 버린다 |
+| **공식 SDK 대신 stdlib `urllib`** | SDK는 13개 패키지(컴파일 확장 2개 포함)를 끌어오고, **기본 `max_retries`가 0이 아니다.** 이 Harness에서 재시도는 고객 evidence 재전송이므로 라이브러리 기본값이 정할 일이 아니다. Messages 호출은 POST 하나다 |
+| **transport 주입 가능** | 오프라인 테스트가 요청 구성·retry·timeout·error mapping·추출을 전부 실행할 수 있다. SDK·Bedrock·Vertex를 쓰고 싶은 조직은 여기에 꽂는다 |
+| **retry 기본 = 1회 시도 (재시도 없음)** | 재시도는 privacy·비용·지연을 바꾼다. `RetryPolicy`로 **명시적으로** 켠다. auth·invalid request·schema 실패는 애초에 재시도 대상이 아니다 |
+| **timeout은 socket 연산 단위** | `urlopen`의 `timeout`은 connect와 각 read에 걸리며 **전체 deadline이 아니다.** 보장하지 못하는 것을 보장한다고 쓰지 않는다. 전체 deadline이 필요하면 그런 transport를 주입한다 |
+| **prompt 재작성 없음** | adapter가 더하는 문장은 module 상수 4개가 전부이고, 테스트가 **그 집합과 정확히 일치**하는지 검사한다. 열거할 수 없는 envelope은 hidden system prompt와 구분되지 않는다 |
+| **instruction은 system, data는 user** | core의 `system`·`prompt`는 각 블록의 **맨 앞에 원문 그대로** 간다. evidence·schema는 데이터이므로 user 블록이다 |
+| **로그 없음** | 이 모듈에 logger가 없다. prompt를 로그에 안 남기는 가장 싼 방법은 남길 곳을 안 두는 것이다. usage는 opt-in callback으로만 나가고 **숫자·식별자뿐**이다 |
+| **저장 없음** | cache·transcript·debug dump·temp 파일 0. 성공·실패 경로 모두에서 검사한다 |
+| **provider 메시지 폐기** | 4xx 본문은 그것을 유발한 요청을 인용한다. stable code + HTTP status + 예외 **클래스명**만 남긴다 (`IntakeError`·`SQLiteStorageError`와 같은 규칙) |
+| **schema 검증 생략 안 함** | `jsonschema`가 없으면 `LLM_SCHEMA_VALIDATOR_UNAVAILABLE`로 멈춘다. 검증하지 않은 것을 통과로 표현하지 않는다 |
+| **max_tokens는 generation policy다** | **adapter의 숨은 기본값이 아니다.** 답변 하나에 토큰을 얼마까지 쓸지는 배포가 무엇을 위한 것이고 얼마를 쓸 의향이 있는지에서 나온다 — 즉 policy이고, **policy 선택은 Application Layer의 일이지 transport의 일이 아니다.** 기본값을 두면 adapter가 잊어버린 모든 배포를 대신 결정하게 된다 |
+| **budget을 고르지도 추론하지도 않는다** | model 이름에서도, prompt 길이에서도, provider별 heuristic에서도 계산하지 않는다. 받은 값을 그대로 body에 넣는다. `_body`에는 **call node가 0개**이고 `_max_tokens`는 **단 한 번** 대입된다 (AST 테스트) |
+| **model별 token ceiling 미보유** | 상한을 하드코딩하지 않는다. adapter는 특정 모델의 한도를 **안다고 가정하지 않으며**, 안다고 가정하면 한도가 바뀌는 날 유효한 값을 거부한다. provider가 거부하면 `LLM_INVALID_REQUEST`로 온다 — 실제로 아는 쪽이 답한다 |
+| **입력 검증은 최소한만** | `bool` 거부(`bool`은 `int`다 — `max_tokens=True`면 body에 `true`가 들어간다) · `int`만 허용 · `> 0`. 강제 변환하지 않는다: `int("4096")`·`int(4096.9)`는 둘 다 성공하고 둘 다 호출자가 보낸 줄 알았던 값이 아니다 |
+| **sampling control 미설정** | `temperature`·`top_p`·`top_k`를 **보내지 않는다.** 빠뜨린 것이 아니라 의도적이다 — sampling semantics는 provider마다 다르고 한 provider 안에서도 모델마다 다르며, 일부 모델은 제약하거나 거부한다. 값을 보내는 adapter는 모든 분석 단계의 sampling 정책을 대신 고르는 것이고, provider 간에 번역하는 adapter는 그 값들이 같은 뜻이라고 주장하는 것이다. **둘 다 transport의 일이 아니다** |
+| **thinking 자동 on/off 없음** | 켜지도 끄지도 않는다. 모델이 답 전에 추론하는지, 그것이 지연·토큰·비용에서 얼마인지는 **호출자가 고른 모델의 속성**이다. 여기서 강제하면 provider-native behavior가 Harness 정책이 된다 |
+| **streaming·tool calling 없음** | `HARNESS.md` 10절이 Phase 1–8에서 제외한다 |
+| **요청 본문은 닫힌 집합** | `REQUEST_BODY_KEYS` = `model`·`max_tokens`·`system`·`messages` **4개가 전부**이고, 그 4개 모두 호출자가 준 값이거나 core가 준 텍스트다. 보내면 안 되는 것의 목록이 아니라 보내는 것의 목록이다 — denylist는 API에 필드가 생길 때마다 조용히 샌다 (`docs/privacy.md` 4절 logging allowlist와 같은 이유). 4개 메서드 각각에 대해 테스트가 **정확히 일치**를 검사한다 |
+
+**동기(sync)이며 호출 스레드를 왕복 내내 막는다.** `LLMProvider`는 동기 Protocol이고 adapter
+편의로 바꾸지 않는다 — 기다림은 Phase 8 Application의 background thread가 맡는다.
+
+**instance 공유**: 설정만 들고 있고 호출마다 요청을 새로 만들므로 여러 스레드에서 써도 된다.
+단 이것은 이 구현에 대한 진술이지 주입된 transport나 `usage_sink`에 대한 보장이 아니다.
+
+**실제 provider 테스트는 opt-in이다.** `HARNESS_LLM_LIVE_TEST=1` · `HARNESS_LLM_LIVE_API_KEY` ·
+`HARNESS_LLM_LIVE_MODEL` **세 개가 함께** 있어야 실행된다. `ANTHROPIC_API_KEY`가 환경에 있다는
+것은 그것을 쓰겠다는 동의가 아니므로 게이트로 쓰지 않는다. 셋이 없으면 **NOT_RUN**이다.
+
+**모델 선택의 결과는 normalize하지 않는다.** 어떤 모델을 주느냐에 따라 provider-native
+thinking 동작 · 지연 · token usage · 비용이 달라진다. adapter는 이것을 평탄화하지 않으며,
+평탄화한 척도 하지 않는다. 모델은 호출자가 고르고 그 결과도 호출자의 것이다.
+
+**과장하지 않는 것**: retention · training usage · data residency는 배포의 속성이지 이 코드의
+속성이 아니다. 이 adapter는 provider가 받은 데이터를 어떻게 다루는지 **주장하지 않는다**
+(`docs/privacy.md` 0절).
 
 ### Pricing adapter는 provider가 아니다
 
@@ -153,7 +214,7 @@ class MyFormatParser:
 
 | Phase | Adapter |
 |---|---|
-| 3 | `llm/anthropic.py` · `llm/openai.py` · `llm/google.py` · `search/web.py` |
+| 8 | `llm/openai.py` · `llm/google.py` · `search/web.py` (`llm/anthropic.py`는 **완료**) |
 | 9 | `reporting/html.py` · `reporting/docx.py` |
 
 ## 주의

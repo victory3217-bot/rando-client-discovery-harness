@@ -47,8 +47,8 @@
   |  adapters/   Interface 구현체. core를 import하지만 그 반대는 없다       |
   |    storage/  null · memory · sqlite                                   |
   |    knowledge/ static · handbook                                       |
-  |    llm/      echo                     (+ anthropic → Phase 3)         |
-  |    search/   manual                   (+ web → Phase 3)               |
+  |    llm/      echo · anthropic       (이 저장소의 유일한 network 경로)    |
+  |    search/   manual                   (+ web → 예정)                 |
   |    intake/   text · html · pdf · office · session · registry          |
   |    prompts/  prompt 파일 로딩 (core는 파일을 읽지 않는다)              |
   |    pricing/  file — pricing-harness-public와의 JSON 파일 교환          |
@@ -101,13 +101,14 @@ provider 선택 · session · auth · QR · 배포 대상
 `EvidenceCandidate`가 저장 불가라는 사실이 이 경계를 강제한다: research와 discovery는 한
 operation 안에서 끝나야 하고, 그 오케스트레이션은 Core가 아니라 Application의 일이다.
 
-### 경계를 강제하는 테스트 3개
+### 경계를 강제하는 테스트 4개
 
 | 테스트 | 검사 내용 |
 |---|---|
 | `tests/test_core_purity.py` | `core/` 전체를 AST로 스캔해 금지된 import(`os`, `pathlib`, `requests`, `httpx`, `anthropic`, `openai`, `sqlite3`, …)와 `open(`/`print(` 호출을 찾는다 |
 | `tests/test_core_standalone.py` | `reference-app/`과 `adapters/`가 없는 상태를 가정하고 `core`만 import해 Entity·불변식이 동작하는지 확인한다 |
 | `tests/test_docs_no_duplication.py` | `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`가 얇은 포인터로 유지되는지 (길이·복제 여부) 확인한다 |
+| `tests/test_llm_anthropic.py` | `core/`와 `adapters/` 전체를 AST로 스캔해 network·provider SDK import(`urllib`, `socket`, `ssl`, `httpx`, `anthropic`, `openai`, …)가 **`adapters/llm/` 밖에 없음**을 확인한다. 오늘 이 저장소에서 소켓을 열 수 있는 모듈은 정확히 하나다 |
 
 `core/`가 `dataclasses`, `enum`, `typing`, `datetime`, `uuid`, `re`, `hashlib`을 쓰는 것은 허용한다.
 표준 라이브러리 중 **부수효과를 갖는 것만** 금지된다.
@@ -183,10 +184,42 @@ core/pricing_bridge      attach_engine_result()로 결과를 기록한다
 | `adapters/intake/pdf.py` | DocumentParser | 2 | pypdf. 텍스트 레이어만, OCR 없음 |
 | `adapters/intake/office.py` | DocumentParser | 2 | DOCX · PPTX · XLSX. package 내부로 타입 판별 + zip bomb 방어 |
 | `adapters/intake/session.py` | — | 2 | request 수명 · batch 상한 · 버퍼 해제 |
-| `adapters/llm/anthropic.py` | LLM | 3 | 예정 |
+| `adapters/llm/anthropic.py` | LLM | 8 | **완료.** 첫 production provider. Messages API · key·model 주입 · transport 주입 · 기본 재시도 없음 · 로그 없음 |
 | `adapters/search/web.py` | Search | 3 | 예정 |
 | `adapters/pricing/file.py` | — (provider 아님) | 7 | `pricing-harness-public`와의 JSON 파일 교환. 스키마 경로를 주입받으면 실제 계약으로 검증한다 |
 | `adapters/storage/sqlite.py` | Storage | 8 | **완료.** Core 9 entity를 table 1개 + payload JSON으로. 경로 주입 · WAL · schema version · `clear()` 없음 |
+
+### 첫 production LLM Adapter가 Anthropic인 것은 architecture 결정이 아니다
+
+`adapters/llm/anthropic.py`가 Phase 8에서 먼저 생겼을 뿐이고, **Core·prompts·pipeline
+어디에도 provider 개념이 없다.** 고르는 주체는 Application wiring이다
+(`docs/product-spec.md` "Provider adapter는 config가 고른다").
+
+세 가지가 그것을 구조로 붙잡는다.
+
+1. **`prompts/`에 vendor 이름이 없다** — `test_research.py`·`test_client_discovery.py`가 검사한다.
+2. **`core/`가 provider SDK를 import하지 못한다** — `test_core_purity.py`.
+3. **network 모듈이 `adapters/llm/` 밖에 없다** — `test_llm_anthropic.py`.
+
+### policy selection ≠ provider transport
+
+같은 경계가 **generation budget**에도 적용된다. `max_tokens`는 `api_key`·`model`과 마찬가지로
+`AnthropicLLM` 생성 시 **필수 인자이고 기본값이 없다.**
+
+| | |
+|---|---|
+| **Application wiring** | 배포·용도에 맞는 budget을 고른다. 필요하면 config/env에 기본 정책을 갖는다. 고른 값을 adapter에 **명시적으로** 전달한다 |
+| **Adapter** | 고르지 않는다 · model에서 추론하지 않는다 · prompt 길이에서 계산하지 않는다 · provider별 heuristic 없다 · **받은 값을 그대로 request body에 넣는다** |
+
+adapter가 model별 token ceiling을 알고 있다고 가정하지 않는다. 한도를 넘으면 provider가
+거부하고 `LLM_INVALID_REQUEST`로 온다 — 실제로 아는 쪽이 답한다. sampling control과
+`thinking`도 같은 이유로 보내지 않는다: 그것들은 전부 정책이고, 정책은 이 층의 것이 아니다.
+
+그리고 `tests/test_llm_contract.py`는 `LLMProvider` 계약을 **echo와 anthropic 양쪽에 같이**
+돌린다 — research pipeline 전체를 두 provider로 각각 실행하는 것까지 포함한다. "LLM Provider를
+교체해도 Core Workflow가 유지된다"는 성공기준이 주장에서 **실행되는 테스트**로 바뀌는 지점이다.
+
+---
 
 ### `echo` LLM Adapter를 Phase 1에 먼저 만드는 이유
 
@@ -297,10 +330,10 @@ chapters와 worksheet이 존재한다. `adapters/knowledge/handbook.py`는 그 *
 |---|---|---|
 | 2 | `core/intake/` · `adapters/intake/` | **완료** |
 | 3 | `core/research/` · `adapters/prompts/` | **완료** |
-| 3+ | `adapters/llm/anthropic.py` · `adapters/search/web.py` | 예정 |
+| 3+ | `adapters/search/web.py` | 예정 |
 | 4 | `core/client/` · `prompts/discovery/` | **완료** |
 | 5 | `core/analysis/` · `prompts/analysis/` | **완료** |
 | 6 | `core/proposal/` · `prompts/proposal/` | **완료** |
 | 7 | `core/pricing_bridge/` · `adapters/pricing/` | **완료** |
-| 8 | `adapters/storage/sqlite.py` · production LLM/Search adapter. Application·UI는 **별도 저장소** | 예정 |
+| 8 | `adapters/storage/sqlite.py` **완료** · `adapters/llm/anthropic.py` **완료** · production Search adapter는 미구현. Application·UI는 **별도 저장소** | 진행 중 |
 | 9 | `core/interfaces/reporting.py` · `adapters/reporting/` | 예정 |

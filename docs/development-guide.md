@@ -138,6 +138,8 @@ pytest -k evidence
 | `test_research.py` | 파이프라인 4단계 · batching · framework 선택 · 검색결과 통합 · 오프라인 E2E |
 | `test_research_validation.py` | **hallucination 거부** · confidence cap · snippet 상한 · KeyIssue 전부-또는-전무 · directive는 flag이지 거부가 아님 · Entity 불변식 |
 | `test_transmission_boundary.py` | **`core/` 전체에서 LLM 호출이 단일 게이트웨이를 통과** (AST) · 전송 객체의 `repr` 은닉 |
+| `test_llm_contract.py` | **`LLMProvider` 계약을 echo·anthropic 양쪽에 같이** 돌린다 — protocol · 시그니처 · 4개 메서드 · 모든 schema 충족 · gateway 통과 · research pipeline 전체 실행. 전부 오프라인 |
+| `test_llm_anthropic.py` | Anthropic adapter 고유 — 요청 구성 · **envelope 전체 열거** · output_lang · retry(기본 없음 · 명시 시 backoff · retry-after · 비대상) · timeout · 에러 매핑 10종 · **provider 메시지 비노출** · canary 6표면 · **전송됨 vs 누출됨** · import 부수효과 0 · 디스크 0 · **network import가 `adapters/llm/` 밖에 없음**(AST) · live 테스트 opt-in 게이트 |
 | `test_client_discovery.py` | criteria · 조직 추출 · fit 8개 · 검색 통합 · 오프라인 E2E |
 | `test_client_validation.py` | **회사명 hallucination 거부** · **토큰 경계 공격** · signal 없는 STRONG 차단 · 파생 집계 일관성 · 잘림 없는 거부 |
 | `test_client_priority.py` | 규칙표 전 분기 · **snippet P1 차단** · reason code i18n · 결정성 |
@@ -156,12 +158,28 @@ pytest -k evidence
 | `test_pricing_canary.py` | 6표면 + **export 표면** — payload에 파일명·경로·URL·claim 원문 0 |
 | `pricing_fixtures.py` | Phase 7 고정값 (테스트가 아니라 fixture 모듈). **모든 숫자가 서로 유도되지 않게** 골라져 있다 |
 | `scripted_llm.py` | 준비된 응답을 돌려주는 테스트 double (테스트가 아니라 도구 모듈) |
+| `fake_transport.py` | 네트워크 없이 응답하는 transport (테스트가 아니라 도구 모듈). 요청에서 schema를 되꺼내 유효 instance를 합성하므로, 계약 테스트가 두 provider에 같이 돈다 |
 | `intake_fixtures.py` | 테스트 문서 8종을 메모리에서 생성 (테스트가 아니라 fixture 모듈) |
 
 `.gitignore`가 `*.pdf` `*.docx` `*.pptx` `*.xlsx`를 차단하므로 **바이너리 fixture를 커밋할 수
 없다.** 그래서 `intake_fixtures.py`가 8종을 코드로 만든다 — Public 저장소에 정체불명의
 바이너리가 남지 않고, 테스트가 파싱하는 모든 바이트를 리뷰할 수 있다. PDF는 의존성 없이 손으로
 조립한다 (비압축 content stream).
+
+### 실제 provider 테스트 (opt-in, 유료)
+
+기본 `pytest`는 **네트워크를 쓰지 않는다.** `adapters/llm/anthropic.py`는 transport를 주입받고
+테스트는 `fake_transport.py`를 넣으므로, 전체 suite에 credential이 필요 없고 소켓도 열리지
+않는다. 실제 왕복은 **NOT_MEASURED**이며 그렇게 표시한다.
+
+실제로 한 번 확인하려면 환경변수 **세 개를 함께** 준다.
+
+```bash
+HARNESS_LLM_LIVE_TEST=1 HARNESS_LLM_LIVE_API_KEY=... HARNESS_LLM_LIVE_MODEL=... pytest -k live
+```
+
+`ANTHROPIC_API_KEY`는 일부러 게이트로 쓰지 않는다 — 다른 작업에서 남은 키가 환경에 있다는 것이
+그것을 쓰겠다는 동의는 아니다. 셋 중 하나라도 없으면 해당 테스트는 **skip**되고 이유를 출력한다.
 
 **경계 테스트가 실패하면 테스트를 고치지 않는다.** `test_core_purity`와
 `test_core_standalone`은 `HARNESS.md` 11절 성공기준의 마지막 두 항목을 자동 검증하는

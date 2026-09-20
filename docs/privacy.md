@@ -305,6 +305,71 @@ Core는 아예 로그를 남기지 않는다 (`test_core_purity`가 `logging` im
 
 ---
 
+## 4-2. Anthropic LLM Adapter *(Phase 8)*
+
+0절이 "추출된 텍스트는 설정된 LLM Provider로 **전송된다**"고 적어 온 그 provider가
+`adapters/llm/anthropic.py`로 처음 실재하게 됐다. **이 저장소에서 네트워크로 나가는 유일한
+adapter**이며, SQLite adapter와 위험의 성격이 다르다 — 저쪽은 남기면 안 되는 것을 남기는
+것이고, 이쪽은 **보낸 사실과 보낸 내용이 로그·에러·파일에 남는 것**이다.
+
+### 전송되는 것과 누출인 것은 다르다
+
+| | |
+|---|---|
+| **전송 (계약대로)** | 선택된 evidence · prompt · system · JSON Schema가 요청 본문에 담겨 provider로 간다. 이것은 분석의 전제이지 사고가 아니다 (0절) |
+| **누출 (있으면 안 됨)** | 같은 텍스트가 로그 · 예외 · traceback · repr · stdout/stderr · 디스크에 남는 것 |
+
+`tests/test_llm_anthropic.py`의 canary 테스트가 **양방향으로** 확인한다 — 가상 파일명·이메일·
+전화번호·문서 원문·키 형태 문자열이 위 6표면에 0이고, **동시에 요청 본문에는 반드시 존재**할
+것. positive half가 없는 canary는 빈 요청을 보내는 adapter에서도 통과한다.
+
+### 구조적 보장
+
+| | |
+|---|---|
+| **logger 부재** | 이 모듈에 `logging` import도 `print`도 없다. AST로 검사한다. prompt를 로그에 안 남기는 가장 확실한 방법은 남길 곳을 두지 않는 것이다 |
+| **provider 메시지 폐기** | 4xx 본문은 그것을 유발한 요청을 인용한다. stable code + HTTP status + 예외 **클래스명**만 남기고 원문은 버린다. `raise ... from None`도 함께 쓴다 |
+| **schema 검증 오류에 instance 부재** | `jsonschema` 메시지는 instance(= 모델 답변, 곧 문서에서 파생된 텍스트)를 인용한다. **JSON pointer 경로만** 남기고, 경로 성분이 필드명 형태가 아니면 `<omitted>`다 |
+| **API key는 헤더에만** | `repr` · `str` · 예외 · traceback · 요청 본문 · URL 어디에도 없다 |
+| **env 미독** | adapter는 `os`를 import하지 않는다. 키는 Application이 읽어 생성자로 주입한다 |
+| **저장 0** | cache · transcript · debug dump · temp 파일 없음. 성공 경로와 4가지 실패 경로 전부에서 temp 디렉토리와 cwd를 검사한다 |
+| **import 부수효과 0** | subprocess로 검사: 파일 0 · 환경변수 읽기 0 · 소켓 0. `urllib`은 `ssl`까지 끌어오므로 transport 함수 안에서 lazy import한다 |
+| **usage는 opt-in·숫자뿐** | `AnthropicUsage`는 token count · status · latency · 불투명 message id. 콜백을 주지 않으면 **메모리에도 남지 않는다.** 이 값을 담는 Entity는 만들지 않았다 |
+| **재전송은 명시적** | `RetryPolicy` 기본값은 시도 1회 = 재시도 없음. 재시도는 고객 evidence를 **한 번 더 제3자에게 보내는 일**이므로 라이브러리 기본값이 정할 문제가 아니다 |
+| **network 모듈 격리** | `core/`·`adapters/` 전체 AST 스캔으로 network·SDK import가 `adapters/llm/` 밖에 없음을 검사한다 |
+
+### 보장하지 않는 것 — 정확히 적는다
+
+- **provider의 retention · training usage · data residency를 이 코드가 보장하지 않는다.**
+  "zero retention" · "저장하지 않는다" 같은 문장을 코드에도 이 문서에도 쓰지 않는다. 0절의
+  확인 항목표가 그대로 적용되며, 배포 조직이 **provider별로 직접 확인**한다.
+- **timeout은 전체 deadline이 아니다.** `urlopen`의 `timeout`은 connect와 각 read 등 socket
+  연산 단위로 걸린다. 바이트를 조금씩 흘려보내는 서버는 총 소요시간에서 이를 넘길 수 있다.
+  전체 deadline이 필요하면 그것을 강제하는 transport를 주입한다.
+- **모델 선택의 결과를 normalize하지 않는다.** 어떤 모델을 주느냐에 따라 provider-native
+  thinking 동작 · 지연 · token usage · **비용**이 달라진다. adapter는 sampling control
+  (`temperature`·`top_p`·`top_k`)도 `thinking`도 **보내지 않으며**, 이것은 누락이 아니라
+  정책이다 — sampling semantics는 provider·모델마다 다르고 일부는 제약하거나 거부한다.
+  요청 본문은 `model`·`max_tokens`·`system`·`messages` **4개로 닫혀 있고**, 그 4개 외의
+  생성 파라미터가 adapter 판단으로 추가되는 경로가 없다.
+- **`max_tokens`는 generation policy이며 adapter의 숨은 기본값이 아니다.** `api_key`·`model`과
+  같이 **필수 인자**이고 기본값이 없다. Application Layer가 배포·용도에 맞는 budget을 고르고
+  adapter에 명시적으로 전달한다 — model 이름에서 추론하지 않고, prompt 길이에서 계산하지 않고,
+  per-model ceiling을 **normalize하거나 추정하지 않는다**. 상한에 닿은 응답은
+  `LLM_RESPONSE_TRUNCATED`로 **거부**하며, 그 호출도 과금되었으므로 usage는 그대로 기록된다.
+- **third-party·runtime·OS 내부 동작은 검증 대상이 아니다** (2절과 같은 범위 제한).
+- **실제 provider 왕복은 NOT_MEASURED다.** live 테스트는 `HARNESS_LLM_LIVE_TEST=1` ·
+  `HARNESS_LLM_LIVE_API_KEY` · `HARNESS_LLM_LIVE_MODEL` **세 개가 함께** 있을 때만 돈다.
+  `ANTHROPIC_API_KEY`가 환경에 있다는 것은 그것을 쓰겠다는 동의가 아니므로 게이트가 아니다.
+  기본 test suite는 네트워크 없이 실행된다.
+
+로그 가능: `provider` · `model` · `status` · `latency_ms` · `attempts` · `input_tokens` ·
+`output_tokens` · `message_id` · `stop_reason` · error code.
+로그 금지: prompt · system prompt · evidence · 응답 원문 · JSON Schema · API key ·
+provider 에러 메시지.
+
+---
+
 ## 4-1. Web Application 표면 *(Phase 8)*
 
 Phase 1–7의 원칙은 그대로다. Web에서 처음 생기는 표면만 여기 적는다. 이 절은 **별도
