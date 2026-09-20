@@ -50,14 +50,14 @@ PyMuPDF는 PDF 텍스트 추출 품질이 더 낫지만 **AGPL-3.0**이라 채�
 | **5** | Client Deep Analysis (사람이 선택) | **완료** | 자동 Top 3 불가 · Phase 4 band 불변 · SYNTHESIS는 FACT 불가 |
 | **6** | Proposal Strategy | **완료** | 목표 기본값 없음 · Solution whitelist · Phase 5 게이트 유지 · 근거 없는 숫자 거부 |
 | **7** | Pricing Harness Adapter | **완료** | `pricing_payload`가 Pricing Harness 스키마 검증 통과 · LLM 부재 · 숫자 무생성 · payload만 전송 |
-| **8** | SQLite · production provider adapter (Application·UI는 **별도 저장소**) | 예정 | Application 삭제 후에도 core 테스트 통과 · Core 변경 0 |
+| **8** | SQLite **완료** · production provider adapter 예정 (Application·UI는 **별도 저장소**) | 진행 | Application 삭제 후에도 core 테스트 통과 · Core 변경 0 |
 | **9** | Report Output (HTML/DOCX) | 예정 | 구조화 데이터만 읽어서 생성 |
 
 Phase 1에서 **만들지 않은 것**과 그 이유:
 
 | 안 만든 것 | 이유 |
 |---|---|
-| SQLite Adapter | Phase 1–7에는 읽는 주체(대시보드)가 없다. 지금 만들면 실제 쿼리 요구가 확정되기 전에 스키마를 고정하고, 마이그레이션 비용만 남는다. Phase 8에서 대시보드와 함께 만든다 |
+| ~~SQLite Adapter~~ | Phase 1–7에는 읽는 주체가 없어 미뤘다. **Phase 8에서 구현했다** — 실제 쿼리 요구(`StorageProvider`의 9 save/get)가 확정된 뒤였고, 그래서 스키마가 table 하나로 끝났다 |
 | `core/intake/` · `core/research/` · `core/client/` 빈 패키지 | 아무것도 하지 않는 패키지를 미리 만들지 않는다. 위치는 `ARCHITECTURE.md` 7절에 문서화되어 있다 |
 | `PricingProvider` · `ReportProvider` Protocol | 호출자가 없는 Protocol은 계약이 아니라 추측이다. `PricingProvider`는 Phase 7에서 **최종적으로 취소**했다 — Core가 Pricing Harness를 호출하지 않기 때문이다 (`ARCHITECTURE.md` 3절) |
 
@@ -128,7 +128,8 @@ pytest -k evidence
 | `test_schemas.py` | dataclass ↔ JSON Schema 필드·enum 일치, 예제 검증 |
 | `test_locales.py` | ko/en 키 구조 동일, 모든 enum 멤버에 라벨 존재, 오래된 라벨 없음 |
 | `test_evidence.py` | Evidence 불변식 |
-| `test_adapters.py` | Adapter 계약 (새 Adapter를 만들 때의 사양서 역할) |
+| `test_adapters.py` | Adapter 계약 (새 Adapter를 만들 때의 사양서 역할) · storage 3종 상호 교체 가능성 |
+| `test_storage_sqlite.py` | 9 entity roundtrip · 중첩 value object 복원 · **MemoryStorage와의 의미 일치**(append/replace·순서·부재) · 재시작 · 스레드 · WAL · schema version · 에러 경계 · import 부수효과 0 · **DB 파일 canary** |
 | `test_knowledge_cards.py` | MN 카드 형식과 dimension 목록이 `HARNESS.md` 5절과 일치 |
 | `test_docs_no_duplication.py` | AI 진입점 3개가 얇게 유지되고 Required Reading이 실존 파일을 가리킨다 |
 | `test_privacy.py` | `SourceMetadata`에 파일명·원문 필드가 없다, source_id가 랜덤이다 |

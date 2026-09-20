@@ -18,6 +18,7 @@ from adapters.llm.echo import EchoLLM
 from adapters.search.manual import ManualSearch
 from adapters.storage.memory import MemoryStorage
 from adapters.storage.null import NullStorage
+from adapters.storage.sqlite import SQLiteStorage
 from core.errors import UnknownFrameworkError
 from core.harness import CLIENT_ANALYSIS_FRAMEWORKS, RESEARCH_FRAMEWORKS, create_harness
 from core.interfaces import KnowledgeProvider, LLMProvider, SearchProvider, StorageProvider
@@ -34,7 +35,7 @@ from core.models import (
 
 # -- protocol conformance --------------------------------------------------
 
-def test_adapters_satisfy_their_protocols(repo_root: Path) -> None:
+def test_adapters_satisfy_their_protocols(repo_root: Path, tmp_path: Path) -> None:
     """Structural conformance only: it checks the methods exist, not their signatures.
 
     The behaviour tests below are what actually pin the contract down.
@@ -42,15 +43,53 @@ def test_adapters_satisfy_their_protocols(repo_root: Path) -> None:
     cards = repo_root / "knowledge" / "master-notes"
     assert isinstance(NullStorage(), StorageProvider)
     assert isinstance(MemoryStorage(), StorageProvider)
+    assert isinstance(SQLiteStorage(tmp_path / "h.sqlite3"), StorageProvider)
     assert isinstance(StaticKnowledge.from_directory(cards), KnowledgeProvider)
     assert isinstance(EchoLLM(), LLMProvider)
     assert isinstance(ManualSearch(), SearchProvider)
 
 
-def test_every_adapter_names_itself() -> None:
+def test_every_adapter_names_itself(tmp_path: Path) -> None:
     """``name`` is what an application may safely put in a log line."""
-    for adapter in (NullStorage(), MemoryStorage(), EchoLLM(), ManualSearch()):
+    adapters = (
+        NullStorage(),
+        MemoryStorage(),
+        SQLiteStorage(tmp_path / "h.sqlite3"),
+        EchoLLM(),
+        ManualSearch(),
+    )
+    for adapter in adapters:
         assert isinstance(adapter.name, str) and adapter.name
+    assert len({a.name for a in adapters}) == len(adapters), "two adapters share a name"
+
+
+def test_the_three_storage_adapters_are_interchangeable(tmp_path: Path) -> None:
+    """The same calls against all three. Only what is *kept* may differ.
+
+    ``SQLiteStorage`` is the one that persists, so it is also the one most able to drift from
+    the contract the other two established — this is where that would show.
+    """
+    project = Project(company_name="Fictional Co")
+    finding = ResearchFinding(
+        project_id=project.project_id,
+        finding="a statement",
+        evidence_type=EvidenceType.ASSUMPTION,
+        mn_basis=["MN02"],
+    )
+
+    for storage in (NullStorage(), MemoryStorage(), SQLiteStorage(tmp_path / "s.sqlite3")):
+        assert storage.save_project(project) == project.project_id
+        assert storage.save_finding(finding) == finding.finding_id
+        # Absence is never an error, whichever adapter is wired.
+        assert storage.get_project("prj_missing") is None
+        assert storage.get_findings("prj_missing") == []
+
+        kept = storage.get_findings(project.project_id)
+        if storage.name == "null":
+            assert kept == []
+        else:
+            assert [f.finding_id for f in kept] == [finding.finding_id]
+            assert storage.get_project(project.project_id) == project
 
 
 # -- null storage ----------------------------------------------------------

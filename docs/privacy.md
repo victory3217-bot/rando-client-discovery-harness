@@ -274,6 +274,37 @@ Core는 아예 로그를 남기지 않는다 (`test_core_purity`가 `logging` im
 
 ---
 
+## 4-0. SQLite Storage Adapter *(Phase 8)*
+
+`adapters/storage/sqlite.py`는 이 저장소에서 **실제로 파일에 쓰는 유일한 adapter**다.
+`PERSISTENT` 모드를 고른 조직이 쓰며, 공개 빌드의 기본값은 여전히 `null`이다 (6절).
+
+| 구조적 보장 | |
+|---|---|
+| `EvidenceCandidate` 저장 메서드 부재 | Protocol에 없고 adapter에도 없다. 문서 원문을 담을 자리가 없다 |
+| 문서를 담을 column 부재 | table은 `harness_entity` 하나, column은 `row_id` `entity_type` `entity_id` `project_id` `payload_json` 다섯 개뿐. 테스트가 이 목록을 정확히 검사한다 |
+| 원본 파일명 column 신설 없음 | `SourceMetadata`에 filename 필드가 없으므로 payload에도 없다 |
+| 에러에 SQL·경로·payload 부재 | `sqlite3` 메시지는 버리고 stable code + 예외 클래스명만 남긴다 |
+| DB path는 호출자 지정 | home·cwd·temp를 고르지 않는다. 부모 디렉토리도 만들지 않는다 |
+| import 부수효과 0 | 파일·디렉토리·temp 아무것도 만들지 않는다. subprocess로 검사한다 |
+| DB 파일 canary | 실제 intake를 통과시킨 문서의 원문·연락처·파일명이 **DB 파일과 WAL sidecar 양쪽에** 없음을 검사한다 |
+
+| 저장되는 것 (정상) | |
+|---|---|
+| Core 9 entity의 structured 내용 | `ResearchFinding.finding` 같은 해석 문장은 **저장이 목적**이다. 문서 원문이 아니다 |
+| `display_label` | 사용자가 직접 입력한 경우에만 (6절) |
+
+**구분이 핵심이다.** 사람이 남기기로 한 해석은 저장되고, 문서 원문은 저장되지 않는다. 둘 다
+문자열이고, 누출인 것은 두 번째뿐이다. canary 테스트는 이 구분을 양방향으로 확인한다 —
+원문 canary가 없을 것, 그리고 정상 statement는 있을 것.
+
+**WAL 주의.** 갓 커밋된 행은 checkpoint 전까지 `<db>-wal`에 있다. DB 파일만 검사하는 점검은
+잘못된 이유로 통과한다.
+
+**한계.** SQLite는 동시 쓰기가 많은 부하에 맞지 않는다. 교육 세션 규모를 전제로 한다.
+
+---
+
 ## 4-1. Web Application 표면 *(Phase 8)*
 
 Phase 1–7의 원칙은 그대로다. Web에서 처음 생기는 표면만 여기 적는다. 이 절은 **별도

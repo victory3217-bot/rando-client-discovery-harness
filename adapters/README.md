@@ -56,6 +56,7 @@ assert isinstance(MyOrgStorage(), StorageProvider)   # 런타임 구조 검사
 |---|---|---|
 | `storage/null.py` | Storage | 기본값. 전부 폐기 (EPHEMERAL 모드) |
 | `storage/memory.py` | Storage | 프로세스 메모리. 세션 내 단계 연결 |
+| `storage/sqlite.py` | Storage | **파일 저장.** Core 9 entity만. 경로는 호출자가 준다 — 아래 |
 | `knowledge/static.py` | Knowledge | `knowledge/master-notes/*.json` 로드 |
 | `knowledge/handbook.py` | Knowledge | handbook 경로 주입. 다른 provider를 감싼다 |
 | `llm/echo.py` | LLM | 오프라인·결정적. API 키 불필요 |
@@ -68,6 +69,40 @@ assert isinstance(MyOrgStorage(), StorageProvider)   # 런타임 구조 검사
 | `intake/safe_logging.py` | — | 로그 allowlist |
 | `prompts/loader.py` | — | `prompts/**/*.md` 로딩 (research + discovery). core는 파일을 읽지 않으므로 여기서 읽어 주입한다 |
 | `pricing/file.py` | — | Pricing Harness와 JSON 파일 교환. provider가 아니다 — 아래 |
+
+### SQLite storage adapter
+
+이 저장소에서 **실제로 무언가를 보관하는 유일한 adapter**다. 그래서 가장 조심해야 한다 —
+여기서의 버그는 데이터를 잃는 것이 아니라 **남기면 안 되는 것을 남긴다.**
+
+```python
+from adapters.storage.sqlite import SQLiteStorage
+
+storage = SQLiteStorage("/var/lib/harness/harness.sqlite3")   # 경로 필수, 기본값 없음
+```
+
+| 결정 | 이유 |
+|---|---|
+| **table 1개 + payload JSON** | Core dataclass를 column으로 다시 모델링하지 않는다. 그러면 `core/models.py`의 세 번째 사본이 되고, 그 사본만 `test_schemas.py` 같은 정합성 검사가 없다 |
+| **직렬화는 `as_dict`/`from_dict`** | 별도 encoder도 수동 enum 변환도 없다. MemoryStorage와 같은 Core 타입이 복원된다 |
+| **append, project만 replace** | MemoryStorage의 의미를 **복제한 것이지 고른 것이 아니다.** 같은 finding을 두 번 저장하면 두 번 쌓인다 |
+| **insertion order** | 역시 MemoryStorage와 맞춘 것. `row_id` 순서다 |
+| **경로 기본값 없음** | 고객 분석이 담긴 파일의 위치는 배포 결정이다. home·cwd·temp를 adapter가 고르지 않는다 |
+| **부모 디렉토리 생성 안 함** | 없으면 `STORAGE_PATH_UNAVAILABLE`. 디렉토리를 만드는 adapter는 아무도 안 본 곳에 쓴다 |
+| **operation당 connection** | background thread가 쓰고 request thread가 읽는 구조라, connection 공유는 production에서만 터진다 |
+| **WAL** | 쓰는 중에도 읽을 수 있다. `-wal`·`-shm` 파일은 **사용의** 정상 결과다 (import의 결과가 아니다) |
+| **`PRAGMA user_version`** | 모르는 schema version은 조용히 읽지 않고 `STORAGE_SCHEMA_VERSION_UNSUPPORTED`로 멈춘다. migration framework는 없다 |
+| **`clear()` 없음** | MemoryStorage의 `clear()`는 ephemeral 세션 종료용이다. 영속 adapter에서 같은 이름의 전체 삭제는 함정이다 |
+
+저장하지 않는 것: `EvidenceCandidate` · 원본 문서 · 문서 전문 · prompt · LLM 원문 응답 ·
+training session · participant · HTTP session · BootstrapRun. 마지막 네 개는 **Application
+저장소의 책임**이고, 같은 SQLite 파일을 쓰더라도 table을 공유하지 않는다.
+
+에러는 `SQLiteStorageError`로 감싼다. `sqlite3` 메시지는 SQL과 값을 인용하므로 **버리고**,
+stable code와 원래 예외의 **클래스명만** 남긴다 (`IntakeError`와 같은 규칙).
+
+한계: SQLite는 동시 쓰기가 많은 부하에 맞지 않는다. 교육 세션 규모를 전제로 하며, 그 이상이
+필요하면 같은 Protocol의 다른 구현체로 바꾼다 — Database Agnostic 원칙이 그것을 위해 있다.
 
 ### Pricing adapter는 provider가 아니다
 
@@ -119,7 +154,6 @@ class MyFormatParser:
 | Phase | Adapter |
 |---|---|
 | 3 | `llm/anthropic.py` · `llm/openai.py` · `llm/google.py` · `search/web.py` |
-| 8 | `storage/sqlite.py` |
 | 9 | `reporting/html.py` · `reporting/docx.py` |
 
 ## 주의

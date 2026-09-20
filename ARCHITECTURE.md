@@ -45,7 +45,7 @@
            |            |            |            |
   +--------v------------v------------v------------v------------------------+
   |  adapters/   Interface 구현체. core를 import하지만 그 반대는 없다       |
-  |    storage/  null · memory            (+ sqlite → Phase 8)            |
+  |    storage/  null · memory · sqlite                                   |
   |    knowledge/ static · handbook                                       |
   |    llm/      echo                     (+ anthropic → Phase 3)         |
   |    search/   manual                   (+ web → Phase 3)               |
@@ -186,7 +186,7 @@ core/pricing_bridge      attach_engine_result()로 결과를 기록한다
 | `adapters/llm/anthropic.py` | LLM | 3 | 예정 |
 | `adapters/search/web.py` | Search | 3 | 예정 |
 | `adapters/pricing/file.py` | — (provider 아님) | 7 | `pricing-harness-public`와의 JSON 파일 교환. 스키마 경로를 주입받으면 실제 계약으로 검증한다 |
-| `adapters/storage/sqlite.py` | Storage | 8 | 예정. Dashboard와 함께 |
+| `adapters/storage/sqlite.py` | Storage | 8 | **완료.** Core 9 entity를 table 1개 + payload JSON으로. 경로 주입 · WAL · schema version · `clear()` 없음 |
 
 ### `echo` LLM Adapter를 Phase 1에 먼저 만드는 이유
 
@@ -204,7 +204,8 @@ core/pricing_bridge      attach_engine_result()로 결과를 기록한다
 | 원칙·규칙을 바꾼다 | `HARNESS.md` (**다른 곳에 복제하지 않는다**) |
 | Entity에 필드를 추가한다 | `core/models.py` + `schemas/<entity>.schema.json` + `docs/data-model.md` (**3개 동시에**) |
 | Evidence 규칙을 바꾼다 | `core/evidence.py` + `HARNESS.md` 6절 |
-| 새 DB를 연결한다 | `adapters/storage/` 에 모듈 추가. `core/`는 건드리지 않는다 |
+| 새 DB를 연결한다 | `adapters/storage/` 에 모듈 추가. `core/`는 건드리지 않는다. `sqlite.py`가 참고 구현 |
+| 저장 의미를 바꾼다 | 바꾸지 않는다. append/replace·순서는 `MemoryStorage`가 정본이고 adapter는 복제한다 |
 | 다른 LLM을 붙인다 | `adapters/llm/` 에 모듈 추가 |
 | 자체 방법론을 붙인다 | `adapters/knowledge/` 에 모듈 추가 |
 | 새 파일 형식을 지원한다 | `adapters/intake/` 에 파서 추가 + `registry.py` 등록 |
