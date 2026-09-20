@@ -210,6 +210,12 @@ Purchasing Potential · Accessibility · Competitive Situation · Evidence Quali
 Entity-level 집계 필드(`finding_ids` · `missing_evidence`)는 **pipeline이 파생**시킨다. 같은
 관계를 두 곳에 따로 쓰면 어긋나므로, canonical 관계는 하위 구조에 한 번만 둔다.
 
+심층분석 대상 Client는 **사람이 고른다.** Core는 `client_ids`를 필수로 받고, 자동 선정·정렬·
+ranking을 하지 않는다. 심층분석 결과가 Phase 4의 band를 조용히 바꾸지 않는다.
+
+분석 claim의 `evidence_type`은 근거 finding의 복사본이 **아니다.** FACT 세 개를 엮은 결론은
+INFERENCE다 — 엮는 행위가 claim이고 그것을 수행한 문서는 없다.
+
 모델 출력이 스키마의 길이 계약을 위반하면 **잘라서 저장하지 않는다.** 잘린 문장은 아무도 쓰지
 않은 주장이다. 해당 출력을 폐기하고 safe code를 기록한 뒤 안전한 값으로 degrade한다.
 

@@ -31,7 +31,9 @@
   |    research/     policy · select · extract · classify · synthesize     |
   |                  · confidence · transmission · pipeline   (ENGINE 1)   |
   |    client/       criteria · verify · fit · priority · pipeline         |
-  |                  (ENGINE 2, 전반부)                                    |
+  |                  (ENGINE 2, 전반부 — 발굴)                             |
+  |    analysis/     dimensions · claims · research · pipeline             |
+  |                  (ENGINE 2, 후반부 — 사람이 고른 Client 심층분석)      |
   |    transmission.py  LLM 전송 단일 게이트웨이 (core 전체)                |
   |    pricing_bridge/ Phase 7 예정                                        |
   +--------+------------+------------+------------+------------------------+
@@ -169,7 +171,8 @@ provider가 아니다. 나머지 2개는 이 문서에 정의만 둔다 (구현 
 | Prompt를 고친다 | `prompts/**/*.md`. 코드에 프롬프트 문자열을 쓰지 않는다 |
 | LLM 호출을 추가한다 | **`core/transmission.send()`를 거친다.** `core/` 안 어디서든 provider를 직접 호출하면 `test_transmission_boundary.py`가 실패한다 |
 | Client 우선순위 규칙을 바꾼다 | `core/client/priority.py`의 규칙표. 숫자를 도입하지 않는다 |
-| 조직명 매칭을 손본다 | `core/client/verify.py`. 토큰 경계를 풀지 않고, semantic alias를 들이지 않는다 |
+| 조직명 매칭을 손본다 | `core/client/verify.py`. 토큰 경계를 풀지 않고, semantic alias를 들이지 않는다. Phase 5도 이 모듈을 그대로 쓴다 |
+| Client 심층분석 규칙을 바꾼다 | `core/analysis/dimensions.py`의 kind·ceiling 표. 교차 의존은 `claims.py` |
 | Entity에 집계 필드를 추가한다 | 파생 함수를 `core/models.py`에 두고 `core/evidence.py`가 관계를 검증한다 |
 | Web·API를 붙인다 | `core/`가 아니라 Application Layer. 경계는 2절, 규칙은 `HARNESS.md` 12절 |
 | 업로드 상한을 바꾼다 | `IntakePolicy`를 만들어 주입한다. `core/`는 환경변수를 읽지 않는다 |
@@ -231,7 +234,8 @@ chapters와 worksheet이 존재한다. `adapters/knowledge/handbook.py`는 그 *
 | 3 | `core/research/` · `adapters/prompts/` | **완료** |
 | 3+ | `adapters/llm/anthropic.py` · `adapters/search/web.py` | 예정 |
 | 4 | `core/client/` · `prompts/discovery/` | **완료** |
-| 5–6 | `core/client/` 확장 (Top 3 분석 · 제안전략) | 예정 |
+| 5 | `core/analysis/` · `prompts/analysis/` | **완료** |
+| 6 | 제안전략 (`core/analysis/` 확장 또는 신규) | 예정 |
 | 7 | `core/pricing_bridge/` · `adapters/pricing/` | 예정 |
 | 8 | Application/API Layer · `reference-app/` (mobile-first) · `adapters/storage/sqlite.py` | 예정 |
 | 9 | `core/interfaces/reporting.py` · `adapters/reporting/` | 예정 |

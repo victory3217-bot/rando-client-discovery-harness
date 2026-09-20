@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from core.analysis.policy import AnalysisPromptSet
 from core.client.policy import ClientPromptSet
 from core.research.policy import PromptSet
 
@@ -26,6 +27,12 @@ CLIENT_PROMPT_FILES = {
     "build_criteria": "discovery/build-criteria.md",
     "find_organizations": "discovery/find-organizations.md",
     "assess_fit": "discovery/assess-fit.md",
+}
+
+#: Deep-analysis stage -> path relative to the prompts directory.
+ANALYSIS_PROMPT_FILES = {
+    "research_criteria": "analysis/research-criteria.md",
+    "synthesize_claims": "analysis/synthesize-claims.md",
 }
 
 
@@ -57,3 +64,10 @@ def load_client_prompt_set(prompts_dir: str | Path) -> ClientPromptSet:
     root = Path(prompts_dir)
     texts = {stage: load_prompt_text(root / rel) for stage, rel in CLIENT_PROMPT_FILES.items()}
     return ClientPromptSet(**texts)
+
+
+def load_analysis_prompt_set(prompts_dir: str | Path) -> AnalysisPromptSet:
+    """Every prompt the deep-analysis pipeline needs, read the same way."""
+    root = Path(prompts_dir)
+    texts = {stage: load_prompt_text(root / rel) for stage, rel in ANALYSIS_PROMPT_FILES.items()}
+    return AnalysisPromptSet(**texts)
