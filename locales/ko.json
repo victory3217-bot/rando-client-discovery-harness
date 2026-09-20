@@ -107,6 +107,7 @@
     },
     "PricingStatus": {
       "NOT_REQUESTED": "미요청",
+      "HANDOFF_BLOCKED": "핸드오프 보류",
       "PAYLOAD_READY": "전달 준비",
       "COMPLETED": "완료",
       "FAILED": "실패"
@@ -249,7 +250,11 @@
     "source_origin": "자료 경로",
     "statement": "진술",
     "decision_area": "의사결정 영역",
-    "supporting_finding_ids": "근거 발견사항"
+    "supporting_finding_ids": "근거 발견사항",
+    "pricing_case_id": "가격 케이스 ID",
+    "pricing_payload": "가격 산출 입력",
+    "commercial_context": "영업 컨텍스트",
+    "engine_result": "가격 엔진 결과"
   },
   "screens": {
     "project": {

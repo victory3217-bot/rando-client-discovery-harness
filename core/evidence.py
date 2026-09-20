@@ -28,6 +28,8 @@ from core.models import (
     KeyIssue,
     MarketScope,
     ObjectionBasis,
+    PricingResult,
+    PricingStatus,
     ProposalStatus,
     ProposalStrategy,
     ResearchFinding,
@@ -666,3 +668,109 @@ def _check_dimension_refs(
             f"{sorted(unsettled)}"
         ]
     return []
+
+
+def check_pricing_result(result: PricingResult) -> list[str]:
+    """A pricing case has to say which case it is, and its status has to match what it holds.
+
+    Two kinds of rule are here.
+
+    The first is about **identity across a boundary**. The payload leaves this repository and
+    the answer comes back on its own, so the ids inside the payload have to be the record's
+    own ids — otherwise the only thing that can rejoin them is a filename, and a filename is
+    not a contract.
+
+    The second is about **status not outrunning content**. ``PAYLOAD_READY`` with no payload,
+    ``COMPLETED`` with no answer, ``FAILED`` with no code: each of these is a record that
+    reads as further along than it is, and a person scanning a list of pricing cases reads
+    the status, not the fields.
+
+    The commercial context does not travel. A ``commercial_context`` key inside the payload
+    would mean this harness had started extending a contract it does not own — see
+    ARCHITECTURE.md section 6.
+    """
+    violations: list[str] = []
+    rid = result.pricing_result_id
+
+    for label, value in (
+        ("project_id", result.project_id),
+        ("client_id", result.client_id),
+        ("pricing_case_id", result.pricing_case_id),
+    ):
+        if not str(value).strip():
+            violations.append(f"pricing result {rid}: {label} is required")
+
+    for label, value in (
+        ("strategy_id", result.strategy_id),
+        ("analysis_id", result.analysis_id),
+    ):
+        if not str(value).strip():
+            violations.append(
+                f"pricing result {rid}: {label} is empty — commercial_context is a copy taken "
+                "across a repository boundary, and a copy with no origin cannot be re-checked"
+            )
+
+    # -- the payload is this case, or there is no payload -------------------
+    payload = result.pricing_payload
+    needs_payload = result.status in (
+        PricingStatus.HANDOFF_BLOCKED,
+        PricingStatus.PAYLOAD_READY,
+        PricingStatus.COMPLETED,
+    )
+    if needs_payload and not payload:
+        violations.append(
+            f"pricing result {rid}: status is {result.status.value} with no pricing_payload"
+        )
+    if result.status is PricingStatus.NOT_REQUESTED and payload:
+        violations.append(
+            f"pricing result {rid}: a payload exists but the status says nobody asked for one"
+        )
+    if payload:
+        if payload.get("client_id") != result.client_id:
+            violations.append(
+                f"pricing result {rid}: the payload names a different client"
+            )
+        if payload.get("case_id") != result.pricing_case_id:
+            violations.append(
+                f"pricing result {rid}: payload case_id is not this case — case_id is the "
+                "pricing_case_id, never the strategy_id"
+            )
+        if "commercial_context" in payload:
+            violations.append(
+                f"pricing result {rid}: commercial_context is inside the payload. It is ours "
+                "and is not sent; the external contract has no field for it"
+            )
+
+    # -- the context describes this case ------------------------------------
+    context = result.commercial_context
+    if context:
+        for key, expected in (
+            ("pricing_case_id", result.pricing_case_id),
+            ("strategy_id", result.strategy_id),
+            ("analysis_id", result.analysis_id),
+            ("client_id", result.client_id),
+        ):
+            if key in context and context[key] != expected:
+                violations.append(
+                    f"pricing result {rid}: commercial_context.{key} does not match the record"
+                )
+
+    # -- status and answer travel together ----------------------------------
+    if result.status is PricingStatus.COMPLETED and result.engine_result is None:
+        violations.append(
+            f"pricing result {rid}: COMPLETED with no engine_result"
+        )
+    if result.engine_result is not None and result.status is not PricingStatus.COMPLETED:
+        violations.append(
+            f"pricing result {rid}: an engine_result is stored but the status is "
+            f"{result.status.value}"
+        )
+    if result.status is PricingStatus.FAILED and not result.error_code:
+        violations.append(f"pricing result {rid}: FAILED with no error_code")
+    if result.error_code and result.status is not PricingStatus.FAILED:
+        violations.append(
+            f"pricing result {rid}: an error_code is recorded but the status is "
+            f"{result.status.value}"
+        )
+
+    return violations

@@ -455,8 +455,23 @@ class EvidenceTiming(str, Enum):
 
 
 class PricingStatus(str, Enum):
+    """Where one pricing case stands between this harness and the separate pricing harness.
+
+    ``HANDOFF_BLOCKED`` is not a failure and not an absence. The payload is built and can be
+    read — what is withheld is the hand-off, because the analysis itself said something had to
+    be known first (:class:`EvidenceTiming` ``BEFORE_PRICING``) and nobody has said it is. It
+    is kept apart from ``NOT_REQUESTED`` for the reason ``UNCLASSIFIED`` is kept apart from a
+    timing: "nobody asked yet" and "asked, and a prerequisite is open" are different facts, and
+    once both read ``NOT_REQUESTED`` a reader cannot recover which one happened.
+    """
+
+    #: Nobody has asked for pricing on this case.
     NOT_REQUESTED = "NOT_REQUESTED"
+    #: A payload exists, but an open BEFORE_PRICING prerequisite holds the hand-off back.
+    HANDOFF_BLOCKED = "HANDOFF_BLOCKED"
+    #: A payload exists and may be handed to the pricing harness.
     PAYLOAD_READY = "PAYLOAD_READY"
+    #: The pricing harness answered and its result is stored verbatim in ``engine_result``.
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
@@ -1053,17 +1068,32 @@ class ProposalStrategy:
 
 @dataclass
 class PricingResult:
-    """Hand-off to, and answer from, the separate pricing harness.
+    """One pricing case: what was handed to the separate pricing harness, and what came back.
 
-    ``pricing_payload`` conforms to that harness's ``client_input.schema.json``.
-    ``commercial_context`` carries the sales context (client, country, problem, buyer, value
-    proposition, competitor, channel, conditions) that the pricing engine does **not** consume
-    but the proposal does. Keeping them apart is what lets the two harnesses version
-    independently — see ARCHITECTURE.md section 6.
+    **Only ``pricing_payload`` crosses the boundary.** It conforms to that harness's
+    ``client_input.schema.json``, whose top level is closed (``additionalProperties: false``),
+    so nothing of ours can be smuggled into it. ``commercial_context`` is ours and stays here:
+    the pricing engine has no field for it and no use for it, and inventing a place to put it
+    would make that harness's contract depend on this one. It is read by the UI, by Phase 9 and
+    by anyone asking why a price was proposed — see ARCHITECTURE.md section 6.
+
+    ``pricing_case_id`` is what the external contract's ``case_id`` carries, and it is **not**
+    the strategy id. One :class:`ProposalStrategy` can produce several pricing cases — a
+    different scope, a different volume, a revised cost sheet — and using the strategy id as
+    the case id would make the second case overwrite the first in the other harness's records.
+    ``strategy_id`` and ``analysis_id`` say where this case came from, because
+    ``commercial_context`` is a copy taken across a repository boundary and a copy with no
+    origin cannot be re-checked against the record it was copied from.
     """
 
     project_id: str
     client_id: str
+    #: The ProposalStrategy this case prices. Several cases may share one.
+    strategy_id: str = ""
+    #: The ClientAnalysis behind that strategy, carried so the copied context has an origin.
+    analysis_id: str = ""
+    #: This case. Becomes ``case_id`` in the external payload — never the strategy id.
+    pricing_case_id: str = field(default_factory=lambda: new_id("pcs"))
     pricing_payload: dict = field(default_factory=dict)
     commercial_context: dict = field(default_factory=dict)
     engine_result: Optional[dict] = None

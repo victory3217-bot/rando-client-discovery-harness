@@ -107,6 +107,7 @@
     },
     "PricingStatus": {
       "NOT_REQUESTED": "Not requested",
+      "HANDOFF_BLOCKED": "Hand-off blocked",
       "PAYLOAD_READY": "Ready to send",
       "COMPLETED": "Completed",
       "FAILED": "Failed"
@@ -249,7 +250,11 @@
     "source_origin": "Source origin",
     "statement": "Statement",
     "decision_area": "Decision area",
-    "supporting_finding_ids": "Supporting findings"
+    "supporting_finding_ids": "Supporting findings",
+    "pricing_case_id": "Pricing case ID",
+    "pricing_payload": "Pricing input",
+    "commercial_context": "Commercial context",
+    "engine_result": "Pricing engine result"
   },
   "screens": {
     "project": {

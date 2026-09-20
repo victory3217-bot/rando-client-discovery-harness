@@ -2,30 +2,42 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/rando/client-discovery-harness/schemas/pricing_result.schema.json",
   "title": "Client Discovery Harness - Pricing Result",
-  "description": "The hand-off to, and answer from, the separate pricing harness. This repository contains no pricing engine. pricing_payload must satisfy that harness's client_input.schema.json (required: schema_version, client_id, case_id, product, tax, fx, costs). commercial_context carries the sales context the pricing engine does not consume but the proposal does. Keeping the two apart is what lets both harnesses version independently - see ARCHITECTURE.md section 6.",
+  "description": "One pricing case: what was handed to the separate pricing harness, and what came back. This repository contains no pricing engine. Only pricing_payload crosses the boundary; it must satisfy that harness's client_input.schema.json (required: schema_version, client_id, case_id, product, tax, fx, costs) and its top level is closed, so nothing of ours is added to it. commercial_context is ours and is NOT sent: the pricing engine has no field for it, and giving it one would make that contract depend on this one. Keeping the two apart is what lets both harnesses version independently - see ARCHITECTURE.md section 6.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["pricing_result_id", "project_id", "client_id", "pricing_payload", "commercial_context", "status", "schema_version"],
+  "required": ["pricing_result_id", "project_id", "client_id", "strategy_id", "analysis_id", "pricing_case_id", "pricing_payload", "commercial_context", "status", "schema_version"],
   "properties": {
     "pricing_result_id": { "type": "string" },
     "project_id": { "type": "string" },
     "client_id": { "type": "string" },
+    "strategy_id": {
+      "type": "string",
+      "description": "The ProposalStrategy this case prices. Several cases may share one."
+    },
+    "analysis_id": {
+      "type": "string",
+      "description": "The ClientAnalysis behind that strategy. commercial_context is a copy taken across a repository boundary, and a copy with no origin cannot be re-checked."
+    },
+    "pricing_case_id": {
+      "type": "string",
+      "description": "This case. Becomes case_id in the external payload. Deliberately not the strategy id: one strategy can produce several pricing cases, and reusing the strategy id would make the second overwrite the first in the other harness's records."
+    },
     "pricing_payload": {
       "type": "object",
       "description": "Validated against the pricing harness's own schema, not here. This schema does not restate a contract it does not own."
     },
     "commercial_context": {
       "type": "object",
-      "description": "client, country, problem, buyer, value_proposition, competitive_advantage, competitor, channel, expected_quantity, commercial_conditions - consumed by the proposal, not by the pricing engine."
+      "description": "Established context that explains the pricing case - offered solution binding, proposal objective, the four MN06 claims with their provenance, pricing-relevant evidence gaps. Consumed by the UI, by Phase 9 and by audit; never sent to the pricing engine."
     },
     "engine_result": {
       "type": ["object", "null"],
-      "description": "The pricing harness's analysis_result, stored verbatim."
+      "description": "The pricing harness's analysis_result, stored verbatim. Module statuses (OK / INCOMPLETE / UNKNOWN / ERROR) are that harness's to report and are not reinterpreted here."
     },
     "engine_version": { "type": ["string", "null"] },
     "status": {
       "type": "string",
-      "enum": ["NOT_REQUESTED", "PAYLOAD_READY", "COMPLETED", "FAILED"]
+      "enum": ["NOT_REQUESTED", "HANDOFF_BLOCKED", "PAYLOAD_READY", "COMPLETED", "FAILED"]
     },
     "error_code": { "type": ["string", "null"] },
     "created_at": { "type": "string" },

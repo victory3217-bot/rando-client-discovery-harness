@@ -57,6 +57,18 @@ class StructuredOutputError(ProviderError):
     code = "STRUCTURED_OUTPUT_INVALID"
 
 
+class PricingHandoffBlocked(HarnessError):
+    """Something tried to hand a pricing case over while a prerequisite was still open.
+
+    Raised by the hand-off adapter, not by the core: the core records
+    :class:`~core.models.PricingStatus` ``HANDOFF_BLOCKED`` and stops. This exists so that the
+    gate is structural rather than advisory — a caller that ignores the status and asks for the
+    payload to be written out is refused, because writing it out *is* the hand-off.
+    """
+
+    code = "PRICING_HANDOFF_BLOCKED"
+
+
 class IntakeErrorCode:
     """The closed set of reasons a document can fail to be ingested.
 
