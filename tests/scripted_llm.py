@@ -79,6 +79,12 @@ class ScriptedLLM:
     def _stage_for(schema: dict) -> str:
         """Identify the caller from the schema it asked for."""
         title = (schema or {}).get("title", "")
+        # Deep analysis asks once per framework group, so its titles carry the group id. The
+        # international check comes first because its title contains the common one.
+        if title.startswith("International client analysis"):
+            return "international_claims"
+        if title.startswith("Client analysis claims"):
+            return "claims"
         return {
             "Finding extraction result": "extract",
             "Inference result": "infer",
@@ -87,6 +93,7 @@ class ScriptedLLM:
             "Client discovery criteria": "criteria",
             "Organization mentions": "organizations",
             "Client fit assessment": "fit",
+            "Client research criteria": "queries",
         }.get(title, "unknown")
 
     @staticmethod
@@ -99,6 +106,9 @@ class ScriptedLLM:
             "criteria": {},
             "organizations": {"mentions": []},
             "fit": {"assessments": []},
+            "queries": {"queries": []},
+            "claims": {"claims": []},
+            "international_claims": {"claims": []},
         }.get(stage, {})
 
     # -- helpers for building payloads ------------------------------------

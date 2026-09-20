@@ -17,8 +17,8 @@ other systems embed.
 
 ## Status
 
-**Phase 4 of 9 — client discovery and prioritisation.**
-Version `0.4.0-alpha.1`. Research, diagnosis and client discovery run; deep analysis, proposal
+**Phase 5 of 9 — client deep analysis.**
+Version `0.5.0-alpha.1`. Research, diagnosis, client discovery and deep analysis run; proposal
 strategy and pricing do not. See [docs/development-guide.md](docs/development-guide.md) for the
 phase plan.
 
@@ -32,7 +32,7 @@ mobile-first practice tool for sales training. The core stays independent of all
 | 2 | File intake (8 formats, in memory), evidence candidates | **done** |
 | 3 | Master Note diagnosis, findings, SWOT, key issues | **done** |
 | 4 | Client discovery, fit assessment, deterministic priority | **done** |
-| 5 | Top-3 client deep analysis | planned |
+| 5 | Deep analysis of human-selected clients | **done** |
 | 6–7 | Proposal strategy, pricing adapter | planned |
 | 8–9 | Reference dashboard, report output | planned |
 
@@ -100,7 +100,7 @@ ARCHITECTURE.md         structure and boundaries
 CLAUDE.md AGENTS.md GEMINI.md    thin per-agent entry points
 
 core/                   pure logic: models, evidence invariants, intake, research,
-                        client discovery, interfaces
+                        client discovery, deep analysis, interfaces
 adapters/               storage · knowledge · llm · search · intake implementations
 schemas/                JSON Schema (Draft 2020-12) for all 9 entities
 knowledge/master-notes/ public analysis-framework cards (MN02–MN07)

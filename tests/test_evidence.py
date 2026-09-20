@@ -11,6 +11,8 @@ import pytest
 from core import evidence
 from core.errors import EvidenceRuleViolation
 from core.models import (
+    AnalysisClaim,
+    AnalysisDimension,
     ClientAnalysis,
     ClientCandidate,
     Confidence,
@@ -171,6 +173,7 @@ def test_analysis_with_no_evidence_must_declare_the_gap() -> None:
         country="VN",
         industry="water treatment",
     )
+    # Nineteen unanswered dimensions, none of them saying what would settle it.
     assert evidence.check_client_analysis(silent) != []
 
     honest = ClientAnalysis(
@@ -179,7 +182,11 @@ def test_analysis_with_no_evidence_must_declare_the_gap() -> None:
         client_name="Fictional Buyer",
         country="VN",
         industry="water treatment",
-        missing_evidence=["procurement cycle", "incumbent supplier"],
+        claims=[
+            AnalysisClaim(dimension=dimension, missing_evidence=["procurement cycle"])
+            for dimension in AnalysisDimension
+        ],
+        missing_evidence=["procurement cycle"],
     )
     assert evidence.check_client_analysis(honest) == []
 

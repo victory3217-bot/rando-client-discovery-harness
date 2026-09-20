@@ -264,20 +264,71 @@ signal이 있다는 것만으로 자동 `STRONG`이 되지 않는다. snippet-on
 
 band는 **영업 지시가 아니라 검토 순서**다 (`HARNESS.md` Human Decision First).
 
-## Stage 7 — Top 3 Client Analysis *(Phase 5)*
+## Stage 7 — Client Deep Analysis *(Phase 5 — 완료)*
 
 | | |
 |---|---|
-| 입력 | 우선순위 상위 후보 + MN03 · MN04 · MN05 · MN06 |
-| 출력 | `ClientAnalysis` |
+| 입력 | **사람이 고른** `client_ids` + `ClientCandidate` + `ResearchFinding[]` + `our_solution` + MN03–06 |
+| 출력 | `ClientAnalysis` (claim 19개 + 해외일 때 8개) |
 
 **MN 전체를 반복하지 않는다.** MN02 · MN07은 회사 차원 진단이므로 Client별로 반복하지 않는다.
 
-해외 Client는 `international` 블록을 추가로 채운다: regulation · certification · tariff ·
-logistics · exchange_rate · local_partner · distribution_structure · local_price ·
-purchasing_power · entry_barrier · local_buyer · local_competitor.
+### 사람이 고른다
 
-`evidence`가 비면 `missing_evidence`가 필수다.
+```python
+run_client_analysis(client_ids=[...], ...)   # keyword-only 필수, default 없음
+```
+
+자동 Top 3 없음 · priority 정렬 없음 · ranking 없음. 후보에 없는 id는 건너뛰지 않고 **거부**하고,
+`max_clients_per_run`을 넘으면 앞 N개를 쓰는 대신 **요청 전체를 거부**한다 — 앞부분을 조용히 쓰는
+것이 곧 자동 선정이고, 그것도 성공한 실행처럼 보인다.
+
+숫자 3은 Core에 없다. "최대 3개 비교"는 Application Layer의 UX다.
+
+### 19개 dimension, MN별 4회
+
+| MN03 (8) | MN04 (5) | MN05 (2) | MN06 (4) |
+|---|---|---|---|
+| USER · BUYER · DECISION_MAKER · BUDGET_OWNER · PROBLEM · PROBLEM_SEVERITY · CURRENT_WORKAROUND · KBF | CURRENT_SOLUTION · COMPETITOR · SUBSTITUTE · VALUE_PROPOSITION · COMPETITIVE_ADVANTAGE | SALES_ACCESS_ROUTE · PARTNER | VALUE_DRIVER · PRICE_SENSITIVITY · BUDGET_EVIDENCE · PROCUREMENT_CONTEXT |
+
+한 응답에 19개를 요구하면 뒷부분이 성의 없이 채워진다. framework별로 네 번 묻고, 교차 의존은
+네 번이 모두 끝난 뒤 판정한다.
+
+MN05는 `channel` · `customer_relationship` · `partner`만, MN06은 `price` · `revenue_model` ·
+`pricing_structure`만 렌즈로 쓴다. `resource` · `activity` · `bm_alignment`와 `cost` · `margin` ·
+`channel_cost`는 **우리** 쪽 진단이라 Client별로 다시 묻지 않는다.
+
+### 두 개의 교차 dimension 규칙
+
+**Competitive Advantage — 4조건.** 하나라도 빠지면 `EVIDENCE_NEEDED` + `NO_COMPARISON_BASIS`.
+
+```
+① KBF가 확정되어 있다
+② CURRENT_SOLUTION / COMPETITOR / SUBSTITUTE 중 ≥1 확정
+③ ①②에 쓰이지 않은 자기 자신의 finding ≥1
+④ 그 finding이 MN04로 읽혔다
+```
+
+③이 핵심이다. KBF와 경쟁사 이름을 다시 인용하는 것은 둘이 존재한다는 증명일 뿐, 우리와의 차이에
+대해서는 아무 말도 하지 않는다. 우리 제품에 특징이 있다는 것만으로는 우위가 아니라 사양서다.
+
+**Value Proposition — 완화.** `PROBLEM` 확정 + `our_solution`이 있으면 INFERENCE 가설을 허용한다.
+KBF가 있으면 ceiling MEDIUM, 없으면 LOW + missing evidence. `PROBLEM`이 없으면 만들지 않는다.
+
+### our_solution은 묻지 않는다
+
+출력 스키마에 필드가 없다. 모델에게 "우리 Solution이 무엇인가"를 묻는 것은 제품을 지어내라는
+뜻이고, 실제로 지어낸다. 호출자가 넘긴 값을 그대로 기록한다.
+
+### 해외
+
+같은 pipeline · 같은 finding · 같은 provenance · 같은 transmission에 호출 한 번이 붙는다.
+`market_scope != INTERNATIONAL`이면 `international_claims`는 비어 있다.
+
+### Phase 5가 하지 않는 것
+
+가격 숫자 · 견적 · WTP · 예산 추측 · margin · revenue model 결정 (Phase 7) ·
+`key_message` · `proposal_storyline` · `expected_objection` · `response_logic` (Phase 6).
 
 ## Stage 8 — Proposal Strategy *(Phase 6)*
 

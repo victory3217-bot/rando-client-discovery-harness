@@ -175,7 +175,14 @@ def test_default_instance_validates(entity, schemas: dict) -> None:
             client_name="Fictional Buyer",
             country="KR",
             industry="manufacturing",
-            missing_evidence=["budget cycle"],
+            our_solution="a single-module multi-parameter sensor",
+            claims=[
+                models.AnalysisClaim(
+                    dimension=dimension, missing_evidence=["not assessed in this run"]
+                )
+                for dimension in models.AnalysisDimension
+            ],
+            missing_evidence=["not assessed in this run"],
         ),
         "ProposalStrategy": dict(
             project_id="prj_1",
@@ -213,9 +220,26 @@ def test_sample_project_files_validate(repo_root: Path, schemas: dict) -> None:
 
 # -- schemas the model is asked to fill ------------------------------------
 
+def _every_output_schema() -> dict:
+    """Every reduced schema from every engine.
+
+    Collected in one place because the interesting failure is a new engine whose schemas
+    nobody thought to check — the tests below were research-only until Phase 5.
+    """
+    from core.analysis.output_schemas import ALL_OUTPUT_SCHEMAS as ANALYSIS
+    from core.client.output_schemas import ALL_OUTPUT_SCHEMAS as CLIENT
+    from core.research.output_schemas import ALL_OUTPUT_SCHEMAS as RESEARCH
+
+    return {
+        **{f"research.{k}": v for k, v in RESEARCH.items()},
+        **{f"client.{k}": v for k, v in CLIENT.items()},
+        **{f"analysis.{k}": v for k, v in ANALYSIS.items()},
+    }
+
+
 def test_llm_output_schemas_are_valid() -> None:
     """The reduced schemas handed to a provider are schemas too, and can be wrong."""
-    from core.research.output_schemas import ALL_OUTPUT_SCHEMAS
+    ALL_OUTPUT_SCHEMAS = _every_output_schema()
 
     for name, schema in ALL_OUTPUT_SCHEMAS.items():
         Draft202012Validator.check_schema(schema)
@@ -226,9 +250,10 @@ def test_llm_output_enums_are_subsets_of_the_real_enums() -> None:
     """A model's options must be drawn from the entity enums, never invented alongside them.
 
     Subset rather than equality on purpose: FINDING_BATCH deliberately omits INFERENCE, because
-    pass 1 has no findings to reason from and the wrong answer should be unrepresentable.
+    pass 1 has no findings to reason from and the wrong answer should be unrepresentable, and
+    each analysis claim batch offers only its own framework's dimensions.
     """
-    from core.research.output_schemas import ALL_OUTPUT_SCHEMAS
+    ALL_OUTPUT_SCHEMAS = _every_output_schema()
 
     known = [frozenset(m.value for m in cls) for cls in _python_enum_classes()]
     problems: list[str] = []
@@ -248,7 +273,7 @@ def test_the_model_is_never_asked_for_a_field_the_pipeline_owns() -> None:
     Asking for them invites invention: EchoLLM filling the full finding schema produces
     mn_basis=["[echo] mn_basis[0]"], a framework id that does not exist.
     """
-    from core.research.output_schemas import ALL_OUTPUT_SCHEMAS
+    ALL_OUTPUT_SCHEMAS = _every_output_schema()
 
     owned = {
         "finding_id", "issue_id", "key_issue_id", "project_id", "mn_basis", "source_id",
@@ -274,3 +299,36 @@ def test_the_model_is_never_asked_for_a_field_the_pipeline_owns() -> None:
         walk(schema, name)
 
     assert not leaked, f"the model is being asked for pipeline-owned fields: {sorted(set(leaked))}"
+
+
+def test_deep_analysis_asks_for_no_judgement_of_its_own() -> None:
+    """Phase 5 goes further than Phase 3, and the difference is deliberate.
+
+    Research asks a model to propose an evidence type and a confidence, then lowers them
+    (``core/research/confidence.py``). Deep analysis asks for neither: a claim's type follows
+    from the dimension's kind, and its confidence from the findings it cites. There is no
+    version of those a model could usefully supply, so there is no field for one.
+    """
+    from core.analysis.output_schemas import ALL_OUTPUT_SCHEMAS
+
+    derived = {
+        "evidence_type", "confidence", "framework_basis", "source_ids", "finding_ids",
+        "our_solution", "sales_priority", "priority", "band", "analysis_id", "client_id",
+    }
+    leaked: list[str] = []
+
+    def walk(node, path=""):
+        if not isinstance(node, dict):
+            return
+        for key, value in (node.get("properties") or {}).items():
+            if key in derived:
+                leaked.append(f"{path}.{key}")
+            walk(value, f"{path}.{key}")
+        items = node.get("items")
+        if isinstance(items, dict):
+            walk(items, path)
+
+    for name, schema in ALL_OUTPUT_SCHEMAS.items():
+        walk(schema, name)
+
+    assert not leaked, f"deep analysis asks the model for a derived field: {sorted(set(leaked))}"

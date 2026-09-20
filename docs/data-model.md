@@ -46,6 +46,9 @@ Project
 | `SourceCategory` | `CONSULTING_OUTPUT` `COMPANY_DATA` `EXTERNAL_BUSINESS_DATA` `USER_PROVIDED` |
 | `SourceOrigin` | `UPLOADED_FILE` `SEARCH_RESULT` `USER_PROVIDED` — 자료가 **어떻게 들어왔는가** (`SourceCategory`는 **무엇인가**) |
 | `FitCriterion` | `PROBLEM_FIT` `SOLUTION_FIT` `CAPABILITY_FIT` `MARKET_ATTRACTIVENESS` `PURCHASING_POTENTIAL` `ACCESSIBILITY` `COMPETITIVE_SITUATION` `EVIDENCE_QUALITY` |
+| `AnalysisDimension` | 19개 — MN03 8 · MN04 5 · MN05 2 · MN06 4. `docs/product-spec.md` Stage 7 참조 |
+| `InternationalDimension` | 8개 |
+| `PurchaseSignal` · `AccessRoute` | closed list. 두 Engine이 공유하므로 `core/models.py`에 있다 |
 | `PriorityReasonCode` | `CORE_FIT_POSITIVE` `CORE_FIT_WEAK` `COMMERCIAL_SIGNAL_CONFIRMED` `PURCHASE_EVIDENCE_NEEDED` `ACCESS_EVIDENCE_NEEDED` `COMPETITIVE_BARRIER` `INSUFFICIENT_EVIDENCE` `SNIPPET_ONLY_LIMITATION` `IDENTITY_VERIFICATION_NEEDED` |
 | `FileType` | `PDF` `DOCX` `PPTX` `XLSX` `HTML` `CSV` `TXT` `MD` |
 | `ProcessingStatus` | `PENDING` `EXTRACTED` `FAILED` `PURGED` |
@@ -280,29 +283,76 @@ Phase의 편의를 위한 것이며, Phase 5에서 사용해도 되지만 근거
 
 ## 7. ClientAnalysis
 
-`schemas/client_analysis.schema.json` · MN03/04/05/06만 사용
+`schemas/client_analysis.schema.json` · **사람이 선택한** Client 1개 · MN03/04/05/06만 사용
 
-| 그룹 | 필드 |
-|---|---|
-| 식별 | `analysis_id` `project_id` `client_id` `client_name` `country` `industry` |
-| MN03 | `company_summary` `business_issue` `user` `buyer` `decision_maker` `problem` `problem_severity` |
-| MN04 | `current_solution` `competitor` `substitute` `kbf` `our_solution` `value_proposition` `competitive_advantage` |
-| MN05 | `sales_access_route` `potential_partner` |
-| MN06 | `pricing_implication` |
-| 근거 | `evidence` (list[EvidenceRef]) · `missing_evidence` (list[str]) |
-| 판단 | `sales_priority` `market_scope` |
-| 해외 | `international` (InternationalContext?) |
+| 필드 | 타입 | 필수 | |
+|---|---|---|---|
+| `client_id` | str | ✓ | 선택된 `ClientCandidate` |
+| `our_solution` | str | ✓ | **입력값.** 모델 출력이 아니다 |
+| `claims` | list[AnalysisClaim] | ✓ | **정확히 19개** |
+| `international_claims` | list[InternationalClaim] | ✓ | INTERNATIONAL일 때만 8개 |
+| `finding_ids` | list[str] | ✓ | 파생 |
+| `missing_evidence` | list[str] | ✓ | 파생 |
+| `market_scope` `mn_basis` `lang` `created_at` | | | |
 
-`EvidenceRef`: `finding_id`(필수) · `source_id` · `note`.
+**`sales_priority`가 없다.** Priority의 SSOT는 `ClientCandidate.priority`이고 Phase 4의 규칙표가
+정한다. 여기에 두 번째 band를 두면 한 Client에 답이 둘이 되고, 어느 쪽이 현재인지 말해 줄 것이
+없다. Phase 5는 band를 읽지도 쓰지도 않는다.
 
-`InternationalContext` (해외일 때만): `local_buyer` `local_competitor` `regulation`
-`certification` `tariff` `logistics` `exchange_rate` `local_partner`
-`distribution_structure` `local_price` `purchasing_power` `entry_barrier`.
+### AnalysisClaim
 
-> 별도 객체로 둔 이유: 국내 프로젝트가 빈 해외 필드 12개를 끌고 다니지 않게 한다.
-> **국가별 별도 Engine을 만들지 않는다** — `market_scope`와 이 객체로만 구분한다.
+`dimension` · `statement`(≤500자) · `finding_ids` · `missing_evidence` +
+파생 `evidence_type` · `confidence` · `framework_basis` + `organization_name`(named-org 전용) ·
+`access_route`(SALES_ACCESS_ROUTE 전용)
 
-`evidence == []`이면 `missing_evidence`가 비어 있을 수 없다 (`core/evidence.py`).
+평평한 `Optional[str]` 20개와 공용 `evidence` 버킷 하나를 대체한 구조다. 예전 구조로는
+**`buyer`의 근거와 `competitive_advantage`의 근거를 구분할 수 없었다** — `ClientCandidate`가
+8개 기준마다 참조를 갖기 전과 같은 결함이다.
+
+**`source_ids`를 저장하지 않는다.** SSOT는 `finding_ids`이고 출처는
+`core.analysis.source_ids_for(claim, findings_by_id)`로 파생한다. `FitAssessment`가 `source_ids`를
+갖는 것은 Phase 4에서 finding 없이 snippet을 직접 인용하는 경로가 있기 때문이고, Phase 5의 claim은
+전부 finding을 경유한다 — 의도적 비대칭이다.
+
+### evidence_type은 supporting finding의 복사본이 아니다
+
+FACT 세 개를 엮은 새 결론은 INFERENCE다. 엮는 행위 자체가 claim이고 그것을 수행한 문서는 없다.
+그래서 종류는 **질문**이 정한다 (`core/analysis/dimensions.py`).
+
+| kind | 의미 | FACT 가능 |
+|---|---|---|
+| `DIRECT` | 문서가 말한다 | FACT finding이 있으면 ✓ |
+| `MIXED` | 드물게 명시된다 | 해당 dimension의 framework로 읽힌 FACT가 있을 때만 ✓ |
+| `SYNTHESIS` | 언제나 결론이다 | ✗ |
+
+`confidence`는 `weakest(supporting) → cap(dimension ceiling)`. 둘 다 모델이 정하지 않는다.
+
+### 파생 집계
+
+```
+ClientAnalysis.finding_ids      = sorted(set(⋃ claim.finding_ids))
+ClientAnalysis.missing_evidence = sorted(set(⋃ claim.missing_evidence))
+```
+
+`ClientCandidate`와 같은 함수(`aggregate_finding_ids` · `aggregate_missing_evidence`)를 쓰고,
+`check_client_analysis()`가 어긋나면 거부한다.
+
+### InternationalClaim
+
+같은 필드, **별도 dataclass**다. `core/models.py`의 `_coerce`가 Union을 첫 멤버로 해석하기
+때문에 두 dimension enum을 한 dataclass로 합치면 해외 값이 역직렬화에서 깨진다.
+
+8개: `LOCAL_BUYING_STRUCTURE` `REGULATION` `CERTIFICATION` `TARIFF` `LOGISTICS` `CURRENCY_FX`
+`ENTRY_BARRIER` `LOCAL_PARTNER_REQUIREMENT`.
+
+기존 `InternationalContext`의 `local_competitor` · `local_price` · `purchasing_power` ·
+`distribution_structure`는 공통 dimension이 답하므로 제외했다. `InternationalContext` 타입 자체는
+Phase 6/7을 위해 모델에 남아 있다.
+
+`market_scope != INTERNATIONAL`이면 `international_claims`는 비어 있어야 한다. **국가별 별도
+Engine을 만들지 않는다** — 같은 pipeline·같은 finding·같은 provenance에 호출 한 번이 붙을 뿐이다.
+
+`EvidenceRef`: `finding_id`(필수) · `source_id` · `note`. `ProposalStrategy`가 계속 사용한다.
 
 ## 8. ProposalStrategy
 

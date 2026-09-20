@@ -8,12 +8,13 @@ deterministic echo LLM and manual search. The intake path creates no temporary f
 
 What this demonstrates is what exists today — adapter wiring, live file intake with provenance,
 the research pipeline running against an offline provider, evidence invariants, client
-prioritisation and localisation. Client analysis onwards is not built, and the last section says
-so rather than faking it.
+prioritisation, deep analysis and localisation. Proposal strategy onwards is not built, and the
+last section says so rather than faking it.
 
 Section 5 is worth reading carefully: the offline provider returns nothing, because it has no
-knowledge of this market and therefore no fact to establish. Sections 6 and 9 show what a
-completed diagnosis and a banded pipeline look like, using the fictional sample project.
+knowledge of this market and therefore no fact to establish. Sections 6, 9 and 10 show what a
+completed diagnosis, a banded pipeline and a deep analysis look like, using the fictional
+sample project.
 
 In section 9 the core wrote none of the Korean: the band comes from a rule, the reasons are
 codes, and locales/*.json renders them.
@@ -45,6 +46,7 @@ from core.intake import IntakePolicy, provenance_of  # noqa: E402
 from core.research import ResearchPolicy, ingest_search_results, run_research  # noqa: E402
 from core.harness import create_harness  # noqa: E402
 from core.interfaces.search import SearchResult  # noqa: E402
+from core.analysis import FRAMEWORK_GROUPS, dimensions_for
 from core.models import (  # noqa: E402
     ClientAnalysis,
     ClientCandidate,
@@ -380,14 +382,44 @@ def main() -> int:
         print(f"      {labels['fields']['source']}: {len(record.source_ids)}건 "
               f"(이 조직이 등장한 자료) · 근거 {len(record.finding_ids)}건")
 
-    _rule("10. What is still missing (recorded, not hidden)")
+    # ---- 10. deep analysis --------------------------------------------------
+    _rule("10. Deep analysis of a selected client")
+    for record in harness.storage.get_client_analyses(project.project_id):
+        print(f"  {record.client_name}  ({record.country}, {record.industry})")
+        print(f"      {labels['fields']['our_solution']}: {record.our_solution}")
+
+        for framework_id in FRAMEWORK_GROUPS:
+            settled = [
+                claim
+                for claim in record.claims
+                if claim.dimension in dimensions_for(framework_id) and claim.statement
+            ]
+            if not settled:
+                continue
+            print(f"      [{framework_id}]")
+            for claim in settled:
+                label = labels["enums"]["AnalysisDimension"][claim.dimension.value]
+                kind = labels["enums"]["EvidenceType"][claim.evidence_type.value]
+                level = labels["enums"]["Confidence"][claim.confidence.value]
+                print(f"        {label:<12} {claim.statement[:44]}…")
+                print(f"        {'':<12} {kind} · {level} · 근거 {len(claim.finding_ids)}건")
+
+        open_dimensions = [c for c in record.claims if not c.statement]
+        print(f"      확인됨 {len(record.claims) - len(open_dimensions)} / "
+              f"미확인 {len(open_dimensions)} (19개 항목)")
+
+    print()
+    print("  a claim carries its own findings, so 'why is this the buyer' has an answer")
+    print("  next to it rather than in a shared bucket at the bottom of the record")
+
+    _rule("11. What is still missing (recorded, not hidden)")
     for record in analyses:
         print(f"  {record.client_name}:")
         for item in record.missing_evidence:
             print(f"    - {item}")
 
     # ---- 11. llm swap -------------------------------------------------------
-    _rule("11. LLM interface")
+    _rule("12. LLM interface")
     finding_schema_path = REPO_ROOT / "schemas" / "research_finding.schema.json"
     with finding_schema_path.open(encoding="utf-8") as fh:
         finding_schema = json.load(fh)
@@ -402,9 +434,8 @@ def main() -> int:
     print("  (the offline provider answers 'not established' rather than inventing a finding)")
     print(f"\n  {labels['messages']['transmission_notice']}")
 
-    _rule("12. Not built yet")
+    _rule("13. Not built yet")
     for phase, item in [
-        ("5", "Top-3 client deep analysis"),
         ("6-7", "Proposal strategy generation, pricing adapter"),
         ("8-9", "Reference dashboard, report output"),
     ]:

@@ -28,7 +28,8 @@ from core import evidence
 from core.errors import EvidenceRuleViolation
 from core.harness import CLIENT_ANALYSIS_FRAMEWORKS, RESEARCH_FRAMEWORKS
 from core.models import (
-    ClientAnalysis, ClientCandidate, Confidence, EvidenceType, FitAssessment, FitCriterion,
+    AnalysisClaim, AnalysisDimension, ClientAnalysis, ClientCandidate, Confidence,
+    EvidenceType, FitAssessment, FitCriterion,
     FitLevel, MarketScope, PriorityDecision, Project, ResearchFinding, SWOTCategory, SWOTIssue,
     aggregate_finding_ids, as_dict,
 )
@@ -68,9 +69,24 @@ else:
 
 analysis = ClientAnalysis(
     project_id=project.project_id, client_id="cli_x", client_name="Fictional Buyer",
-    country="VN", industry="water treatment", missing_evidence=["procurement cycle"],
+    country="VN", industry="water treatment",
+    claims=[
+        AnalysisClaim(dimension=d, missing_evidence=["procurement cycle"])
+        for d in AnalysisDimension
+    ],
+    missing_evidence=["procurement cycle"],
 )
 assert evidence.check_client_analysis(analysis) == []
+assert len(analysis.claims) == 19
+
+# A dimension that is simply absent is indistinguishable from one nobody could settle.
+short = ClientAnalysis(
+    project_id=project.project_id, client_id="cli_x", client_name="Fictional Buyer",
+    country="VN", industry="water treatment",
+    claims=[AnalysisClaim(dimension=AnalysisDimension.BUYER, missing_evidence=["who buys"])],
+    missing_evidence=["who buys"],
+)
+assert evidence.check_client_analysis(short) != []
 
 fit = [
     FitAssessment(

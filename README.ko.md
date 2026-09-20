@@ -16,8 +16,8 @@
 
 ## 현재 상태
 
-**Phase 4 / 9 — Client Discovery & Priority.**
-버전 `0.4.0-alpha.1`. Research · 진단 · Client Discovery는 동작하고, 심층분석 · 제안전략 ·
+**Phase 5 / 9 — Client Deep Analysis.**
+버전 `0.5.0-alpha.1`. Research · 진단 · Client Discovery · 심층분석은 동작하고, 제안전략 ·
 Pricing은 아직이다. 개발 순서는 [docs/development-guide.md](docs/development-guide.md)를 참조한다.
 
 사용 예정: 독립 Public Harness · Web Application의 분석 Core · 영업조직 교육용 Mobile-first
@@ -29,7 +29,7 @@ Pricing은 아직이다. 개발 순서는 [docs/development-guide.md](docs/devel
 | 2 | File Intake (8종, 메모리 파싱) · Evidence Candidate | **완료** |
 | 3 | Master Note 진단 · Finding · SWOT · Key Issue | **완료** |
 | 4 | Client Discovery · Fit 평가 · 결정적 우선순위 | **완료** |
-| 5 | Top 3 Client 심층분석 | 예정 |
+| 5 | 사람이 선택한 Client 심층분석 | **완료** |
 | 6–7 | Proposal Strategy · Pricing Adapter | 예정 |
 | 8–9 | Reference Dashboard · Report Output | 예정 |
 
@@ -97,7 +97,7 @@ ARCHITECTURE.md         구조와 경계
 CLAUDE.md AGENTS.md GEMINI.md    AI별 얇은 진입점
 
 core/                   순수 로직: Entity · Evidence 불변식 · Intake · Research ·
-                        Client Discovery · Interface
+                        Client Discovery · Deep Analysis · Interface
 adapters/               storage · knowledge · llm · search · intake 구현체
 schemas/                Entity 9개의 JSON Schema (Draft 2020-12)
 knowledge/master-notes/ 공개용 분석 프레임워크 카드 (MN02–MN07)

@@ -47,7 +47,7 @@ PyMuPDF는 PDF 텍스트 추출 품질이 더 낫지만 **AGPL-3.0**이라 채�
 | **2** | File Intake (8종) · 메모리 파싱 · Evidence Candidate · 버퍼 해제 | **완료** | canary 6개 표면 누출 0 · intake가 temp file을 만들지 않음 |
 | **3** | Master Note 진단 · Finding · SWOT · Key Issue · 전송 게이트웨이 | **완료** | hallucination 거부 · 전송 단일 경계 · 오프라인 E2E |
 | **4** | Client Discovery · Fit · Priority | **완료** | 근거 없는 회사명 저장 불가 · 숫자 없는 band · snippet P1 차단 |
-| **5** | Top 3 Client Analysis | 예정 | MN03–MN06 필드가 채워짐 |
+| **5** | Client Deep Analysis (사람이 선택) | **완료** | 자동 Top 3 불가 · Phase 4 band 불변 · SYNTHESIS는 FACT 불가 |
 | **6** | Proposal Strategy | 예정 | `proposal_objective` 포함 전 필드 |
 | **7** | Pricing Adapter | 예정 | `pricing_payload`가 Pricing Harness 스키마 검증 통과 |
 | **8** | Web App Integration + Mobile-first Reference UI + Training UX + SQLite Adapter | 예정 | Reference App 삭제 후에도 core 테스트 통과 |
@@ -60,6 +60,16 @@ Phase 1에서 **만들지 않은 것**과 그 이유:
 | SQLite Adapter | Phase 1–7에는 읽는 주체(대시보드)가 없다. 지금 만들면 실제 쿼리 요구가 확정되기 전에 스키마를 고정하고, 마이그레이션 비용만 남는다. Phase 8에서 대시보드와 함께 만든다 |
 | `core/intake/` · `core/research/` · `core/client/` 빈 패키지 | 아무것도 하지 않는 패키지를 미리 만들지 않는다. 위치는 `ARCHITECTURE.md` 7절에 문서화되어 있다 |
 | `PricingProvider` · `ReportProvider` Protocol | 호출자가 없는 Protocol은 계약이 아니라 추측이다. 정의는 `ARCHITECTURE.md` 3절에 있다 |
+
+### Phase 5에서 남긴 것 (backlog)
+
+범위를 넘기지 않기 위해 의도적으로 미룬 두 가지다. 둘 다 Phase 5가 만든 문제가 아니라 Phase 5에서
+드러난 문제다.
+
+| | |
+|---|---|
+| **core gap 문자열의 locale 렌더링** | `"not assessed in this run"` 같은 fallback을 Core가 영문으로 만들어 사용자 목록에 그대로 나온다 (`examples/run_example.py` 11절에서 확인 가능). Bilingual by Design대로라면 code를 반환하고 `locales/*.json`이 렌더해야 한다. Phase 4의 `core/client/fit.py`도 같은 방식이라 **두 Phase를 함께 고쳐야** 하고, 그래서 Phase 5 범위에서 하지 않았다 |
+| **claim과 인용 finding의 의미적 적합성** | 모델이 무관한 FACT finding을 `BUYER`에 인용해도 구조 검사는 통과한다. 지금 막는 것은 ref 해석 가능성 · finding의 evidence_type · 조직명 검증뿐이다. 의미 판정에는 이 저장소가 도입하지 않기로 한 수단(NER · embedding · LLM 심판)이 필요하므로, 고치려면 그 결정을 먼저 다시 해야 한다 |
 
 ### Web / Training 관련으로 아직 만들지 않은 것
 
@@ -106,6 +116,11 @@ pytest -k evidence
 | `test_client_discovery.py` | criteria · 조직 추출 · fit 8개 · 검색 통합 · 오프라인 E2E |
 | `test_client_validation.py` | **회사명 hallucination 거부** · **토큰 경계 공격** · signal 없는 STRONG 차단 · 파생 집계 일관성 · 잘림 없는 거부 |
 | `test_client_priority.py` | 규칙표 전 분기 · **snippet P1 차단** · reason code i18n · 결정성 |
+| `test_analysis_selection.py` | **사람이 고른 Client만** · 자동 Top 3 부재(AST) · Phase 4 band 불변 |
+| `test_analysis_validation.py` | claim 19개 · evidence type 3분류 · CA 4조건 · VP 최소조건 · 조직명 검증 |
+| `test_client_analysis.py` | MN별 4회 호출 · 해외 8개 · serializer roundtrip · 오프라인 E2E |
+| `test_analysis_canary.py` | 6표면 누출 0 · 개인정보 필드 부재 |
+| `test_analysis_handoff.py` | Phase 6 입력 11개 · Phase 7 commercial context 4개 |
 | `scripted_llm.py` | 준비된 응답을 돌려주는 테스트 double (테스트가 아니라 도구 모듈) |
 | `intake_fixtures.py` | 테스트 문서 8종을 메모리에서 생성 (테스트가 아니라 fixture 모듈) |
 

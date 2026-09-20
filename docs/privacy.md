@@ -160,14 +160,38 @@ parser · exception_type · segment_count · duration_ms
 없다. Core가 추측해서 분류하는 기능은 만들지 않는다 — 출처는 `source_origin` ·
 `source_category` · provenance로 유지한다.
 
-Client discovery 단계에서 기록 가능한 것: `project_id` · `client_id` · `source_origin` ·
-`source_category` · `fit_criterion` · `fit_level` · `priority_band` · counts · rejection code.
+Client discovery·analysis 단계에서 기록 가능한 것: `project_id` · `client_id` ·
+`analysis_id` · `source_origin` · `source_category` · `fit_criterion` · `fit_level` ·
+`priority_band` · `dimension` · `evidence_type` · `confidence` · counts · rejection code.
 
 길이 상한을 넘긴 `reason`은 **잘라서 저장하지도, 로그에 남기지도 않는다.** 남는 것은
 `REASON_TOO_LONG` 코드와 criterion 값뿐이다. 잘린 앞부분을 진단용으로 남기는 것은 문서 텍스트를
 로그로 옮기는 가장 흔한 경로다.
 `OrganizationMention.verbatim`(원문 조각) · `FitAssessment.reason` · `discovery_rationale`은
 남기지 않는다. 전송·거부·플래그 객체는 전부 redacting `__repr__`를 정의한다.
+
+### 보장되는 것과 노력하는 것 (Phase 5)
+
+Deep Analysis는 이 Harness에서 가장 민감한 텍스트를 다룬다 — 누가 사고, 문제의 비용이 얼마이며,
+조달이 어떻게 돌아가는가. 그래서 **구조가 보장하는 것**과 **prompt·policy가 요청할 뿐인 것**을
+구분해 적는다.
+
+| 구조적 보장 | |
+|---|---|
+| `contact_name` · `email` · `phone` · `person_title` 필드가 **없다** | schema `additionalProperties: false`. 그 이름으로 저장할 자리가 없다 |
+| `statement` 500자 초과는 **거부**(잘라내지 않음) | 잘린 문장은 아무도 쓰지 않은 주장이다 |
+| 검증 실패한 조직명은 statement까지 폐기 | 근거에 없는 조직에 대한 문장은 보여줄 수 없는 내용이다 |
+| log·repr·rejection에 statement 부재 | canary 6표면 테스트 |
+| 모델이 못 만드는 것 | `our_solution` · `evidence_type` · `confidence` · `source_ids` · priority — 출력 스키마에 필드가 없다 |
+
+| prompt / policy 수준 (보장 아님) | |
+|---|---|
+| `BUYER` · `DECISION_MAKER` · `BUDGET_OWNER`가 역할·부서·기능일 것 | `statement`는 free text이므로 개인 실명이 들어갈 수 있다. prompt가 요구할 뿐이다 |
+| 근거에 실제로 존재하는 개인명 | 저장될 수 있다. 이것은 공개 근거에 있는 정보이고, 이 Harness는 그것을 제거한다고 주장하지 않는다 |
+
+**"개인 이름이 절대 저장되지 않는다"고 쓰지 않는다.** 실제로 보장할 수 없는 문장이다.
+
+CRM 연결은 별도 기능이며 이 저장소는 그 경로를 제공하지 않는다.
 
 ### `display_label`은 allowlist에 없다
 
