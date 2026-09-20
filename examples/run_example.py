@@ -8,8 +8,8 @@ deterministic echo LLM and manual search. The intake path creates no temporary f
 
 What this demonstrates is what exists today — adapter wiring, live file intake with provenance,
 the research pipeline running against an offline provider, evidence invariants, client
-prioritisation, deep analysis, proposal strategy and localisation. Pricing onwards is not built,
-and the last section says so rather than faking it.
+prioritisation, deep analysis, proposal strategy, the pricing hand-off and localisation. The
+report layer is not built, and the last section says so rather than faking it.
 
 Section 5 is worth reading carefully: the offline provider returns nothing, because it has no
 knowledge of this market and therefore no fact to establish. Sections 6, 9 and 10 show what a
@@ -18,6 +18,12 @@ using the fictional sample project.
 
 In section 9 the core wrote none of the Korean: the band comes from a rule, the reasons are
 codes, and locales/*.json renders them.
+
+Section 12 runs the pricing hand-off twice on purpose. The first run is blocked because the
+analysis recorded things that have to be known before a price is set; the second proceeds
+because a person named each of them by gap_ref, not by retyping its wording. No number is
+calculated in either run, and the exchange rate nobody entered stays null rather than
+becoming a figure.
 
 The documents ingested in section 3 are built in memory here. Everything in
 examples/sample_project/ is invented too. See HARNESS.md section 9.
@@ -47,6 +53,14 @@ from core.research import ResearchPolicy, ingest_search_results, run_research  #
 from core.harness import create_harness  # noqa: E402
 from core.interfaces.search import SearchResult  # noqa: E402
 from core.analysis import FRAMEWORK_GROUPS, dimensions_for
+from adapters.pricing.file import FilePricingBridge  # noqa: E402
+from core.pricing_bridge import (  # noqa: E402
+    CommercialInput,
+    CostItemInput,
+    PriceComponentInput,
+    open_before_pricing,
+    run_pricing_handoff,
+)
 from core.models import (  # noqa: E402
     ClientAnalysis,
     ClientCandidate,
@@ -452,14 +466,100 @@ def main() -> int:
     print("  the storyline has no DIFFERENTIATION step because the analysis established no")
     print("  competitive advantage - Phase 6 reads that gate rather than deciding again")
 
-    _rule("12. What is still missing (recorded, not hidden)")
+    # ---- 12. pricing hand-off -----------------------------------------------
+    _rule("12. Pricing hand-off (this harness does not calculate)")
+    pricing_analysis = next(
+        r for r in harness.storage.get_client_analyses(project.project_id)
+        if r.analysis_id == "cla_s01"
+    )
+    pricing_strategy = next(
+        r for r in harness.storage.get_proposal_strategies(project.project_id)
+        if r.strategy_id == "prp_s01"
+    )
+    commercial = CommercialInput(
+        # The other repository's contract version, not ours. There is no default.
+        contract_version="1.1",
+        product_name="Multi-parameter water quality module (가상)",
+        pricing_model="one_time",
+        base_currency="KRW",
+        reporting_currency="USD",
+        vat_rate=0.10,
+        # Nobody entered an exchange rate. It stays unknown rather than becoming a number.
+        rate_base_per_reporting=None,
+        price_components=[
+            PriceComponentInput(
+                solution_element_ref="S1",
+                component_id="module",
+                component_type="one_time",
+                currency="KRW",
+                actual_price=4200000,
+                price_includes_vat=False,
+            )
+        ],
+        cost_items=[
+            CostItemInput(
+                item_id="bom",
+                label="자재원가",
+                cost_category="product_service_direct_cost",
+                basis="per_unit",
+                applies_to_component="module",
+                amount=1850000,
+                currency="KRW",
+            )
+        ],
+    )
+
+    blocked = run_pricing_handoff(
+        analysis=pricing_analysis, strategy=pricing_strategy, commercial=commercial
+    ).results[0]
+    blocking = open_before_pricing(pricing_strategy)
+    print(f"  {labels['fields']['status']}: "
+          f"{labels['enums']['PricingStatus'][blocked.status.value]}")
+    for gap in blocking:
+        # need is what a person reads; gap_ref is what comes back. Never the other way round.
+        print(f"      {labels['enums']['EvidenceTiming'][gap.timing.value]}: {gap.need}")
+        print(f"      {'':<12} {gap.gap_ref}")
+    print("      the payload was built and can be read - what is withheld is the hand-off")
+
+    # A person reads those four and takes responsibility for each one by reference. Waving
+    # the case through in general would not survive a fifth gap appearing tomorrow, and
+    # acknowledging by wording would break the moment somebody tidied a sentence.
+    outcome = run_pricing_handoff(
+        analysis=pricing_analysis,
+        strategy=pricing_strategy,
+        commercial=commercial,
+        acknowledged_gap_refs=[gap.gap_ref for gap in blocking],
+    )
+    case = outcome.results[0]
+    print(f"  {labels['fields']['status']}: "
+          f"{labels['enums']['PricingStatus'][case.status.value]}  "
+          f"({' · '.join(f.code for f in outcome.review_flags)})")
+
+    payload = case.pricing_payload
+    print(f"      case_id {case.pricing_case_id[:12]}… ≠ strategy_id {case.strategy_id}")
+    print(f"      {labels['fields']['pricing_payload']}: {' '.join(sorted(payload))}")
+    print(f"      fx.rate_base_per_reporting: {payload['fx']['rate_base_per_reporting']} "
+          "(UNKNOWN stays null - never 0)")
+    print(f"      {labels['fields']['commercial_context']}: "
+          f"{len(case.commercial_context['claims'])} claims, kept here, not sent")
+
+    bridge = FilePricingBridge.from_repository(REPO_ROOT.parent / "pricing-harness-public")
+    verdict = bridge.validate_external_payload(payload)
+    print(f"      external contract: "
+          f"{'checked and accepted' if verdict.ok else verdict.code or 'rejected'}")
+
+    print()
+    print("  no margin, no break-even, no target price and no exchange rate is computed here.")
+    print("  the pricing harness is a separate repository and a separate process (HARNESS.md 8).")
+
+    _rule("13. What is still missing (recorded, not hidden)")
     for record in analyses:
         print(f"  {record.client_name}:")
         for item in record.missing_evidence:
             print(f"    - {item}")
 
     # ---- 11. llm swap -------------------------------------------------------
-    _rule("13. LLM interface")
+    _rule("14. LLM interface")
     finding_schema_path = REPO_ROOT / "schemas" / "research_finding.schema.json"
     with finding_schema_path.open(encoding="utf-8") as fh:
         finding_schema = json.load(fh)
@@ -474,10 +574,10 @@ def main() -> int:
     print("  (the offline provider answers 'not established' rather than inventing a finding)")
     print(f"\n  {labels['messages']['transmission_notice']}")
 
-    _rule("14. Not built yet")
+    _rule("15. Not built yet")
     for phase, item in [
-        ("7", "Pricing adapter"),
-        ("8-9", "Reference dashboard, report output"),
+        ("8", "Web app integration, mobile-first reference UI, SQLite adapter"),
+        ("9", "Report output (HTML/DOCX)"),
     ]:
         print(f"  Phase {phase:<4} {item}")
 

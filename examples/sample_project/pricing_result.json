@@ -1,0 +1,254 @@
+{
+  "project_id": "prj_sample",
+  "client_id": "cli_s01",
+  "strategy_id": "prp_s01",
+  "analysis_id": "cla_s01",
+  "pricing_case_id": "pcs_s01",
+  "pricing_payload": {
+    "schema_version": "1.1",
+    "client_id": "cli_s01",
+    "case_id": "pcs_s01",
+    "product": {
+      "name": "Multi-parameter water quality module (가상)",
+      "pricing_model": "hybrid",
+      "price_components": [
+        {
+          "component_id": "module",
+          "type": "one_time",
+          "actual_price": 4200000,
+          "currency": "KRW",
+          "price_includes_vat": false,
+          "evidence": {
+            "source_type": "quote",
+            "source_ref": "src_s01",
+            "as_of_date": "2026-08-01",
+            "verification_status": "confirmed"
+          }
+        },
+        {
+          "component_id": "remote_access",
+          "type": "recurring_annual",
+          "actual_price": 480000,
+          "currency": "KRW",
+          "price_includes_vat": false
+        }
+      ]
+    },
+    "tax": {
+      "vat_rate": 0.1
+    },
+    "fx": {
+      "base_currency": "KRW",
+      "reporting_currency": "USD",
+      "rate_base_per_reporting": 1350.0
+    },
+    "costs": {
+      "items": [
+        {
+          "item_id": "bom",
+          "label": "자재원가",
+          "cost_category": "product_service_direct_cost",
+          "amount": 1850000,
+          "rate": null,
+          "currency": "KRW",
+          "basis": "per_unit",
+          "applies_to_component": "module",
+          "evidence": {
+            "source_ref": "src_s02",
+            "verification_status": "estimated"
+          }
+        },
+        {
+          "item_id": "install",
+          "label": "설치·교정",
+          "cost_category": "variable_selling_delivery",
+          "amount": 320000,
+          "rate": null,
+          "currency": "KRW",
+          "basis": "per_visit",
+          "applies_to_component": "module",
+          "frequency_per_year": 1
+        },
+        {
+          "item_id": "hosting",
+          "label": "원격조회 호스팅",
+          "cost_category": "product_service_direct_cost",
+          "amount": 9000,
+          "rate": null,
+          "currency": "KRW",
+          "basis": "per_unit_per_month",
+          "applies_to_component": "remote_access"
+        },
+        {
+          "item_id": "agent_fee",
+          "label": "현지 대리점 수수료",
+          "cost_category": "variable_selling_delivery",
+          "amount": null,
+          "rate": 0.08,
+          "currency": null,
+          "basis": "rate_of_net_sales",
+          "applies_to_component": "shared",
+          "allocation_rule": "by_component_revenue"
+        }
+      ]
+    },
+    "targets": {
+      "target_contribution_margin_rate": 0.4
+    },
+    "meta": {
+      "strategy_id": "prp_s01",
+      "analysis_id": "cla_s01"
+    }
+  },
+  "commercial_context": {
+    "schema_version": "0.1",
+    "pricing_case_id": "pcs_s01",
+    "strategy_id": "prp_s01",
+    "analysis_id": "cla_s01",
+    "client_id": "cli_s01",
+    "client_name": "Mekong Aqua Utilities (가상)",
+    "country": "VN",
+    "market_scope": "INTERNATIONAL",
+    "objective": "PILOT",
+    "objective_source": "HUMAN",
+    "offered": [
+      {
+        "ref": "S1",
+        "text": "다항목 수질 측정을 단일 모듈로 처리하는 상시 계측 장비",
+        "component_id": "module"
+      },
+      {
+        "ref": "S2",
+        "text": "계측 데이터 원격 조회 기능",
+        "component_id": "remote_access"
+      }
+    ],
+    "claims": {
+      "VALUE_DRIVER": {
+        "established": true,
+        "statement": "채수 인력을 늘리지 않고 측정 주기를 확보하는 것이 도입 이유다",
+        "evidence_type": "INFERENCE",
+        "confidence": "LOW",
+        "finding_ids": [
+          "fnd_s07"
+        ],
+        "framework_basis": [
+          "MN06"
+        ]
+      },
+      "PRICE_SENSITIVITY": {
+        "established": true,
+        "statement": "공개 입찰 이력상 최저가보다 유지보수 조건을 우선한 사례가 있다",
+        "evidence_type": "INFERENCE",
+        "confidence": "LOW",
+        "finding_ids": [
+          "fnd_s04"
+        ],
+        "framework_basis": [
+          "MN06"
+        ]
+      },
+      "BUDGET_EVIDENCE": {
+        "established": true,
+        "statement": "연간 계측 유지보수 예산 항목이 공시 자료에 편성되어 있다",
+        "evidence_type": "FACT",
+        "confidence": "MEDIUM",
+        "finding_ids": [
+          "fnd_s01"
+        ],
+        "framework_basis": [
+          "MN06"
+        ]
+      },
+      "PROCUREMENT_CONTEXT": {
+        "established": true,
+        "statement": "공개 입찰과 수의계약을 병행하며 사전 공급자 등록을 요구한다",
+        "evidence_type": "FACT",
+        "confidence": "MEDIUM",
+        "finding_ids": [
+          "fnd_s06"
+        ],
+        "framework_basis": [
+          "MN06"
+        ]
+      },
+      "PROBLEM": {
+        "established": true,
+        "statement": "월 1회 수동 채수로는 배수지 수질 변동을 확인하지 못한다",
+        "evidence_type": "FACT",
+        "confidence": "MEDIUM",
+        "finding_ids": [
+          "fnd_s05"
+        ],
+        "framework_basis": [
+          "MN03"
+        ]
+      },
+      "KBF": {
+        "established": true,
+        "statement": "측정 주기와 유지보수 주기를 단가보다 먼저 본다",
+        "evidence_type": "FACT",
+        "confidence": "MEDIUM",
+        "finding_ids": [
+          "fnd_s03"
+        ],
+        "framework_basis": [
+          "MN03"
+        ]
+      },
+      "COMPETITIVE_ADVANTAGE": {
+        "established": true,
+        "statement": "다항목을 단일 모듈로 처리해 설치 지점당 장비 수가 줄어든다",
+        "evidence_type": "FACT",
+        "confidence": "MEDIUM",
+        "finding_ids": [
+          "fnd_s02"
+        ],
+        "framework_basis": [
+          "MN03"
+        ]
+      }
+    },
+    "international_claims": {
+      "TARIFF": {
+        "established": true,
+        "statement": "계측기기 수입 관세는 협정세율 적용 대상이다",
+        "evidence_type": "FACT",
+        "confidence": "MEDIUM",
+        "finding_ids": [
+          "fnd_s08"
+        ],
+        "framework_basis": [
+          "MN06"
+        ]
+      }
+    },
+    "evidence_needs": [
+      {
+        "gap_ref": "gap_61becf8f3fd0bb8b",
+        "need": "연간 계측 예산 규모",
+        "timing": "BEFORE_PRICING",
+        "dimension": "BUDGET_EVIDENCE"
+      }
+    ],
+    "open_gap_counts": {
+      "BEFORE_PROPOSAL": 0,
+      "BEFORE_PRICING": 1,
+      "BEFORE_CONTRACT": 0,
+      "OPTIONAL": 0,
+      "UNCLASSIFIED": 1
+    },
+    "expected_quantity": 24,
+    "commercial_conditions": [
+      "결제 60일",
+      "보증 24개월"
+    ]
+  },
+  "engine_result": null,
+  "engine_version": null,
+  "status": "PAYLOAD_READY",
+  "error_code": null,
+  "pricing_result_id": "prc_s01",
+  "created_at": "2026-09-20T00:00:00+00:00",
+  "schema_version": "0.1"
+}

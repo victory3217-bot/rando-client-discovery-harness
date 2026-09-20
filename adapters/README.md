@@ -67,6 +67,30 @@ assert isinstance(MyOrgStorage(), StorageProvider)   # 런타임 구조 검사
 | `intake/session.py` | — | request 수명 · batch 상한 · 버퍼 해제 |
 | `intake/safe_logging.py` | — | 로그 allowlist |
 | `prompts/loader.py` | — | `prompts/**/*.md` 로딩 (research + discovery). core는 파일을 읽지 않으므로 여기서 읽어 주입한다 |
+| `pricing/file.py` | — | Pricing Harness와 JSON 파일 교환. provider가 아니다 — 아래 |
+
+### Pricing adapter는 provider가 아니다
+
+`create_harness()`는 그대로 provider 4개를 받는다. Core는 Pricing Harness를 **호출하지
+않기** 때문이다 — payload를 조립하고 멈춘다. 파일을 어디에 쓸지는 그 디렉토리를 소유하는
+Application Layer가 정하므로, `FilePricingBridge`는 거기서 직접 조립한다.
+
+```python
+from adapters.pricing.file import FilePricingBridge
+
+bridge = FilePricingBridge.from_repository("../pricing-harness-public")  # 경로는 선택
+path = bridge.write_payload(result, export_dir)     # HANDOFF_BLOCKED면 거부한다
+answer = bridge.read_engine_result(result_path)
+```
+
+지켜야 할 것 3가지:
+
+1. **Pricing Harness의 Python을 import하지 않는다.** 두 저장소 모두 top-level 패키지명이
+   `core`라 같은 프로세스에서 충돌한다. 스키마 *파일*을 읽는 것은 무방하다.
+2. **출력 디렉토리에 기본값을 두지 않는다.** 원가표가 담긴 파일이 아무도 고르지 않은 위치에
+   생기지 않는다.
+3. **검사하지 않은 것을 통과로 표현하지 않는다.** 외부 스키마 경로가 없으면
+   `ExternalValidation(checked=False, code="EXTERNAL_CONTRACT_NOT_CHECKED")`다.
 
 ### Intake adapter를 추가할 때
 
@@ -95,7 +119,6 @@ class MyFormatParser:
 | Phase | Adapter |
 |---|---|
 | 3 | `llm/anthropic.py` · `llm/openai.py` · `llm/google.py` · `search/web.py` |
-| 7 | `pricing/file.py` — Pricing Harness와 JSON 파일 계약 |
 | 8 | `storage/sqlite.py` |
 | 9 | `reporting/html.py` · `reporting/docx.py` |
 
