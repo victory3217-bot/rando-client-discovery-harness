@@ -330,20 +330,118 @@ KBF가 있으면 ceiling MEDIUM, 없으면 LOW + missing evidence. `PROBLEM`이 
 가격 숫자 · 견적 · WTP · 예산 추측 · margin · revenue model 결정 (Phase 7) ·
 `key_message` · `proposal_storyline` · `expected_objection` · `response_logic` (Phase 6).
 
-## Stage 8 — Proposal Strategy *(Phase 6)*
+## Stage 8 — Proposal Strategy *(Phase 6 — 완료)*
 
 | | |
 |---|---|
-| 입력 | `ClientAnalysis` |
+| 입력 | `ClientAnalysis` 1건 + 호출자가 제공한 `solution_elements` + (선택) `objective` |
 | 출력 | `ProposalStrategy` |
 
-**제안서를 바로 작성하지 않는다.** 전략이 먼저다.
+### Proposal Strategy ≠ Proposal Document
 
-`proposal_objective`(제안 목표)가 비어 있으면 거부된다. `proposal_storyline` ·
-`expected_objection` · `response_logic` · `additional_evidence_required`를 함께 만든다.
+| | |
+|---|---|
+| **Proposal Strategy** | 무엇을 왜 어떻게 제안할지에 대한 **구조화된 의사결정 데이터** |
+| **Proposal Document** | 그 전략으로 만드는 실제 문서 — Phase 9 |
 
-확인되지 않은 것을 확인된 것처럼 쓰지 않는다 — `examples/sample_project/proposal_strategy.json`의
-`response_logic` 첫 항목이 그 예다(인증 미확인을 밝히고 확인 일정을 제안에 포함).
+Phase 6는 PPT·DOCX·PDF·제안서 본문·견적서를 만들지 않는다. `core/proposal/`에 렌더링
+라이브러리 import가 없음을 테스트가 확인한다.
+
+### 목표에는 기본값이 없다
+
+```
+objective = None, objective_source = None      ← 아무도 고르지 않았을 때
+사람이 지정  → HUMAN,        status = STRATEGY_DRAFTED
+AI가 제안    → AI_SUGGESTED, 근거가 받쳐줄 때만
+```
+
+**근거를 앞지르는 목표에 대해 자동 fallback을 두지 않는다.** AI 제안이 요건을 못 채우면
+목표는 `None`이 되고 **아무것도 대신 들어가지 않는다** — 조용한 대체는 파이프라인이 제안의
+목적을 정하는 것이다. 사람이 고른 목표는 요건을 못 채워도 **덮어쓰지 않고** flag만 남긴다.
+사람은 Harness가 모르는 것을 알 수 있고, 기계는 자기가 인용한 근거 이상을 알 수 없다.
+
+| 목표 | 요구 근거 |
+|---|---|
+| `DISCOVERY_MEETING` · `TECHNICAL_REVIEW` · `PARTNERSHIP_DISCUSSION` | 없음 |
+| `POC` | `PROBLEM` |
+| `PILOT` | `PROBLEM` + (`BUYER` 또는 `DECISION_MAKER`) |
+| `SUPPLIER_REGISTRATION` | `PROCUREMENT_CONTEXT` |
+| `FORMAL_PROPOSAL` | `PROBLEM` + (`BUYER` 또는 `DECISION_MAKER`) |
+| `PROCUREMENT_RESPONSE` | `PROCUREMENT_CONTEXT` + (`BUYER` 또는 `DECISION_MAKER`) |
+
+초기 목표에 요건이 없는 것은 의도다. **탐색 미팅은 구매자를 찾는 방법**이고, 그 전에 구매자
+근거를 요구하면 대부분의 후보가 실제로 서 있는 단계에서 Harness가 쓸모없어진다.
+
+### 제안할 Solution은 고르는 것이지 쓰는 것이 아니다
+
+```
+호출자 → solution_elements [S1, S2, ...]
+모델   → element ref 선택만
+pipeline → 호출자의 원문으로 조립
+```
+
+출력 스키마에 **제품을 서술할 자유 텍스트 필드가 없다.** 없는 인증·지원체계·현지망·통합
+기능이 들어갈 자리가 없다. 모르는 ref는 거부한다.
+
+### Phase 5 게이트를 다시 판정하지 않는다
+
+| Phase 5 | Phase 6 |
+|---|---|
+| `VALUE_PROPOSITION` 확정 | proposal-specific 재서술 허용 |
+| 미확정 | `value_proposition = None` + `EvidenceNeed(BEFORE_PROPOSAL)` |
+| `COMPETITIVE_ADVANTAGE` 확정 | `DIFFERENTIATION` step 허용 |
+| 미확정 | step 생성 금지 + `COMPETITIVE_POSITION_UNKNOWN` |
+
+규칙을 복제하지 않고 claim의 확정 여부만 읽으므로 두 Phase가 어긋날 수 없다.
+
+### 제안 문장은 무엇을 제안하는지 ref로 가리킨다
+
+```
+호출자 whitelist   SolutionElement(ref="S1", text="...")
+       ↓ 모델은 ref만 고른다        ["S1", "S3"]
+       ↓ deterministic resolution
+레코드             SelectedSolutionElement(ref="S1", text=<호출자 원문>)
+       ↑
+문장               solution_element_refs = ["S1"]
+```
+
+`ref`는 안정적 참조 id, `text`는 표시 내용이다. **산문을 식별자로 쓰지 않는다** — 같은 문구의
+두 element가 합쳐지고, 문구를 다듬으면 가리키던 문장이 끊어진다.
+
+`value_proposition`·`key_message`는 각각 ref 최소 1개를 요구하고, 그 ref는 선택된 것이어야
+한다. `proposed_solution`은 선택된 `text`만 이어 붙인다.
+
+문장의 정확성을 보장하지는 않는다 — 제안된 것의 **출처**를 보장할 뿐이다. 의미적 정확성은
+best-effort이며 semantic relevance validation backlog 대상이다.
+
+### 분류되지 않은 gap
+
+Phase 5 gap은 전부 전달된다. 시점을 판정할 수 없으면 `UNCLASSIFIED`이고, **가장 이른 시점으로
+승격하지 않는다.** 승격은 분석이 주장한 적 없는 긴급성을 만들고, 기록된 뒤에는 판단과 기본값을
+구분할 수 없게 만든다.
+
+### 근거 없는 숫자
+
+`key_message`·`value_proposition`의 숫자가 인용된 claim에 없으면 **그 문장을 확정하지 않는다**
+(`UNSOURCED_FIGURE`). storyline·response에서는 flag만 남긴다 — 고객에게 하는 약속과 내부 논리는
+틀렸을 때 비용이 다르다.
+
+검사는 숫자 토큰에 대한 문자 대조이며 NER이 아니다. 모델명이나 연도에서 오탐이 날 수 있고,
+그 대가는 문장 하나이지 고객이 아니다.
+
+### 반론과 대응은 한 객체다
+
+`EVIDENCE_BACKED`는 확정된 claim 인용이 필수이고, 인용이 없으면 `ANTICIPATED`로 **강등**된다 —
+우려 자체는 진짜일 수 있고, 잃는 것은 "고객이 그렇게 말했다"는 주장이다. 근거도 gap도 없는
+대응은 거부한다.
+
+빈 반론 목록은 flag만 남긴다. 최소 개수를 강제하면 지어내게 되고, 그것이 침묵보다 나쁘다.
+
+### 한계
+
+인용된 dimension이 존재한다는 것과 고객이 **그 반론을** 실제로 제기했다는 것은 같지 않다.
+의미적 적합성 검증은 `docs/development-guide.md`의 backlog 항목이며, 이를 가리기 위한 verifier·
+embedding·NER을 Phase 6에서 도입하지 않았다.
 
 ## Stage 9 — Pricing *(Phase 7)*
 

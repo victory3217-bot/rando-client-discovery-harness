@@ -94,6 +94,8 @@ class ScriptedLLM:
             "Organization mentions": "organizations",
             "Client fit assessment": "fit",
             "Client research criteria": "queries",
+            "Proposal strategy": "proposal_strategy",
+            "Proposal objections": "proposal_objections",
         }.get(title, "unknown")
 
     @staticmethod
@@ -109,6 +111,8 @@ class ScriptedLLM:
             "queries": {"queries": []},
             "claims": {"claims": []},
             "international_claims": {"claims": []},
+            "proposal_strategy": {"storyline": []},
+            "proposal_objections": {"objections": []},
         }.get(stage, {})
 
     # -- helpers for building payloads ------------------------------------

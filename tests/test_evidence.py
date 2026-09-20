@@ -13,6 +13,9 @@ from core.errors import EvidenceRuleViolation
 from core.models import (
     AnalysisClaim,
     AnalysisDimension,
+    ObjectiveSource,
+    ProposalObjective,
+    ProposalStatus,
     ClientAnalysis,
     ClientCandidate,
     Confidence,
@@ -193,16 +196,43 @@ def test_analysis_with_no_evidence_must_declare_the_gap() -> None:
 
 # -- proposal --------------------------------------------------------------
 
-def test_strategy_needs_an_objective() -> None:
-    """Prevents: generating a proposal document before deciding what it is for."""
+def test_strategy_needs_the_analysis_it_reads() -> None:
+    """Prevents: a strategy whose dimension references resolve nowhere."""
     strategy = ProposalStrategy(
         project_id=PROJECT, client_id="cli_1", client_name="Fictional Buyer", country="VN"
     )
     violations = evidence.check_proposal_strategy(strategy)
-    assert violations and "proposal_objective" in violations[0]
+    assert violations and "analysis_id is empty" in violations[0]
 
-    strategy.proposal_objective = "secure a paid pilot in the next procurement cycle"
+    strategy.analysis_id = "cla_1"
     assert evidence.check_proposal_strategy(strategy) == []
+
+
+def test_an_objective_travels_with_whoever_chose_it() -> None:
+    """An objective nobody owns is one the pipeline chose.
+
+    The pair is checked rather than each field, because either half alone is the failure: a
+    source without an objective is noise, and an objective without a source is the harness
+    quietly deciding what a proposal is for.
+    """
+    strategy = ProposalStrategy(
+        project_id=PROJECT, client_id="cli_1", client_name="Fictional Buyer", country="VN",
+        analysis_id="cla_1", objective=ProposalObjective.DISCOVERY_MEETING,
+    )
+    violations = evidence.check_proposal_strategy(strategy)
+    assert any("objective_source" in v for v in violations)
+
+    strategy.objective_source = ObjectiveSource.HUMAN
+    assert evidence.check_proposal_strategy(strategy) == []
+
+
+def test_a_strategy_cannot_be_drafted_before_it_has_a_purpose() -> None:
+    strategy = ProposalStrategy(
+        project_id=PROJECT, client_id="cli_1", client_name="Fictional Buyer", country="VN",
+        analysis_id="cla_1", status=ProposalStatus.STRATEGY_DRAFTED,
+    )
+    violations = evidence.check_proposal_strategy(strategy)
+    assert any("cannot be drafted" in v for v in violations)
 
 
 # -- raising -------------------------------------------------------------

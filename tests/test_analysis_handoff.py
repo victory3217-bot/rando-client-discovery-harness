@@ -26,6 +26,7 @@ from core.models import (
     MarketScope,
     ProposalStrategy,
     ResearchFinding,
+    StrategyStatement,
     aggregate_finding_ids,
     aggregate_missing_evidence,
 )
@@ -143,21 +144,27 @@ def test_phase_six_can_be_assembled_without_re_reading_the_evidence(analysis, fi
 
 
 def test_the_assembled_inputs_fit_the_proposal_entity(analysis) -> None:
-    """They have to land somewhere, and that somewhere already exists."""
+    """They have to land somewhere, and that somewhere already exists.
+
+    Phase 6 references the analysis rather than copying its claims, so what has to survive the
+    hand-off is the link and the dimensions, not a set of duplicated strings.
+    """
     strategy = ProposalStrategy(
         project_id=analysis.project_id,
         client_id=analysis.client_id,
         client_name=analysis.client_name,
         country=analysis.country,
-        problem=analysis.claim_for(D.PROBLEM).statement,
-        buyer=analysis.claim_for(D.BUYER).statement,
-        decision_maker=analysis.claim_for(D.DECISION_MAKER).statement,
+        analysis_id=analysis.analysis_id,
         proposed_solution=analysis.our_solution,
-        value_proposition=analysis.claim_for(D.VALUE_PROPOSITION).statement,
-        competitive_advantage=analysis.claim_for(D.COMPETITIVE_ADVANTAGE).statement,
-        additional_evidence_required=list(analysis.missing_evidence),
+        key_message=StrategyStatement(
+            text="their measurement problem, addressed by what we already sell",
+            dimensions=[D.PROBLEM, D.VALUE_PROPOSITION],
+        ),
     )
-    assert strategy.problem and strategy.proposed_solution
+    assert strategy.analysis_id == analysis.analysis_id
+    assert strategy.proposed_solution
+    assert analysis.claim_for(D.PROBLEM).statement, "reachable through the analysis"
+    assert strategy.key_message.dimensions == [D.PROBLEM, D.VALUE_PROPOSITION]
 
 
 def test_phase_five_does_not_write_the_proposal(analysis) -> None:
@@ -208,11 +215,14 @@ def test_the_commercial_context_is_traceable(analysis, findings) -> None:
     assert source_ids_for(driver, findings) == ["src_f6"]
 
 
-def test_pricing_input_stays_empty_until_phase_seven(analysis) -> None:
-    strategy = ProposalStrategy(
-        project_id=analysis.project_id,
-        client_id=analysis.client_id,
-        client_name=analysis.client_name,
-        country=analysis.country,
-    )
-    assert strategy.pricing_input is None
+def test_the_strategy_holds_no_pricing_structure(analysis) -> None:
+    """``pricing_input`` was an opaque dict nothing validated.
+
+    ``PricingResult`` already owns ``pricing_payload`` and ``commercial_context``; a third
+    copy on the strategy was a place for the two to disagree.
+    """
+    import dataclasses
+
+    names = {f.name for f in dataclasses.fields(ProposalStrategy)}
+    assert "pricing_input" not in names
+    assert not any("pric" in name or "quote" in name or "margin" in name for name in names)

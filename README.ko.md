@@ -16,9 +16,9 @@
 
 ## 현재 상태
 
-**Phase 5 / 9 — Client Deep Analysis.**
-버전 `0.5.0-alpha.1`. Research · 진단 · Client Discovery · 심층분석은 동작하고, 제안전략 ·
-Pricing은 아직이다. 개발 순서는 [docs/development-guide.md](docs/development-guide.md)를 참조한다.
+**Phase 6 / 9 — Proposal Strategy.**
+버전 `0.6.0-alpha.1`. Research · 진단 · Client Discovery · 심층분석 · 제안전략은 동작하고,
+Pricing과 보고서 출력은 아직이다. 개발 순서는 [docs/development-guide.md](docs/development-guide.md)를 참조한다.
 
 사용 예정: 독립 Public Harness · Web Application의 분석 Core · 영업조직 교육용 Mobile-first
 실습 도구. Core는 이 셋 모두에 대해 독립을 유지한다 — [HARNESS.md](HARNESS.md) 12절.
@@ -30,7 +30,8 @@ Pricing은 아직이다. 개발 순서는 [docs/development-guide.md](docs/devel
 | 3 | Master Note 진단 · Finding · SWOT · Key Issue | **완료** |
 | 4 | Client Discovery · Fit 평가 · 결정적 우선순위 | **완료** |
 | 5 | 사람이 선택한 Client 심층분석 | **완료** |
-| 6–7 | Proposal Strategy · Pricing Adapter | 예정 |
+| 6 | 제안전략 (문서가 아니라 전략) | **완료** |
+| 7 | Pricing Adapter | 예정 |
 | 8–9 | Reference Dashboard · Report Output | 예정 |
 
 ---
@@ -97,7 +98,7 @@ ARCHITECTURE.md         구조와 경계
 CLAUDE.md AGENTS.md GEMINI.md    AI별 얇은 진입점
 
 core/                   순수 로직: Entity · Evidence 불변식 · Intake · Research ·
-                        Client Discovery · Deep Analysis · Interface
+                        Client Discovery · Deep Analysis · 제안전략 · Interface
 adapters/               storage · knowledge · llm · search · intake 구현체
 schemas/                Entity 9개의 JSON Schema (Draft 2020-12)
 knowledge/master-notes/ 공개용 분석 프레임워크 카드 (MN02–MN07)

@@ -193,6 +193,29 @@ Deep Analysis는 이 Harness에서 가장 민감한 텍스트를 다룬다 — �
 
 CRM 연결은 별도 기능이며 이 저장소는 그 경로를 제공하지 않는다.
 
+### Proposal Strategy (Phase 6)
+
+가장 상업적으로 민감한 텍스트다 — 고객에게 할 말, 예상되는 반론, 그에 대한 대응. 여기서의
+누출은 문서 유출이 아니라 **협상 포지션이 로그 파일에 남는 일**이다.
+
+| 구조적 보장 | |
+|---|---|
+| 연락처 필드 부재 | `ProposalStrategy`·`StrategyStatement`·`StoryStep`·`ProposalObjection` 어디에도 없다 |
+| 제품 서술 필드 부재 | 출력 스키마에 없다. 없는 역량이 들어갈 자리가 없다 |
+| 제안 문장의 출처 추적 | `solution_element_refs`(ref) → `selected_solution_elements[*].ref` → 호출자 목록. 단, 문장의 **정확성**은 보장하지 않는다 — best-effort이며 backlog 대상 |
+| 가격 구조 부재 | `pricing_input` 삭제. Phase 6는 숫자를 만들지 않는다 |
+| Phase 5 claim 원문 미복제 | dimension 참조만 저장한다 |
+| 길이 초과 거부 | 잘라서 저장하지 않는다 |
+| draft의 redacting `__repr__` | canary 6표면 |
+
+| prompt / policy 수준 (보장 아님) | |
+|---|---|
+| `key_message`·반론·대응에 개인명이 없을 것 | free text이므로 보장하지 않는다 |
+
+로그 가능: `strategy_id` · `analysis_id` · `client_id` · `objective` · `objective_source` ·
+`step_type` · `basis` · `timing` · counts · rejection/flag code.
+로그 금지: 위 모든 free text · `objective_detail` · `selected_solution_elements` 원문.
+
 ### `display_label`은 allowlist에 없다
 
 사용자가 직접 입력한 자유 텍스트이며 고객사명을 담을 수 있다. 사용자가 보관하기로 한 레코드에

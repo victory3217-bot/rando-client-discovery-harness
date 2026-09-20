@@ -48,7 +48,7 @@ PyMuPDF는 PDF 텍스트 추출 품질이 더 낫지만 **AGPL-3.0**이라 채�
 | **3** | Master Note 진단 · Finding · SWOT · Key Issue · 전송 게이트웨이 | **완료** | hallucination 거부 · 전송 단일 경계 · 오프라인 E2E |
 | **4** | Client Discovery · Fit · Priority | **완료** | 근거 없는 회사명 저장 불가 · 숫자 없는 band · snippet P1 차단 |
 | **5** | Client Deep Analysis (사람이 선택) | **완료** | 자동 Top 3 불가 · Phase 4 band 불변 · SYNTHESIS는 FACT 불가 |
-| **6** | Proposal Strategy | 예정 | `proposal_objective` 포함 전 필드 |
+| **6** | Proposal Strategy | **완료** | 목표 기본값 없음 · Solution whitelist · Phase 5 게이트 유지 · 근거 없는 숫자 거부 |
 | **7** | Pricing Adapter | 예정 | `pricing_payload`가 Pricing Harness 스키마 검증 통과 |
 | **8** | Web App Integration + Mobile-first Reference UI + Training UX + SQLite Adapter | 예정 | Reference App 삭제 후에도 core 테스트 통과 |
 | **9** | Report Output (HTML/DOCX) | 예정 | 구조화 데이터만 읽어서 생성 |
@@ -120,7 +120,11 @@ pytest -k evidence
 | `test_analysis_validation.py` | claim 19개 · evidence type 3분류 · CA 4조건 · VP 최소조건 · 조직명 검증 |
 | `test_client_analysis.py` | MN별 4회 호출 · 해외 8개 · serializer roundtrip · 오프라인 E2E |
 | `test_analysis_canary.py` | 6표면 누출 0 · 개인정보 필드 부재 |
-| `test_analysis_handoff.py` | Phase 6 입력 11개 · Phase 7 commercial context 4개 |
+| `test_analysis_handoff.py` | Phase 6 입력 · Phase 7 commercial context 4개 |
+| `test_proposal_validation.py` | 목표 게이트 · Solution whitelist · 숫자 출처 · 반론 basis · Entity 불변식 |
+| `test_proposal_strategy.py` | 2회 호출 · Phase 5 게이트 · serializer roundtrip · 오프라인 E2E |
+| `test_proposal_canary.py` | 6표면 누출 0 · 연락처 필드 부재 |
+| `test_proposal_handoff.py` | Phase 7 commercial context · Phase 9 **구조만** (렌더링 0) |
 | `scripted_llm.py` | 준비된 응답을 돌려주는 테스트 double (테스트가 아니라 도구 모듈) |
 | `intake_fixtures.py` | 테스트 문서 8종을 메모리에서 생성 (테스트가 아니라 fixture 모듈) |
 

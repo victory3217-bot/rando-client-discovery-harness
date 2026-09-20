@@ -356,22 +356,99 @@ Engine을 만들지 않는다** — 같은 pipeline·같은 finding·같은 prov
 
 ## 8. ProposalStrategy
 
-`schemas/proposal_strategy.schema.json`
+`schemas/proposal_strategy.schema.json` · **전략이지 문서가 아니다**
 
-| 필드 | 타입 | 설명 |
+| 필드 | | |
 |---|---|---|
-| `strategy_id` `project_id` `client_id` `client_name` `country` | str | 필수 |
-| `problem` `buyer` `decision_maker` | str? | |
-| `proposal_objective` | str? | 이 제안이 무엇을 달성하려는가. 비어 있으면 `check_proposal_strategy`가 거부 |
-| `proposed_solution` `value_proposition` `competitive_advantage` `key_message` | str? | |
-| `proposal_storyline` | list[str] | 논리 순서 |
-| `expected_objection` · `response_logic` | list[str] | |
-| `additional_evidence_required` | list[str] | |
-| `evidence` | list[EvidenceRef] | |
-| `pricing_input` | dict? | Pricing Harness 인계. Phase 7까지 `None` |
-| `status` | ProposalStatus | |
+| `analysis_id` | ✓ | 이 전략이 읽은 `ClientAnalysis`. 모든 dimension 참조가 여기서 해석된다 |
+| `objective` · `objective_source` | | **기본값 없음.** 둘은 함께 설정되거나 함께 비어 있다 |
+| `selected_solution_elements` | ✓ | `list[SelectedSolutionElement]` — 호출자의 **ref + 원문 text**. 모델이 쓴 것이 아니다 |
+| `value_proposition` · `key_message` | | `StrategyStatement` |
+| `storyline` | ✓ | `list[StoryStep]` |
+| `objections` | ✓ | `list[ProposalObjection]` — 반론과 대응이 **한 객체** |
+| `evidence_needs` | ✓ | `list[EvidenceNeed]` |
 
-**제안서 문서를 먼저 만들지 않는다.** Strategy가 먼저다.
+### 삭제된 것과 그 이유
+
+| | |
+|---|---|
+| `problem` `buyer` `decision_maker` `competitive_advantage` | Phase 5 claim의 사본이었다. 사본은 원본에서 어긋나고, 어느 쪽이 현재인지 말해 줄 것이 없다 |
+| `expected_objection` + `response_logic` | **위치로만 짝지어진 병렬 리스트.** 반론 하나를 지우면 그 뒤의 모든 대응이 조용히 재배치된다 — 정보를 잃는 것이 아니라 **틀린 정보를 만드는** 구조다 |
+| `evidence: list[EvidenceRef]` | 공용 버킷. 근거는 각 부분이 갖는다 |
+| `pricing_input: Optional[dict]` | opaque라 검증이 없었고, `PricingResult`가 이미 `pricing_payload`·`commercial_context`를 갖는다. 세 번째 사본이자 유일하게 검사되지 않는 사본이었다 |
+
+`EvidenceRef` 타입 자체는 public schema 호환성 때문에 모델에 남겨 둔다 (Phase 9에서 정리 검토).
+
+### 중첩 value object 4개
+
+```
+SelectedSolutionElement   ref · text
+StrategyStatement   text · dimensions · solution_element_refs · missing_evidence
+StoryStep           step_type · message · dimensions · missing_evidence
+ProposalObjection   objection · basis · dimensions
+                    · response · response_dimensions · missing_evidence
+EvidenceNeed        need · timing · dimension
+```
+
+전부 `AnalysisDimension`으로 Phase 5 claim을 가리킨다. claim은 id가 없는 value object이고
+`(analysis_id, dimension)`이 곧 주소이므로 새 id 체계가 필요 없다. **원문도 finding_ids도
+복제하지 않는다** — 필요하면 `ClientAnalysis`에서 파생한다.
+
+### ref와 text를 분리한다
+
+```
+SelectedSolutionElement   ref = 안정적 참조 id   ·   text = 호출자의 정확한 원문
+StrategyStatement.solution_element_refs         →  selected_solution_elements[*].ref
+```
+
+| | |
+|---|---|
+| `ref` | 다른 부분이 가리키는 **식별자**. Phase 7의 관계 키, Phase 9의 데이터 참조 |
+| `text` | 사람에게 **보여주는 내용**. 호출자의 원문 그대로이며 모델이 쓰지 않는다 |
+
+**text를 식별자로 쓰지 않는다.** 산문을 자연키로 쓰면 우연히 같은 문구를 가진 서로 다른
+element가 하나로 합쳐지고, 문구를 다듬는 순간 그것을 가리키던 모든 statement가 조용히 끊어진다.
+중복 제거도 text가 아니라 `ref` 기준이다 — 같은 문구의 두 element는 여전히 두 개다.
+
+`value_proposition`과 `key_message`는 **둘 다 무언가를 제안하기 위해 존재하므로** 각각 최소
+1개의 ref를 가리켜야 하고, 그 ref는 `selected_solution_elements[*].ref`에 있어야 한다. 이
+검사는 호출자 목록 없이 레코드만으로 수행된다.
+
+`proposed_solution`은 `selected_solution_elements[*].text`만 이어 붙여 만든다.
+
+*"Solution을 언급하는 경우"*를 구조적으로 감지하려면 semantic verifier가 필요하므로, 두
+statement 모두에 **무조건** 요구하는 쪽으로 구현했다. 제안할 것을 가리키지 않는 value
+proposition은 value proposition이 아니라 관찰이다.
+
+**이것이 문장의 정확성을 보장하지는 않는다.** 제안된 것이 우리가 받은 목록에서 나왔다는 것만
+보장하고, 산문이 그 element를 정확히 서술하는지는 판정하지 않는다. `value_proposition` ·
+`key_message` · `storyline` · `response`의 의미적 정확성은 현재 **best-effort**이며
+`docs/development-guide.md`의 semantic relevance validation backlog 대상이다. 그 판정을 위한
+verifier를 만들지 않았다.
+
+### 새 enum 5개
+
+| | |
+|---|---|
+| `ProposalObjective` | 8개. `POC`(기술 입증)와 `PILOT`(실제 운영 배치)은 승인 주체가 달라 분리했다 |
+| `ObjectiveSource` | `HUMAN` · `AI_SUGGESTED` |
+| `StoryStepType` | 6개. `IMPLEMENTATION`은 만들지 않았다 |
+| `ObjectionBasis` | `EVIDENCE_BACKED` · `ANTICIPATED` |
+| `EvidenceTiming` | 5개. 순서 4개 + `UNCLASSIFIED`. 점수가 아니다 |
+
+### 불변식
+
+`objective`와 `objective_source`는 함께 있거나 함께 없다 · objective 없이
+`STRATEGY_DRAFTED`가 될 수 없다 · `proposed_solution`은 `selected_solution_elements` 없이 존재할
+수 없다 · 두 statement는 element를 최소 1개 가리켜야 하고 그것은 선택된 element여야 한다 ·
+`EVIDENCE_BACKED` 반론은 dimension 필수 · 근거도 gap도 없는 response는 거부 · 참조된 dimension은
+analysis에서 **확정된** 것이어야 한다.
+
+### 분류되지 않은 gap은 승격시키지 않는다
+
+Phase 5의 gap은 전부 전달되고, 아무도 시점을 정하지 않은 것은 `UNCLASSIFIED`로 남는다.
+가장 이른 시점으로 자동 승격하면 분석이 주장한 적 없는 긴급성을 만들어내고, 일단 기록되고 나면
+**"누군가 제안 전 필수라고 판단했다"와 "아무도 안 봤다"를 구분할 수 없다.**
 
 ## 9. PricingResult
 

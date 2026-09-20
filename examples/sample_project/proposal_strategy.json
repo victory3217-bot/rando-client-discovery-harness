@@ -1,51 +1,240 @@
-{
-  "strategy_id": "prp_s01",
-  "project_id": "prj_sample",
-  "client_id": "cli_s01",
-  "client_name": "Mekong Aqua Utilities (가상)",
-  "country": "VN",
-  "problem": "건기 염분 상승 구간에서 측정 주기를 늘려야 하지만 수동 채수로는 인력이 따라가지 못한다.",
-  "buyer": "운영본부 (설비·계측 예산 집행 단위로 추정)",
-  "decision_maker": "미확인 — 제안 전 확인 대상",
-  "proposal_objective": "건기 구간 1개 정수장을 대상으로 유료 시범 설치를 확보하고, 인력 부담 감소를 측정 데이터로 입증한다.",
-  "proposed_solution": "정수장 1개소 + 배수지 2개 지점에 다항목 단일 모듈을 설치하고 건기 한 시즌 동안 상시 측정 데이터를 수집한다.",
-  "value_proposition": "측정 지점당 설치·유지보수 대상 기기를 줄여, 현장 인력을 늘리지 않고 측정 주기를 높인다.",
-  "competitive_advantage": "단항목 측정기 대비 모듈 수 감소. 비용 우위 폭은 현지 견적으로 확인한 뒤에만 수치로 제시한다.",
-  "key_message": "인력을 늘리지 않고 측정 주기를 늘릴 수 있는지를 한 시즌 안에 데이터로 확인해 보자는 제안이다.",
-  "proposal_storyline": [
-    "건기 구간의 측정 주기 요구와 현재 인력 부담 (고객 자료 기반)",
-    "수동 채수 방식이 주기를 늘릴 때 부딪히는 한계",
-    "다항목 단일 모듈이 줄이는 것은 기기 수가 아니라 현장 작업량",
-    "1개 정수장 한 시즌 시범 범위와 측정 항목",
-    "성공 판정 기준 — 무엇이 확인되면 확대하는가",
-    "확인이 필요한 사항 (인증 요건·예산 주기) 과 그 확인 방법"
-  ],
-  "expected_objection": [
-    "현지 형식승인·인증을 보유하고 있는가",
-    "기존 단항목 측정기보다 실제로 저렴한가",
-    "장비 고장 시 현지에서 유지보수가 가능한가",
-    "한국 업체가 건기 시즌 내내 대응할 수 있는가"
-  ],
-  "response_logic": [
-    "인증은 현재 미확인 상태임을 밝히고, 확인 일정을 제안서에 포함한다. 보유하고 있다고 말하지 않는다.",
-    "단가 비교는 현지 견적 확보 후 제시한다. 그 전에는 모듈 수 감소라는 구조적 차이만 설명한다.",
-    "유지보수는 현지 설비 사업자와의 협업 구조를 전제로 하되, 파트너가 확정되지 않았음을 명시한다.",
-    "시범 범위를 1개 정수장 한 시즌으로 좁혀 대응 부담과 고객 리스크를 함께 줄인다."
-  ],
-  "additional_evidence_required": [
-    "베트남 공공 상수도 형식승인·인증 요건",
-    "구매 예산 규모와 집행 주기",
-    "의사결정자 및 승인 절차",
-    "현지 단항목 측정기 견적 수준",
-    "유지보수 협업 가능한 현지 사업자"
-  ],
-  "evidence": [
-    { "finding_id": "fnd_s03", "source_id": "src_s03", "note": "문제 진술의 근거" },
-    { "finding_id": "fnd_s01", "source_id": "src_s01", "note": "제안 솔루션 역량의 근거" }
-  ],
-  "pricing_input": null,
-  "status": "STRATEGY_DRAFTED",
-  "lang": "ko",
-  "created_at": "2026-09-18T09:40:00+00:00",
-  "schema_version": "0.1"
-}
+[
+  {
+    "project_id": "prj_sample",
+    "client_id": "cli_s01",
+    "client_name": "Mekong Aqua Utilities (가상)",
+    "country": "VN",
+    "analysis_id": "cla_s01",
+    "objective": "DISCOVERY_MEETING",
+    "objective_source": "HUMAN",
+    "objective_detail": "운영 담당 부서와 측정 주기 요구사항을 확인한다",
+    "selected_solution_elements": [
+      {
+        "ref": "S1",
+        "text": "다항목 수질 측정을 단일 모듈로 처리하는 상시 계측 장비"
+      },
+      {
+        "ref": "S2",
+        "text": "계측 데이터 원격 조회 기능"
+      }
+    ],
+    "proposed_solution": "다항목 수질 측정을 단일 모듈로 처리하는 상시 계측 장비 / 계측 데이터 원격 조회 기능",
+    "value_proposition": {
+      "text": "수동 채수로 감당하지 못하는 측정 주기를 상시 계측으로 대체하여 인력을 늘리지 않고 필요한 주기를 확보한다",
+      "dimensions": [
+        "PROBLEM",
+        "VALUE_PROPOSITION"
+      ],
+      "solution_element_refs": [
+        "S1"
+      ],
+      "missing_evidence": [
+        "구매결정요인이 단가 중심인지 유지보수 편의 중심인지"
+      ]
+    },
+    "key_message": {
+      "text": "건기에 필요한 측정 주기를 인력 증원 없이 확보하는 방법을 확인하는 자리를 요청한다",
+      "dimensions": [
+        "PROBLEM",
+        "VALUE_DRIVER"
+      ],
+      "solution_element_refs": [
+        "S1"
+      ],
+      "missing_evidence": []
+    },
+    "storyline": [
+      {
+        "step_type": "CONTEXT",
+        "message": "건기 염분 상승 구간에서 수질을 확인하는 현장 운영 인력이 수동 채수에 의존하고 있다",
+        "dimensions": [
+          "USER",
+          "CURRENT_WORKAROUND"
+        ],
+        "missing_evidence": []
+      },
+      {
+        "step_type": "PROBLEM",
+        "message": "필요한 측정 주기를 인력으로 감당하지 못하고 있다",
+        "dimensions": [
+          "PROBLEM"
+        ],
+        "missing_evidence": []
+      },
+      {
+        "step_type": "SOLUTION",
+        "message": "다항목을 단일 모듈로 상시 측정하는 장비로 채수 주기를 대체한다",
+        "dimensions": [
+          "PROBLEM"
+        ],
+        "missing_evidence": []
+      },
+      {
+        "step_type": "VALUE",
+        "message": "측정 주기를 인력 증원 없이 확보하는 것이 이 고객의 가치 기준일 수 있다",
+        "dimensions": [
+          "VALUE_DRIVER"
+        ],
+        "missing_evidence": [
+          "측정 누락이 실제로 초래한 손실 규모"
+        ]
+      },
+      {
+        "step_type": "NEXT_STEP",
+        "message": "운영 담당 부서와 측정 주기 요구사항을 확인하는 미팅을 요청한다",
+        "dimensions": [
+          "PROBLEM"
+        ],
+        "missing_evidence": [
+          "미팅을 요청할 실제 접근 경로"
+        ]
+      }
+    ],
+    "objections": [
+      {
+        "objection": "현지 형식승인 없이 납품할 수 있는지 확인되지 않았다",
+        "basis": "ANTICIPATED",
+        "dimensions": [],
+        "response": "인증 요건을 먼저 확인한 뒤 일정과 범위를 제시한다",
+        "response_dimensions": [],
+        "missing_evidence": [
+          "베트남 공공 상수도 형식승인·인증 요건"
+        ]
+      },
+      {
+        "objection": "현지 공급사의 단항목 측정기로 충분하다고 볼 수 있다",
+        "basis": "EVIDENCE_BACKED",
+        "dimensions": [
+          "COMPETITOR"
+        ],
+        "response": "측정 지점당 장비 수 차이를 비교할 근거를 아직 확보하지 못했다",
+        "response_dimensions": [],
+        "missing_evidence": [
+          "현지 단항목 측정기와의 비교 근거"
+        ]
+      }
+    ],
+    "evidence_needs": [
+      {
+        "need": "비교 기준에서 우리가 앞선다는 근거",
+        "timing": "BEFORE_PROPOSAL",
+        "dimension": "COMPETITIVE_ADVANTAGE"
+      },
+      {
+        "need": "구매를 집행하는 부서와 그 승인 절차",
+        "timing": "BEFORE_PROPOSAL",
+        "dimension": "BUYER"
+      },
+      {
+        "need": "기술 평가에 관여하는 조직 또는 위원회",
+        "timing": "BEFORE_PROPOSAL",
+        "dimension": "DECISION_MAKER"
+      },
+      {
+        "need": "계측 설비 예산을 보유한 주체",
+        "timing": "BEFORE_PRICING",
+        "dimension": "BUDGET_OWNER"
+      },
+      {
+        "need": "측정 누락이 실제로 초래한 손실 또는 규제 위반 사례",
+        "timing": "UNCLASSIFIED",
+        "dimension": "PROBLEM_SEVERITY"
+      },
+      {
+        "need": "단가 중심인지 유지보수 편의 중심인지",
+        "timing": "BEFORE_PROPOSAL",
+        "dimension": "KBF"
+      },
+      {
+        "need": "현재 설치되어 운영 중인 계측 설비와 그 공급사",
+        "timing": "UNCLASSIFIED",
+        "dimension": "CURRENT_SOLUTION"
+      },
+      {
+        "need": "외부 수질 분석 위탁 등 장비 구매를 대신하는 방식의 사용 여부",
+        "timing": "UNCLASSIFIED",
+        "dimension": "SUBSTITUTE"
+      },
+      {
+        "need": "the customer's buying factors, to test this against",
+        "timing": "UNCLASSIFIED",
+        "dimension": "VALUE_PROPOSITION"
+      },
+      {
+        "need": "the buying factors the comparison rests on",
+        "timing": "UNCLASSIFIED",
+        "dimension": "COMPETITIVE_ADVANTAGE"
+      },
+      {
+        "need": "실제 접근 가능한 채널 또는 조달 창구",
+        "timing": "BEFORE_PROPOSAL",
+        "dimension": "SALES_ACCESS_ROUTE"
+      },
+      {
+        "need": "현지 형식승인을 보유한 유통 파트너의 존재 여부",
+        "timing": "UNCLASSIFIED",
+        "dimension": "PARTNER"
+      },
+      {
+        "need": "예산 규모와 단가 상한",
+        "timing": "BEFORE_PRICING",
+        "dimension": "PRICE_SENSITIVITY"
+      },
+      {
+        "need": "구매 예산 규모와 집행 주기",
+        "timing": "BEFORE_PRICING",
+        "dimension": "BUDGET_EVIDENCE"
+      },
+      {
+        "need": "공개 입찰 여부와 조달 요건",
+        "timing": "BEFORE_CONTRACT",
+        "dimension": "PROCUREMENT_CONTEXT"
+      },
+      {
+        "need": "현지 상수도 사업자의 구매 주체와 승인 단계",
+        "timing": "UNCLASSIFIED",
+        "dimension": null
+      },
+      {
+        "need": "수질 계측 설비에 적용되는 현지 규정",
+        "timing": "UNCLASSIFIED",
+        "dimension": null
+      },
+      {
+        "need": "현지 형식승인·인증 요건",
+        "timing": "BEFORE_PROPOSAL",
+        "dimension": null
+      },
+      {
+        "need": "계측 장비에 적용되는 관세율",
+        "timing": "BEFORE_PRICING",
+        "dimension": null
+      },
+      {
+        "need": "설치·교정 인력의 현지 운용 방식",
+        "timing": "OPTIONAL",
+        "dimension": null
+      },
+      {
+        "need": "계약 통화와 환율 조건",
+        "timing": "BEFORE_CONTRACT",
+        "dimension": null
+      },
+      {
+        "need": "신규 공급사에 적용되는 실적 요건",
+        "timing": "BEFORE_CONTRACT",
+        "dimension": null
+      },
+      {
+        "need": "현지 대리인 지정이 의무인지 여부",
+        "timing": "BEFORE_CONTRACT",
+        "dimension": null
+      }
+    ],
+    "status": "STRATEGY_DRAFTED",
+    "strategy_id": "prp_s01",
+    "lang": "ko",
+    "created_at": "2026-09-18T09:40:00+00:00",
+    "schema_version": "0.1"
+  }
+]

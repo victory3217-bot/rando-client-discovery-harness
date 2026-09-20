@@ -8,13 +8,13 @@ deterministic echo LLM and manual search. The intake path creates no temporary f
 
 What this demonstrates is what exists today — adapter wiring, live file intake with provenance,
 the research pipeline running against an offline provider, evidence invariants, client
-prioritisation, deep analysis and localisation. Proposal strategy onwards is not built, and the
-last section says so rather than faking it.
+prioritisation, deep analysis, proposal strategy and localisation. Pricing onwards is not built,
+and the last section says so rather than faking it.
 
 Section 5 is worth reading carefully: the offline provider returns nothing, because it has no
 knowledge of this market and therefore no fact to establish. Sections 6, 9 and 10 show what a
-completed diagnosis, a banded pipeline and a deep analysis look like, using the fictional
-sample project.
+completed diagnosis, a banded pipeline, a deep analysis and a proposal strategy look like,
+using the fictional sample project.
 
 In section 9 the core wrote none of the Korean: the band comes from a rule, the reasons are
 codes, and locales/*.json renders them.
@@ -312,8 +312,11 @@ def main() -> int:
         violations += evidence.check_client_candidate(record, known_finding_ids=known_ids)
     for record in analyses:
         violations += evidence.check_client_analysis(record)
+    analyses_by_id = {record.analysis_id: record for record in analyses}
     for record in strategies:
-        violations += evidence.check_proposal_strategy(record)
+        violations += evidence.check_proposal_strategy(
+            record, analyses_by_id.get(record.analysis_id)
+        )
 
     if violations:
         print("  FAILED:")
@@ -412,14 +415,51 @@ def main() -> int:
     print("  a claim carries its own findings, so 'why is this the buyer' has an answer")
     print("  next to it rather than in a shared bucket at the bottom of the record")
 
-    _rule("11. What is still missing (recorded, not hidden)")
+    # ---- 11. proposal strategy ----------------------------------------------
+    _rule("11. Proposal strategy (a strategy, not a document)")
+    for record in harness.storage.get_proposal_strategies(project.project_id):
+        if record.objective is None:
+            print(f"  {record.client_name}: 목표 미정")
+        else:
+            objective = labels["enums"]["ProposalObjective"][record.objective.value]
+            source = labels["enums"]["ObjectiveSource"][record.objective_source.value]
+            print(f"  {record.client_name}  →  {objective}  ({source})")
+
+        for element in record.selected_solution_elements:
+            print(f"      제안 [{element.ref}]: {element.text}")
+        if record.key_message:
+            offered = ", ".join(record.key_message.solution_element_refs)
+            print(f"      핵심 메시지가 제안하는 것: {offered}")
+        if record.key_message:
+            print(f"      핵심 메시지: {record.key_message.text[:50]}…")
+
+        print("      " + " → ".join(
+            labels["enums"]["StoryStepType"][step.step_type.value]
+            for step in record.storyline
+        ))
+
+        for objection in record.objections:
+            basis = labels["enums"]["ObjectionBasis"][objection.basis.value]
+            print(f"      [{basis}] {objection.objection[:40]}…")
+
+        by_timing: dict[str, int] = {}
+        for need in record.evidence_needs:
+            key = labels["enums"]["EvidenceTiming"][need.timing.value]
+            by_timing[key] = by_timing.get(key, 0) + 1
+        print("      확인 필요: " + " · ".join(f"{k} {v}건" for k, v in by_timing.items()))
+
+    print()
+    print("  the storyline has no DIFFERENTIATION step because the analysis established no")
+    print("  competitive advantage - Phase 6 reads that gate rather than deciding again")
+
+    _rule("12. What is still missing (recorded, not hidden)")
     for record in analyses:
         print(f"  {record.client_name}:")
         for item in record.missing_evidence:
             print(f"    - {item}")
 
     # ---- 11. llm swap -------------------------------------------------------
-    _rule("12. LLM interface")
+    _rule("13. LLM interface")
     finding_schema_path = REPO_ROOT / "schemas" / "research_finding.schema.json"
     with finding_schema_path.open(encoding="utf-8") as fh:
         finding_schema = json.load(fh)
@@ -434,9 +474,9 @@ def main() -> int:
     print("  (the offline provider answers 'not established' rather than inventing a finding)")
     print(f"\n  {labels['messages']['transmission_notice']}")
 
-    _rule("13. Not built yet")
+    _rule("14. Not built yet")
     for phase, item in [
-        ("6-7", "Proposal strategy generation, pricing adapter"),
+        ("7", "Pricing adapter"),
         ("8-9", "Reference dashboard, report output"),
     ]:
         print(f"  Phase {phase:<4} {item}")

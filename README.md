@@ -17,9 +17,9 @@ other systems embed.
 
 ## Status
 
-**Phase 5 of 9 — client deep analysis.**
-Version `0.5.0-alpha.1`. Research, diagnosis, client discovery and deep analysis run; proposal
-strategy and pricing do not. See [docs/development-guide.md](docs/development-guide.md) for the
+**Phase 6 of 9 — proposal strategy.**
+Version `0.6.0-alpha.1`. Research, diagnosis, client discovery, deep analysis and proposal
+strategy run; pricing and report output do not. See [docs/development-guide.md](docs/development-guide.md) for the
 phase plan.
 
 Intended uses: a standalone public harness, the analysis core behind a web application, and a
@@ -33,7 +33,8 @@ mobile-first practice tool for sales training. The core stays independent of all
 | 3 | Master Note diagnosis, findings, SWOT, key issues | **done** |
 | 4 | Client discovery, fit assessment, deterministic priority | **done** |
 | 5 | Deep analysis of human-selected clients | **done** |
-| 6–7 | Proposal strategy, pricing adapter | planned |
+| 6 | Proposal strategy (a strategy, not a document) | **done** |
+| 7 | Pricing adapter | planned |
 | 8–9 | Reference dashboard, report output | planned |
 
 ---
