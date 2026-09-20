@@ -1,0 +1,43 @@
+{% extends "_layout.html" %}
+{% block title %}분석 상태{% endblock %}
+{% block body %}
+  <h1>분석 상태</h1>
+  <div class="card">
+    <p><span class="badge {% if needs_reupload %}badge--warn{% endif %}">{{ title }}</span></p>
+    <p>{{ message }}</p>
+    <div class="kv"><span>상태 코드</span><span><code id="status">{{ status }}</code></span></div>
+    <div class="kv"><span>evidence candidate</span><span id="candidates">{{ run.candidate_count }}</span></div>
+    <div class="kv"><span>finding</span><span id="findings">{{ run.finding_count }}</span></div>
+    <div class="kv"><span>provider 호출</span><span id="llm">{{ run.llm_calls }}</span></div>
+    {% if run.error_code %}<div class="kv"><span>error code</span><span><code>{{ run.error_code }}</code></span></div>{% endif %}
+  </div>
+  {% if needs_reupload %}
+    <a class="cta" href="/upload">자료 다시 올리기</a>
+  {% else %}
+    <a class="cta" href="/">처음으로</a>
+  {% endif %}
+  <p class="muted" style="margin-top:16px">run id <code>{{ run.run_id }}</code></p>
+
+  <script>
+    // Polling only. No framework, no client-side state beyond these four fields.
+    (function () {
+      if ({{ 'true' if settled else 'false' }}) return;
+      var id = {{ run.run_id | tojson }};
+      var terminal = {{ terminal_statuses | tojson }};
+      var tries = 0;
+      var timer = setInterval(function () {
+        if (++tries > 120) { clearInterval(timer); return; }
+        fetch('/api/runs/' + id, { headers: { 'Accept': 'application/json' } })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            document.getElementById('status').textContent = d.status;
+            document.getElementById('candidates').textContent = d.counts.candidates;
+            document.getElementById('findings').textContent = d.counts.findings;
+            document.getElementById('llm').textContent = d.counts.llm_calls;
+            if (terminal.indexOf(d.status) !== -1) { clearInterval(timer); location.reload(); }
+          })
+          .catch(function () { clearInterval(timer); });
+      }, 700);
+    })();
+  </script>
+{% endblock %}

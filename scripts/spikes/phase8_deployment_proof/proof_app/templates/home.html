@@ -1,0 +1,21 @@
+{% extends "_layout.html" %}
+{% block title %}Phase 8 배포 검증{% endblock %}
+{% block body %}
+  <h1>Phase 8 배포 검증</h1>
+  <p class="muted">production 앱이 아닙니다. Application Layer 구조가 실제 runtime에서 성립하는지만 확인합니다.</p>
+
+  <h2>Harness 연결</h2>
+  <div class="card">
+    <div class="kv"><span>entity</span><span>{{ facts.entities }}</span></div>
+    <div class="kv"><span>research framework</span><span>{{ facts.research_frameworks }}</span></div>
+    <div class="kv"><span>analysis framework</span><span>{{ facts.analysis_frameworks }}</span></div>
+    <div class="kv"><span>storage</span><span>{{ facts.storage_adapter }}</span></div>
+    <div class="kv"><span>llm</span><span>{{ facts.llm_adapter }}</span></div>
+    <div class="kv"><span>search</span><span>{{ facts.search_adapter }}</span></div>
+    <div class="kv"><span>knowledge</span><span>{{ facts.knowledge_adapter }}</span></div>
+  </div>
+  <p class="muted">모두 오프라인 adapter입니다. credential도 네트워크도 쓰지 않습니다.</p>
+
+  <a class="cta" href="/upload">자료 올리고 분석 시작</a>
+  <p class="muted" style="margin-top:16px"><a href="/session">세션 쿠키 확인</a></p>
+{% endblock %}

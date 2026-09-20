@@ -1,0 +1,19 @@
+{% extends "_layout.html" %}
+{% block title %}자료 올리기{% endblock %}
+{% block body %}
+  <h1>자료 올리기</h1>
+  <p class="muted">MD · TXT · CSV · HTML. 업로드한 문서는 메모리에서만 처리되고 저장되지 않습니다.</p>
+  <form method="post" action="/upload" enctype="multipart/form-data">
+    <input type="hidden" name="_csrf_token" value="{{ csrf_token }}">
+    <div class="card">
+      <label for="document">문서</label>
+      <input id="document" name="document" type="file" required
+             accept=".md,.txt,.csv,.html,.htm">
+      <label class="check">
+        <input type="checkbox" name="fail_discovery" value="1">
+        <span>고객 발굴 단계를 일부러 실패시키기 (부분 실패 경로 확인용)</span>
+      </label>
+    </div>
+    <button class="cta" type="submit">분석 시작</button>
+  </form>
+{% endblock %}

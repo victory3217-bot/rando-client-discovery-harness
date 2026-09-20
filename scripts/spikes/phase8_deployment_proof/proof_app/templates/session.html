@@ -1,0 +1,11 @@
+{% extends "_layout.html" %}
+{% block title %}세션{% endblock %}
+{% block body %}
+  <h1>세션</h1>
+  <div class="card">
+    <div class="kv"><span>세션이 담고 있는 키</span><span>{{ session_keys|join(', ') }}</span></div>
+    <div class="kv"><span>opaque id</span><span><code>{{ session_id }}</code></span></div>
+  </div>
+  <p class="muted">쿠키에는 서버측 세션을 가리키는 불투명 id만 들어갑니다. 이름·이메일·전화번호를 담는 자리가 없습니다.</p>
+  <a class="cta" href="/">처음으로</a>
+{% endblock %}
