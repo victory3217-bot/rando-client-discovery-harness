@@ -9,6 +9,7 @@ from adapters.prompts.loader import (
     load_analysis_prompt_set,
     load_client_prompt_set,
     load_prompt_set,
+    load_proposal_prompt_set,
     load_prompt_text,
 )
 
@@ -17,4 +18,5 @@ __all__ = [
     "load_client_prompt_set",
     "load_prompt_set",
     "load_prompt_text",
+    "load_proposal_prompt_set",
 ]

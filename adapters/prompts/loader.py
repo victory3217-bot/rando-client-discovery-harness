@@ -13,6 +13,7 @@ from pathlib import Path
 
 from core.analysis.policy import AnalysisPromptSet
 from core.client.policy import ClientPromptSet
+from core.proposal.policy import ProposalPromptSet
 from core.research.policy import PromptSet
 
 #: Research stage -> path relative to the prompts directory.
@@ -33,6 +34,12 @@ CLIENT_PROMPT_FILES = {
 ANALYSIS_PROMPT_FILES = {
     "research_criteria": "analysis/research-criteria.md",
     "synthesize_claims": "analysis/synthesize-claims.md",
+}
+
+#: Proposal stage -> path relative to the prompts directory.
+PROPOSAL_PROMPT_FILES = {
+    "synthesize_strategy": "proposal/synthesize-strategy.md",
+    "anticipate_objections": "proposal/anticipate-objections.md",
 }
 
 
@@ -71,3 +78,10 @@ def load_analysis_prompt_set(prompts_dir: str | Path) -> AnalysisPromptSet:
     root = Path(prompts_dir)
     texts = {stage: load_prompt_text(root / rel) for stage, rel in ANALYSIS_PROMPT_FILES.items()}
     return AnalysisPromptSet(**texts)
+
+
+def load_proposal_prompt_set(prompts_dir: str | Path) -> ProposalPromptSet:
+    """Every prompt the proposal pipeline needs, read the same way."""
+    root = Path(prompts_dir)
+    texts = {stage: load_prompt_text(root / rel) for stage, rel in PROPOSAL_PROMPT_FILES.items()}
+    return ProposalPromptSet(**texts)
