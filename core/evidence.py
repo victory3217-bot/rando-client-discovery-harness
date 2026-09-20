@@ -13,7 +13,7 @@ nothing supports.
 """
 from __future__ import annotations
 
-from typing import Iterable, Optional
+from typing import Iterable, Optional, Sequence
 
 from core.errors import EvidenceRuleViolation
 from core.models import (
@@ -27,6 +27,8 @@ from core.models import (
     FitLevel,
     KeyIssue,
     MarketScope,
+    ObjectionBasis,
+    ProposalStatus,
     ProposalStrategy,
     ResearchFinding,
     SourceMetadata,
@@ -476,17 +478,191 @@ def _check_claim(analysis_id: str, claim) -> list[str]:
     return violations
 
 
-def check_proposal_strategy(strategy: ProposalStrategy) -> list[str]:
-    """A proposal strategy must be attached to a client and state its objective."""
+def check_proposal_strategy(
+    strategy: ProposalStrategy,
+    analysis: Optional[ClientAnalysis] = None,
+) -> list[str]:
+    """Every claim the strategy makes has to point back into an analysis.
+
+    The rules here are mostly about pairs that used to be able to come apart: an objective
+    without a source, a response without either evidence or an admission that it has none, an
+    evidence-backed objection with nothing behind it. Each one was representable in the old
+    flat shape and each one reads, in a finished document, exactly like a supported claim.
+
+    Passing ``analysis`` additionally checks that every referenced dimension is *established*
+    there — a reference to a dimension nobody settled is a footnote to an empty page.
+    """
     violations: list[str] = []
+    sid = strategy.strategy_id
 
     if not strategy.client_id:
         violations.append("strategy: client_id is required")
 
-    if not (strategy.proposal_objective or "").strip():
+    if not strategy.analysis_id:
         violations.append(
-            f"strategy {strategy.strategy_id}: proposal_objective is empty — the strategy "
-            "comes before the document"
+            f"strategy {sid}: analysis_id is empty — a strategy reads one ClientAnalysis, and "
+            "without it none of its dimension references resolve"
         )
 
+    if analysis is not None:
+        if strategy.analysis_id and analysis.analysis_id != strategy.analysis_id:
+            violations.append(f"strategy {sid}: analysis_id does not match the analysis given")
+        if analysis.client_id != strategy.client_id:
+            violations.append(f"strategy {sid}: the analysis belongs to another client")
+
+    # -- the objective and who chose it travel together --------------------
+    if (strategy.objective is None) != (strategy.objective_source is None):
+        violations.append(
+            f"strategy {sid}: objective and objective_source must both be set or both be "
+            "absent — an objective nobody owns is one the pipeline chose"
+        )
+    if strategy.objective is None and strategy.status is not ProposalStatus.NOT_STARTED:
+        violations.append(
+            f"strategy {sid}: status is {strategy.status.value} with no objective — a strategy "
+            "cannot be drafted before anyone has said what it is for"
+        )
+
+    # -- what we are offering ----------------------------------------------
+    refs = [element.ref for element in strategy.selected_solution_elements]
+    duplicated_refs = sorted({ref for ref in refs if refs.count(ref) > 1})
+    if duplicated_refs:
+        violations.append(
+            f"strategy {sid}: the same solution element is selected twice {duplicated_refs}"
+        )
+    for element in strategy.selected_solution_elements:
+        if not element.ref.strip() or not element.text.strip():
+            violations.append(
+                f"strategy {sid}: a selected solution element is missing its ref or its text — "
+                "both come from the caller's list and neither is optional"
+            )
+
+    if strategy.proposed_solution and not strategy.selected_solution_elements:
+        violations.append(
+            f"strategy {sid}: proposed_solution with no selected_solution_elements — what is "
+            "offered is assembled from the caller's list, never written freely"
+        )
+
+    for label, statement in (
+        ("value_proposition", strategy.value_proposition),
+        ("key_message", strategy.key_message),
+    ):
+        violations.extend(
+            _check_statement(
+                sid,
+                label,
+                statement,
+                [element.ref for element in strategy.selected_solution_elements],
+            )
+        )
+
+    seen_steps = [step.step_type for step in strategy.storyline]
+    duplicated = sorted({s.value for s in seen_steps if seen_steps.count(s) > 1})
+    if duplicated:
+        violations.append(f"strategy {sid}: duplicate storyline steps {duplicated}")
+    for step in strategy.storyline:
+        if not step.message.strip():
+            violations.append(f"strategy {sid}: {step.step_type.value} step has no message")
+        if len(step.message) > MAX_CLAIM_STATEMENT_CHARS:
+            violations.append(
+                f"strategy {sid}: {step.step_type.value} step exceeds "
+                f"{MAX_CLAIM_STATEMENT_CHARS} characters"
+            )
+
+    for objection in strategy.objections:
+        violations.extend(_check_objection(sid, objection))
+
+    for need in strategy.evidence_needs:
+        if not need.need.strip():
+            violations.append(f"strategy {sid}: an evidence need has no text")
+
+    if analysis is not None:
+        violations.extend(_check_dimension_refs(sid, strategy, analysis))
+
     return violations
+
+
+def _check_statement(sid: str, label: str, statement, offered: Sequence[str]) -> list[str]:
+    """A statement needs text, a claim behind it, and an offer in front of it.
+
+    ``offered`` is the refs of the selected elements, so the check runs on identifiers rather
+    than on prose that happens to match.
+    """
+    if statement is None:
+        return []
+    violations: list[str] = []
+    if not statement.text.strip():
+        violations.append(f"strategy {sid}: {label} is present but empty")
+    if len(statement.text) > MAX_CLAIM_STATEMENT_CHARS:
+        violations.append(
+            f"strategy {sid}: {label} exceeds {MAX_CLAIM_STATEMENT_CHARS} characters"
+        )
+    if not statement.dimensions:
+        violations.append(
+            f"strategy {sid}: {label} names no analysis dimension — a sentence the proposal "
+            "will make has to say what it rests on"
+        )
+    if not statement.solution_element_refs:
+        violations.append(
+            f"strategy {sid}: {label} offers none of the selected solution elements — both "
+            "statements exist to propose something, and one proposing nothing in particular "
+            "is an observation"
+        )
+    unknown = sorted(set(statement.solution_element_refs) - set(offered))
+    if unknown:
+        violations.append(
+            f"strategy {sid}: {label} offers {unknown}, which was never selected — the chain "
+            "from a sentence to the caller's capability list is broken"
+        )
+    return violations
+
+
+def _check_objection(sid: str, objection) -> list[str]:
+    violations: list[str] = []
+    name = objection.basis.value
+
+    if not objection.objection.strip():
+        violations.append(f"strategy {sid}: an objection has no text")
+    if objection.basis is ObjectionBasis.EVIDENCE_BACKED and not objection.dimensions:
+        violations.append(
+            f"strategy {sid}: an {name} objection cites no dimension — then nothing "
+            "distinguishes it from one we merely expect"
+        )
+    if objection.response and not objection.response_dimensions and not objection.missing_evidence:
+        violations.append(
+            f"strategy {sid}: a response rests on no dimension and admits no gap — an answer "
+            "with neither is an assertion dressed as a position"
+        )
+    return violations
+
+
+def _check_dimension_refs(
+    sid: str, strategy: ProposalStrategy, analysis: ClientAnalysis
+) -> list[str]:
+    """Every referenced dimension has to be one the analysis actually settled."""
+    settled = {
+        claim.dimension
+        for claim in analysis.claims
+        if claim.statement and claim.finding_ids
+    }
+    unsettled: set[str] = set()
+
+    def check(dimensions) -> None:
+        for dimension in dimensions:
+            if dimension not in settled:
+                unsettled.add(dimension.value)
+
+    for statement in (strategy.value_proposition, strategy.key_message):
+        if statement is not None:
+            check(statement.dimensions)
+    for step in strategy.storyline:
+        check(step.dimensions)
+    for objection in strategy.objections:
+        check(objection.dimensions)
+        check(objection.response_dimensions)
+
+    if unsettled:
+        return [
+            f"strategy {sid}: references dimensions the analysis did not settle "
+            f"{sorted(unsettled)}"
+        ]
+    return []

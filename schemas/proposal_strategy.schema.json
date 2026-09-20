@@ -1,55 +1,464 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/rando/client-discovery-harness/schemas/proposal_strategy.schema.json",
-  "title": "Client Discovery Harness - Proposal Strategy",
-  "description": "The strategy that precedes a proposal document. No HTML or DOCX is generated before this exists. pricing_input is the hand-off to the separate pricing harness and stays null until that step runs.",
+  "$id": "https://github.com/victory3217-bot/rando-client-discovery-harness/schemas/proposal_strategy.schema.json",
+  "title": "ProposalStrategy",
+  "description": "What to propose to one analysed client, why, and what is still unknown. A strategy, not a document: no slide, page, quotation or price is produced by this phase. It holds no copy of the analysis and no pricing structure - it names its ClientAnalysis and points at dimensions inside it.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["strategy_id", "project_id", "client_id", "client_name", "country", "status", "schema_version"],
+  "required": [
+    "strategy_id",
+    "project_id",
+    "client_id",
+    "client_name",
+    "country",
+    "analysis_id",
+    "selected_solution_elements",
+    "storyline",
+    "objections",
+    "evidence_needs",
+    "status",
+    "schema_version"
+  ],
   "$defs": {
-    "evidenceRef": {
+    "storyStep": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["finding_id"],
+      "required": [
+        "step_type",
+        "message"
+      ],
       "properties": {
-        "finding_id": { "type": "string" },
-        "source_id": { "type": ["string", "null"] },
-        "note": { "type": ["string", "null"] }
+        "step_type": {
+          "type": "string",
+          "enum": [
+            "CONTEXT",
+            "PROBLEM",
+            "SOLUTION",
+            "VALUE",
+            "DIFFERENTIATION",
+            "NEXT_STEP"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "BUYER",
+              "DECISION_MAKER",
+              "BUDGET_OWNER",
+              "PROBLEM",
+              "PROBLEM_SEVERITY",
+              "CURRENT_WORKAROUND",
+              "KBF",
+              "CURRENT_SOLUTION",
+              "COMPETITOR",
+              "SUBSTITUTE",
+              "VALUE_PROPOSITION",
+              "COMPETITIVE_ADVANTAGE",
+              "SALES_ACCESS_ROUTE",
+              "PARTNER",
+              "VALUE_DRIVER",
+              "PRICE_SENSITIVITY",
+              "BUDGET_EVIDENCE",
+              "PROCUREMENT_CONTEXT"
+            ]
+          }
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "proposalObjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "objection",
+        "basis"
+      ],
+      "description": "The objection and its answer in one object. They were two lists paired by position, where deleting one objection silently re-paired every answer after it.",
+      "properties": {
+        "objection": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "basis": {
+          "type": "string",
+          "enum": [
+            "EVIDENCE_BACKED",
+            "ANTICIPATED"
+          ]
+        },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "BUYER",
+              "DECISION_MAKER",
+              "BUDGET_OWNER",
+              "PROBLEM",
+              "PROBLEM_SEVERITY",
+              "CURRENT_WORKAROUND",
+              "KBF",
+              "CURRENT_SOLUTION",
+              "COMPETITOR",
+              "SUBSTITUTE",
+              "VALUE_PROPOSITION",
+              "COMPETITIVE_ADVANTAGE",
+              "SALES_ACCESS_ROUTE",
+              "PARTNER",
+              "VALUE_DRIVER",
+              "PRICE_SENSITIVITY",
+              "BUDGET_EVIDENCE",
+              "PROCUREMENT_CONTEXT"
+            ]
+          },
+          "description": "Required when the basis is EVIDENCE_BACKED."
+        },
+        "response": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        },
+        "response_dimensions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "BUYER",
+              "DECISION_MAKER",
+              "BUDGET_OWNER",
+              "PROBLEM",
+              "PROBLEM_SEVERITY",
+              "CURRENT_WORKAROUND",
+              "KBF",
+              "CURRENT_SOLUTION",
+              "COMPETITOR",
+              "SUBSTITUTE",
+              "VALUE_PROPOSITION",
+              "COMPETITIVE_ADVANTAGE",
+              "SALES_ACCESS_ROUTE",
+              "PARTNER",
+              "VALUE_DRIVER",
+              "PRICE_SENSITIVITY",
+              "BUDGET_EVIDENCE",
+              "PROCUREMENT_CONTEXT"
+            ]
+          }
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "evidenceNeed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "need",
+        "timing"
+      ],
+      "properties": {
+        "need": {
+          "type": "string"
+        },
+        "timing": {
+          "type": "string",
+          "enum": [
+            "BEFORE_PROPOSAL",
+            "BEFORE_PRICING",
+            "BEFORE_CONTRACT",
+            "OPTIONAL",
+            "UNCLASSIFIED"
+          ],
+          "description": "UNCLASSIFIED means nobody placed this gap. It is not promoted to the earliest slot: a default that looks like a judgement is worse than an honest blank."
+        },
+        "dimension": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "USER",
+            "BUYER",
+            "DECISION_MAKER",
+            "BUDGET_OWNER",
+            "PROBLEM",
+            "PROBLEM_SEVERITY",
+            "CURRENT_WORKAROUND",
+            "KBF",
+            "CURRENT_SOLUTION",
+            "COMPETITOR",
+            "SUBSTITUTE",
+            "VALUE_PROPOSITION",
+            "COMPETITIVE_ADVANTAGE",
+            "SALES_ACCESS_ROUTE",
+            "PARTNER",
+            "VALUE_DRIVER",
+            "PRICE_SENSITIVITY",
+            "BUDGET_EVIDENCE",
+            "PROCUREMENT_CONTEXT",
+            null
+          ]
+        }
+      }
+    },
+    "selectedSolutionElement": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ref",
+        "text"
+      ],
+      "description": "One thing being offered: the caller's key and the caller's own wording. The model chooses the ref; the text is copied across unchanged.",
+      "properties": {
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Stable reference, e.g. S1."
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The caller's exact wording."
+        }
       }
     }
   },
   "properties": {
-    "strategy_id": { "type": "string" },
-    "project_id": { "type": "string" },
-    "client_id": { "type": "string" },
-    "client_name": { "type": "string", "minLength": 1 },
-    "country": { "type": "string" },
-    "problem": { "type": ["string", "null"] },
-    "buyer": { "type": ["string", "null"] },
-    "decision_maker": { "type": ["string", "null"] },
-    "proposal_objective": {
-      "type": ["string", "null"],
-      "description": "What this proposal is trying to achieve. Required in practice by core/evidence.py before the status may leave NOT_STARTED."
+    "strategy_id": {
+      "type": "string"
     },
-    "proposed_solution": { "type": ["string", "null"] },
-    "value_proposition": { "type": ["string", "null"] },
-    "competitive_advantage": { "type": ["string", "null"] },
-    "key_message": { "type": ["string", "null"] },
-    "proposal_storyline": { "type": "array", "items": { "type": "string" }, "description": "Ordered sections of the argument." },
-    "expected_objection": { "type": "array", "items": { "type": "string" } },
-    "response_logic": { "type": "array", "items": { "type": "string" } },
-    "additional_evidence_required": { "type": "array", "items": { "type": "string" } },
-    "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRef" } },
-    "pricing_input": {
-      "type": ["object", "null"],
-      "description": "Opaque here on purpose: its shape is owned by the pricing harness contract, not by this schema. See PricingResult."
+    "project_id": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string"
+    },
+    "client_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "country": {
+      "type": "string"
+    },
+    "analysis_id": {
+      "type": "string",
+      "description": "The ClientAnalysis this strategy reads. Every dimension reference resolves in it."
+    },
+    "objective": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "DISCOVERY_MEETING",
+        "TECHNICAL_REVIEW",
+        "POC",
+        "PILOT",
+        "SUPPLIER_REGISTRATION",
+        "PARTNERSHIP_DISCUSSION",
+        "FORMAL_PROPOSAL",
+        "PROCUREMENT_RESPONSE",
+        null
+      ],
+      "description": "Null until somebody chooses. There is no default: a quiet fallback would be the harness deciding what the proposal is for."
+    },
+    "objective_source": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "HUMAN",
+        "AI_SUGGESTED",
+        null
+      ],
+      "description": "Set together with the objective, never separately."
+    },
+    "objective_detail": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 500
+    },
+    "selected_solution_elements": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/selectedSolutionElement"
+      },
+      "description": "What is being offered. Both halves come from the caller's list: refs are what other parts of the record point at, text is what a reader is shown."
+    },
+    "proposed_solution": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "value_proposition": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "BUYER",
+              "DECISION_MAKER",
+              "BUDGET_OWNER",
+              "PROBLEM",
+              "PROBLEM_SEVERITY",
+              "CURRENT_WORKAROUND",
+              "KBF",
+              "CURRENT_SOLUTION",
+              "COMPETITOR",
+              "SUBSTITUTE",
+              "VALUE_PROPOSITION",
+              "COMPETITIVE_ADVANTAGE",
+              "SALES_ACCESS_ROUTE",
+              "PARTNER",
+              "VALUE_DRIVER",
+              "PRICE_SENSITIVITY",
+              "BUDGET_EVIDENCE",
+              "PROCUREMENT_CONTEXT"
+            ]
+          },
+          "description": "The analysis claims this sentence rests on."
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "solution_element_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Refs of the selected elements this sentence offers, e.g. S1. At least one, and each must be among selected_solution_elements[*].ref. Refs rather than wording: prose used as an identifier collapses elements that read alike. It makes the offer traceable, not the sentence accurate."
+        }
+      },
+      "description": "Absent unless the analysis established one - Phase 5's gate is not re-run here."
+    },
+    "key_message": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "dimensions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "USER",
+              "BUYER",
+              "DECISION_MAKER",
+              "BUDGET_OWNER",
+              "PROBLEM",
+              "PROBLEM_SEVERITY",
+              "CURRENT_WORKAROUND",
+              "KBF",
+              "CURRENT_SOLUTION",
+              "COMPETITOR",
+              "SUBSTITUTE",
+              "VALUE_PROPOSITION",
+              "COMPETITIVE_ADVANTAGE",
+              "SALES_ACCESS_ROUTE",
+              "PARTNER",
+              "VALUE_DRIVER",
+              "PRICE_SENSITIVITY",
+              "BUDGET_EVIDENCE",
+              "PROCUREMENT_CONTEXT"
+            ]
+          },
+          "description": "The analysis claims this sentence rests on."
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "solution_element_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Refs of the selected elements this sentence offers, e.g. S1. At least one, and each must be among selected_solution_elements[*].ref. Refs rather than wording: prose used as an identifier collapses elements that read alike. It makes the offer traceable, not the sentence accurate."
+        }
+      }
+    },
+    "storyline": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/storyStep"
+      }
+    },
+    "objections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/proposalObjection"
+      }
+    },
+    "evidence_needs": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/evidenceNeed"
+      }
     },
     "status": {
       "type": "string",
-      "enum": ["NOT_STARTED", "STRATEGY_DRAFTED", "PRICING_REQUESTED", "PROPOSAL_DRAFTED"]
+      "enum": [
+        "NOT_STARTED",
+        "STRATEGY_DRAFTED",
+        "PRICING_REQUESTED",
+        "PROPOSAL_DRAFTED"
+      ]
     },
-    "lang": { "type": "string" },
-    "created_at": { "type": "string" },
-    "schema_version": { "type": "string" }
+    "lang": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    }
   }
 }

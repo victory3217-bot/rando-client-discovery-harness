@@ -158,6 +158,39 @@
       "RFP": "제안요청",
       "INVESTMENT_PLAN": "투자 계획",
       "EXPANSION_PLAN": "증설 계획"
+    },
+    "ProposalObjective": {
+      "DISCOVERY_MEETING": "탐색 미팅",
+      "TECHNICAL_REVIEW": "기술 검토",
+      "POC": "개념검증 (PoC)",
+      "PILOT": "시범 운영",
+      "SUPPLIER_REGISTRATION": "공급사 등록",
+      "PARTNERSHIP_DISCUSSION": "파트너십 논의",
+      "FORMAL_PROPOSAL": "공식 제안",
+      "PROCUREMENT_RESPONSE": "입찰 대응"
+    },
+    "ObjectiveSource": {
+      "HUMAN": "사람이 결정",
+      "AI_SUGGESTED": "AI 제안"
+    },
+    "StoryStepType": {
+      "CONTEXT": "고객 상황",
+      "PROBLEM": "확인된 문제",
+      "SOLUTION": "제안 내용",
+      "VALUE": "고객 가치",
+      "DIFFERENTIATION": "차별성",
+      "NEXT_STEP": "다음 행동"
+    },
+    "ObjectionBasis": {
+      "EVIDENCE_BACKED": "근거로 확인된 반론",
+      "ANTICIPATED": "예상 반론"
+    },
+    "EvidenceTiming": {
+      "BEFORE_PROPOSAL": "제안 전",
+      "BEFORE_PRICING": "가격 산정 전",
+      "BEFORE_CONTRACT": "계약 전",
+      "OPTIONAL": "선택적 확인",
+      "UNCLASSIFIED": "미분류"
     }
   },
   "fields": {

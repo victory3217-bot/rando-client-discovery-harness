@@ -158,6 +158,39 @@
       "RFP": "Request for proposal",
       "INVESTMENT_PLAN": "Investment plan",
       "EXPANSION_PLAN": "Expansion plan"
+    },
+    "ProposalObjective": {
+      "DISCOVERY_MEETING": "Discovery meeting",
+      "TECHNICAL_REVIEW": "Technical review",
+      "POC": "Proof of concept",
+      "PILOT": "Pilot",
+      "SUPPLIER_REGISTRATION": "Supplier registration",
+      "PARTNERSHIP_DISCUSSION": "Partnership discussion",
+      "FORMAL_PROPOSAL": "Formal proposal",
+      "PROCUREMENT_RESPONSE": "Procurement response"
+    },
+    "ObjectiveSource": {
+      "HUMAN": "Chosen by a person",
+      "AI_SUGGESTED": "Suggested by the model"
+    },
+    "StoryStepType": {
+      "CONTEXT": "Context",
+      "PROBLEM": "Problem",
+      "SOLUTION": "Solution",
+      "VALUE": "Value",
+      "DIFFERENTIATION": "Differentiation",
+      "NEXT_STEP": "Next step"
+    },
+    "ObjectionBasis": {
+      "EVIDENCE_BACKED": "Raised, on the evidence",
+      "ANTICIPATED": "Anticipated"
+    },
+    "EvidenceTiming": {
+      "BEFORE_PROPOSAL": "Before proposing",
+      "BEFORE_PRICING": "Before pricing",
+      "BEFORE_CONTRACT": "Before contract",
+      "OPTIONAL": "Optional",
+      "UNCLASSIFIED": "Unclassified"
     }
   },
   "fields": {

@@ -374,6 +374,86 @@ class InternationalDimension(str, Enum):
     LOCAL_PARTNER_REQUIREMENT = "LOCAL_PARTNER_REQUIREMENT"
 
 
+class ProposalObjective(str, Enum):
+    """What this proposal is trying to achieve next.
+
+    A closed list, because the field used to be free text and free text is where an over-reach
+    hides. "Sign a contract", written against a client whose buyer has never been identified,
+    reads like a plan; as an enum it can be checked against the evidence.
+
+    Rarely the last of these. A proposal's objective is the next thing that can actually
+    happen, and for most candidates that is a meeting rather than a purchase order.
+    """
+
+    DISCOVERY_MEETING = "DISCOVERY_MEETING"
+    TECHNICAL_REVIEW = "TECHNICAL_REVIEW"
+    #: Proof that the thing works, usually off-line and at our cost.
+    POC = "POC"
+    #: A limited deployment in real operation. Different from a PoC in what it risks for the
+    #: customer and in who has to approve it, so it is a different objective.
+    PILOT = "PILOT"
+    SUPPLIER_REGISTRATION = "SUPPLIER_REGISTRATION"
+    PARTNERSHIP_DISCUSSION = "PARTNERSHIP_DISCUSSION"
+    FORMAL_PROPOSAL = "FORMAL_PROPOSAL"
+    PROCUREMENT_RESPONSE = "PROCUREMENT_RESPONSE"
+
+
+class ObjectiveSource(str, Enum):
+    """Who chose the objective.
+
+    Recorded because the two are not interchangeable. A person may know things this harness
+    does not and their choice stands; a model's suggestion is a suggestion, and the record says
+    which one a reader is looking at.
+    """
+
+    HUMAN = "HUMAN"
+    AI_SUGGESTED = "AI_SUGGESTED"
+
+
+class StoryStepType(str, Enum):
+    """The shape of one step in the proposal's argument.
+
+    Six, in order. The order carries the logic; the type is what lets a later phase place a
+    step without re-reading it.
+    """
+
+    CONTEXT = "CONTEXT"
+    PROBLEM = "PROBLEM"
+    SOLUTION = "SOLUTION"
+    VALUE = "VALUE"
+    #: Only when Phase 5 established a competitive advantage - see core/proposal/strategy.py.
+    DIFFERENTIATION = "DIFFERENTIATION"
+    NEXT_STEP = "NEXT_STEP"
+
+
+class ObjectionBasis(str, Enum):
+    """Whether the customer actually raised this, or we expect them to.
+
+    Keeping the two apart is the point of the field. An anticipated objection is a useful thing
+    to prepare for and a dangerous thing to repeat as though the customer had said it.
+    """
+
+    EVIDENCE_BACKED = "EVIDENCE_BACKED"
+    ANTICIPATED = "ANTICIPATED"
+
+
+class EvidenceTiming(str, Enum):
+    """When a gap has to be closed. A sequence, not a score.
+
+    ``UNCLASSIFIED`` sits outside the sequence and is the default. A gap nobody has timed is
+    carried forward saying so, rather than being promoted to the earliest slot — inventing an
+    urgency the analysis never stated would send somebody to close it first, and a reader
+    cannot tell a judgement from a default once both read ``BEFORE_PROPOSAL``.
+    """
+
+    BEFORE_PROPOSAL = "BEFORE_PROPOSAL"
+    BEFORE_PRICING = "BEFORE_PRICING"
+    BEFORE_CONTRACT = "BEFORE_CONTRACT"
+    OPTIONAL = "OPTIONAL"
+    #: Nobody decided. Not an urgency, and not a dismissal.
+    UNCLASSIFIED = "UNCLASSIFIED"
+
+
 class PricingStatus(str, Enum):
     NOT_REQUESTED = "NOT_REQUESTED"
     PAYLOAD_READY = "PAYLOAD_READY"
@@ -523,6 +603,98 @@ class InternationalClaim:
     evidence_type: EvidenceType = EvidenceType.MISSING_EVIDENCE
     confidence: Confidence = Confidence.UNKNOWN
     framework_basis: list[str] = field(default_factory=list)
+
+
+@dataclass
+class SelectedSolutionElement:
+    """One thing we are offering: the caller's key and the caller's own wording.
+
+    Both halves come from the list the caller supplied. The model chooses ``ref`` and nothing
+    else; ``text`` is copied across unchanged, because a model that may rephrase what we sell
+    may also extend it.
+
+    Keeping both is what stops the record using prose as an identifier. A later phase that
+    needs to point at an element points at ``ref``; a later phase that needs to show it to
+    somebody shows ``text``. Two elements may share wording and remain different elements.
+    """
+
+    ref: str
+    text: str
+
+
+@dataclass
+class StrategyStatement:
+    """A sentence the proposal will make, what it rests on, and what it offers.
+
+    Not a plain string. ``dimensions`` names the :class:`AnalysisDimension` claims behind the
+    sentence, so "why does the proposal say this" has an answer that leads back through the
+    analysis to a document - without copying any of that document here.
+
+    ``solution_element_refs`` closes the other half of the chain. Both statements this type is
+    used for exist to propose something, so each has to name which of the caller's solution
+    elements it is proposing:
+
+    ``StrategyStatement.solution_element_refs``
+        → ``ProposalStrategy.selected_solution_elements[*].ref``
+        → the caller's own capability list
+
+    These are **reference keys**, not wording. Storing the prose here would make a sentence its
+    own identifier: two elements that happen to read alike would collapse into one, and
+    rewording an offer would silently break every statement pointing at it.
+
+    **This does not make the sentence true.** It guarantees that whatever the sentence offers
+    was drawn from the list we were given; it cannot tell whether the prose describes that
+    element accurately. No verifier is introduced here to pretend otherwise - see the semantic
+    relevance entry in ``docs/development-guide.md``.
+    """
+
+    text: str
+    dimensions: list[AnalysisDimension] = field(default_factory=list)
+    #: Keys into ``ProposalStrategy.selected_solution_elements``. Refs, not text.
+    solution_element_refs: list[str] = field(default_factory=list)
+    missing_evidence: list[str] = field(default_factory=list)
+
+
+@dataclass
+class StoryStep:
+    """One step of the argument, with the claims it stands on."""
+
+    step_type: StoryStepType
+    message: str
+    dimensions: list[AnalysisDimension] = field(default_factory=list)
+    missing_evidence: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ProposalObjection:
+    """Something the customer may push back on, and what we would say.
+
+    The objection and its answer are **one object**. They used to be two lists paired by
+    position, which meant that deleting one objection silently re-paired every answer after
+    it - a structure that does not merely lose information but manufactures wrong information.
+    """
+
+    objection: str
+    basis: ObjectionBasis = ObjectionBasis.ANTICIPATED
+    #: Required when the basis is EVIDENCE_BACKED.
+    dimensions: list[AnalysisDimension] = field(default_factory=list)
+    response: Optional[str] = None
+    response_dimensions: list[AnalysisDimension] = field(default_factory=list)
+    missing_evidence: list[str] = field(default_factory=list)
+
+
+@dataclass
+class EvidenceNeed:
+    """Something to find out, and when it has to be known by.
+
+    The default is ``UNCLASSIFIED`` rather than the earliest timing: a gap that nobody placed
+    should say nobody placed it.
+    """
+
+    need: str
+    timing: EvidenceTiming = EvidenceTiming.UNCLASSIFIED
+    #: Which analysis dimension the gap came from, where it came from one.
+    dimension: Optional[AnalysisDimension] = None
 
 
 @dataclass
@@ -828,35 +1000,55 @@ class ClientAnalysis:
 
 @dataclass
 class ProposalStrategy:
-    """The strategy that precedes a proposal document.
+    """What to propose to this client, why, and what is still unknown.
 
-    No proposal is drafted before this exists. ``pricing_input`` is the hand-off point to the
-    pricing harness and stays ``None`` until Phase 7 fills it.
+    **A strategy, not a document.** Nothing here is a proposal: it is the set of decisions a
+    proposal would be written from, structured so a later phase can render it and a person can
+    argue with it. No slide, page or quotation is produced by this phase.
+
+    It holds no copy of the analysis. ``problem``, ``buyer``, ``decision_maker`` and
+    ``competitive_advantage`` used to be strings here, duplicating claims that
+    :class:`ClientAnalysis` already carried with their evidence; a copy of a claim drifts from
+    it and nothing says which one is current. The strategy names its analysis and points at
+    dimensions inside it.
+
+    It holds no pricing either. ``pricing_input`` was an opaque dict that nothing validated,
+    and :class:`PricingResult` already owns ``pricing_payload`` and ``commercial_context``.
+    Phase 7 assembles those from the analysis and from this record.
     """
 
     project_id: str
     client_id: str
     client_name: str
     country: str
-    problem: Optional[str] = None
-    buyer: Optional[str] = None
-    decision_maker: Optional[str] = None
-    proposal_objective: Optional[str] = None
+    #: The ClientAnalysis this strategy reads. Every dimension reference below resolves in it.
+    analysis_id: str = ""
+    #: ``None`` until somebody chooses. There is deliberately no default: a quiet fallback
+    #: would be the harness deciding what this proposal is for.
+    objective: Optional[ProposalObjective] = None
+    objective_source: Optional[ObjectiveSource] = None
+    objective_detail: Optional[str] = None
+    #: What is being offered: the caller's own keys and the caller's own wording. The model
+    #: selects refs from the supplied list and nothing else, which is what stops a proposal
+    #: acquiring capabilities we do not have.
+    selected_solution_elements: list[SelectedSolutionElement] = field(default_factory=list)
     proposed_solution: Optional[str] = None
-    value_proposition: Optional[str] = None
-    competitive_advantage: Optional[str] = None
-    key_message: Optional[str] = None
-    proposal_storyline: list[str] = field(default_factory=list)
-    expected_objection: list[str] = field(default_factory=list)
-    response_logic: list[str] = field(default_factory=list)
-    additional_evidence_required: list[str] = field(default_factory=list)
-    evidence: list[EvidenceRef] = field(default_factory=list)
-    pricing_input: Optional[dict] = None
+    value_proposition: Optional[StrategyStatement] = None
+    key_message: Optional[StrategyStatement] = None
+    storyline: list[StoryStep] = field(default_factory=list)
+    objections: list[ProposalObjection] = field(default_factory=list)
+    evidence_needs: list[EvidenceNeed] = field(default_factory=list)
     status: ProposalStatus = ProposalStatus.NOT_STARTED
     strategy_id: str = field(default_factory=lambda: new_id("prp"))
     lang: str = "ko"
     created_at: str = field(default_factory=utc_now)
     schema_version: str = SCHEMA_VERSION
+
+    def step_of(self, step_type: StoryStepType) -> Optional[StoryStep]:
+        for step in self.storyline:
+            if step.step_type is step_type:
+                return step
+        return None
 
 
 @dataclass
