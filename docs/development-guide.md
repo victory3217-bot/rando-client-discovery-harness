@@ -69,7 +69,7 @@ Phase 1에서 **만들지 않은 것**과 그 이유:
 | | |
 |---|---|
 | **core gap 문자열의 locale 렌더링** | `"not assessed in this run"` 같은 fallback을 Core가 영문으로 만들어 사용자 목록에 그대로 나온다 (`examples/run_example.py` 11절에서 확인 가능). Bilingual by Design대로라면 code를 반환하고 `locales/*.json`이 렌더해야 한다. Phase 4의 `core/client/fit.py`도 같은 방식이라 **두 Phase를 함께 고쳐야** 하고, 그래서 Phase 5 범위에서 하지 않았다 |
-| **claim과 인용 finding의 의미적 적합성** | 모델이 무관한 FACT finding을 `BUYER`에 인용해도 구조 검사는 통과한다. 지금 막는 것은 ref 해석 가능성 · finding의 evidence_type · 조직명 검증뿐이다. 의미 판정에는 이 저장소가 도입하지 않기로 한 수단(NER · embedding · LLM 심판)이 필요하므로, 고치려면 그 결정을 먼저 다시 해야 한다 |
+| **claim과 인용 finding의 의미적 적합성** | 모델이 무관한 FACT finding을 `BUYER`에 인용해도 구조 검사는 통과한다. 지금 막는 것은 ref 해석 가능성 · finding의 evidence_type · 조직명 검증뿐이다. **해결 방법은 아직 정하지 않았다.** 더 좁은 구조적 제약으로 상당 부분을 걸러낼 수 있는지부터 검토하고, 그것으로 부족할 때 어떤 수단을 쓸지는 그때 판단한다 — 이 저장소가 지금까지 도입하지 않은 수단(NER · embedding · LLM 심판)을 들이는 선택지도 그 검토에 포함되지만, 필요하다고 단정된 상태는 아니다 |
 
 ### Web / Training 관련으로 아직 만들지 않은 것
 
