@@ -963,19 +963,26 @@ def _python_files(root: Path) -> list[Path]:
     return sorted(p for p in root.rglob("*.py") if "__pycache__" not in p.parts)
 
 
-def test_x_only_llm_adapters_may_import_a_network_module() -> None:
-    """``test_core_purity.py`` keeps these out of ``core/``. This keeps them in one folder.
+#: Every file in this repository allowed to reach a socket, named one by one.
+#:
+#: A list of *files* rather than of directories, because the thing being held still is not
+#: "which folders may do HTTP" but **how many modules in this repository can open a socket at
+#: all**. Phase 8 added the second one (``adapters/search/brave.py``, the first production
+#: ``SearchProvider``), and adding it meant editing this line — which is the point. A third
+#: appearing should be a decision somebody made rather than one that happened.
+NETWORK_CAPABLE = {
+    Path("adapters/llm/anthropic.py"),
+    Path("adapters/search/brave.py"),
+}
 
-    The point is not that a search adapter will never need HTTP — Phase 3's ``search/web.py``
-    will. It is that today exactly one module in this repository can open a socket, and a
-    second one appearing should be a decision somebody made rather than one that happened.
-    """
-    allowed = REPO_ROOT / "adapters" / "llm"
+
+def test_x_only_the_named_adapters_may_import_a_network_module() -> None:
+    """``test_core_purity.py`` keeps these out of ``core/``. This keeps them in a known list."""
     offenders: list[str] = []
 
     for root in (REPO_ROOT / "core", REPO_ROOT / "adapters"):
         for path in _python_files(root):
-            if allowed in path.parents:
+            if path.relative_to(REPO_ROOT) in NETWORK_CAPABLE:
                 continue
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
             for node in ast.walk(tree):
@@ -989,6 +996,18 @@ def test_x_only_llm_adapters_may_import_a_network_module() -> None:
                         offenders.append(f"{path.relative_to(REPO_ROOT)}:{node.lineno} {name}")
 
     assert not offenders, offenders
+
+
+def test_x0_the_allowlist_has_no_stale_entry() -> None:
+    """An allowlist nobody prunes eventually permits a file that no longer exists — or one that
+    exists and no longer needs the permission, which is the same failure wearing a disguise."""
+    for relative in NETWORK_CAPABLE:
+        path = REPO_ROOT / relative
+        assert path.is_file(), f"{relative} is on the network allowlist but is not there"
+        source = path.read_text(encoding="utf-8")
+        assert any(module in source for module in NETWORK_MODULES), (
+            f"{relative} no longer reaches the network; take it off the allowlist"
+        )
 
 
 def test_x2_the_core_cannot_see_this_adapter_at_all() -> None:

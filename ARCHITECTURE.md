@@ -48,7 +48,7 @@
   |    storage/  null · memory · sqlite                                   |
   |    knowledge/ static · handbook                                       |
   |    llm/      echo · anthropic       (이 저장소의 유일한 network 경로)    |
-  |    search/   manual                   (+ web → 예정)                 |
+  |    search/   manual · brave                                           |
   |    intake/   text · html · pdf · office · session · registry          |
   |    prompts/  prompt 파일 로딩 (core는 파일을 읽지 않는다)              |
   |    pricing/  file — pricing-harness-public와의 JSON 파일 교환          |
@@ -185,7 +185,7 @@ core/pricing_bridge      attach_engine_result()로 결과를 기록한다
 | `adapters/intake/office.py` | DocumentParser | 2 | DOCX · PPTX · XLSX. package 내부로 타입 판별 + zip bomb 방어 |
 | `adapters/intake/session.py` | — | 2 | request 수명 · batch 상한 · 버퍼 해제 |
 | `adapters/llm/anthropic.py` | LLM | 8 | **완료.** 첫 production provider. Messages API · key·model 주입 · transport 주입 · 기본 재시도 없음 · 로그 없음 |
-| `adapters/search/web.py` | Search | 3 | 예정 |
+| `adapters/search/brave.py` | Search | 8 | **완료.** 첫 production Search provider. Web Search API · key 주입 · transport 주입 · 기본 재시도 없음 · 로그 없음 · page fetch 없음 |
 | `adapters/pricing/file.py` | — (provider 아님) | 7 | `pricing-harness-public`와의 JSON 파일 교환. 스키마 경로를 주입받으면 실제 계약으로 검증한다 |
 | `adapters/storage/sqlite.py` | Storage | 8 | **완료.** Core 9 entity를 table 1개 + payload JSON으로. 경로 주입 · WAL · schema version · `clear()` 없음 |
 
@@ -199,7 +199,24 @@ core/pricing_bridge      attach_engine_result()로 결과를 기록한다
 
 1. **`prompts/`에 vendor 이름이 없다** — `test_research.py`·`test_client_discovery.py`가 검사한다.
 2. **`core/`가 provider SDK를 import하지 못한다** — `test_core_purity.py`.
-3. **network 모듈이 `adapters/llm/` 밖에 없다** — `test_llm_anthropic.py`.
+3. **network 모듈을 import하는 파일이 이름으로 열거된 2개뿐이다** — `test_llm_anthropic.py`의
+   `NETWORK_CAPABLE`. 폴더가 아니라 **파일 목록**이다: Phase 8에서 두 번째
+   (`adapters/search/brave.py`)가 생길 때 이 줄을 고쳐야 했고, 그것이 목적이다.
+
+### 첫 production Search Adapter도 같다
+
+`adapters/search/brave.py`는 Phase 8에서 생긴 첫 production `SearchProvider`다. **`core/`에
+provider 개념이 없고 `SearchProvider` Protocol도 그대로다** — 새 Search abstraction을 만들지
+않았고, `SearchResult`에 필드 하나 더하지 않았다.
+
+| | |
+|---|---|
+| **Core가 고르지 않는 것** | provider · credential · endpoint · 결과 수 상한 · region |
+| **Adapter가 고르지 않는 것** | query 내용 · 무엇이 관련 있는지 · 결과의 우선순위 · publication date |
+
+**provider의 결과 순서는 search ranking이지 `sales_priority`가 아니다.** 둘은 다른 의미이고,
+adapter는 순서를 그대로 전달할 뿐 band로 바꾸지 않는다. Client priority는 evidence를 보고
+`core/client/priority.py`가 정한다 (`HARNESS.md` 7절).
 
 ### policy selection ≠ provider transport
 
@@ -330,10 +347,9 @@ chapters와 worksheet이 존재한다. `adapters/knowledge/handbook.py`는 그 *
 |---|---|---|
 | 2 | `core/intake/` · `adapters/intake/` | **완료** |
 | 3 | `core/research/` · `adapters/prompts/` | **완료** |
-| 3+ | `adapters/search/web.py` | 예정 |
 | 4 | `core/client/` · `prompts/discovery/` | **완료** |
 | 5 | `core/analysis/` · `prompts/analysis/` | **완료** |
 | 6 | `core/proposal/` · `prompts/proposal/` | **완료** |
 | 7 | `core/pricing_bridge/` · `adapters/pricing/` | **완료** |
-| 8 | `adapters/storage/sqlite.py` **완료** · `adapters/llm/anthropic.py` **완료** · production Search adapter는 미구현. Application·UI는 **별도 저장소** | 진행 중 |
+| 8 | `adapters/storage/sqlite.py` **완료** · `adapters/llm/anthropic.py` **완료** · `adapters/search/brave.py` **완료**. Application·UI는 **별도 저장소** | 진행 중 |
 | 9 | `core/interfaces/reporting.py` · `adapters/reporting/` | 예정 |

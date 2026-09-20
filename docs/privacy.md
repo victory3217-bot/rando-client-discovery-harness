@@ -370,6 +370,78 @@ provider 에러 메시지.
 
 ---
 
+## 4-3. Brave Search Adapter *(Phase 8)*
+
+`adapters/search/brave.py`는 **두 번째로 네트워크로 나가는 adapter**이고, 나가는 것의 성격이
+LLM adapter와 다르다. 저쪽이 보내는 것은 **고객이 준 문서**이고, 이쪽이 보내는 것은
+**무엇을 찾고 있는지**다 — query는 대상 산업·국가·문제·때로는 조직명을 그대로 담는다.
+`"가상수처리공사 노후 설비 교체 2026"` 한 줄은 문서 한 장만큼 말해 준다.
+
+그리고 **evidence trail이 여기서 시작한다.** 그래서 이 절에는 다른 adapter에 없는 항목이
+하나 더 있다: *아무도 말하지 않은 것이 provenance로 기록되지 않을 것*.
+
+### 전송되는 것과 누출인 것은 다르다
+
+| | |
+|---|---|
+| **전송 (계약대로)** | query 문자열과 `country` 코드가 provider로 간다. 그것이 검색이다 (0절) |
+| **누출 (있으면 안 됨)** | 같은 query, 결과 snippet, URL, publisher가 로그 · 예외 · traceback · repr · stdout/stderr · 디스크에 남는 것 |
+
+`tests/test_search_brave.py`의 canary 테스트가 **양방향으로** 확인한다 — 가상 query·조직명·
+파일명·이메일·전화번호·snippet·키 형태 문자열이 위 표면에 0이고, **동시에 요청에는 query가
+반드시 존재**할 것. positive half가 없는 canary는 빈 query를 보내는 adapter에서도 통과한다.
+
+### 구조적 보장
+
+| | |
+|---|---|
+| **logger 부재** | 이 모듈에 `logging` import도 `print`도 없다. AST로 검사한다 |
+| **query는 숫자로만 관측된다** | `BraveSearchUsage`에 query 문자열 자리가 없다. `query_chars`(길이)뿐이며, `TransmissionRecord.char_count`와 같은 방식이다 |
+| **URL·snippet·publisher는 usage에 없다** | 결과에 대해 나가는 것은 `returned_count` · `mapped_count` · `rejected_count`뿐이다 |
+| **provider 메시지 폐기** | 422 본문은 그것을 유발한 **query를 인용한다.** stable code + HTTP status + 예외 **클래스명**만 남기고 `raise ... from None`을 함께 쓴다 |
+| **API key는 헤더에만** | `repr` · `str` · 예외 · traceback · URL · 파라미터 어디에도 없다 |
+| **env 미독** | adapter는 `os`를 import하지 않는다. 키는 Application이 읽어 생성자로 주입한다 |
+| **저장 0** | cache · transcript · temp 파일 없음. 성공 경로와 4가지 실패 경로 전부에서 temp 디렉토리와 cwd를 검사한다. 같은 query를 두 번 부르면 요청도 두 번 나간다 |
+| **import 부수효과 0** | subprocess로 검사: 파일 0 · 환경변수 읽기 0 · 소켓 0. `urllib`은 `ssl`까지 끌어오므로 transport 함수 안에서 lazy import한다 |
+| **이 머신의 위치를 보내지 않음** | `x-loc-lat` · `x-loc-city` · `x-loc-timezone` · `x-loc-country` · `search_lang` · `ui_lang` 전부 미전송. `locale` module을 import하지 않는다 |
+| **재전송은 명시적** | `RetryPolicy` 기본값은 시도 1회. 재시도는 query를 **한 번 더 제3자에게 보내는 일**이다 |
+| **network 모듈 격리** | `core/`·`adapters/` 전체 AST 스캔으로, network import가 있는 파일이 **이름으로 열거된 2개**(`llm/anthropic.py` · `search/brave.py`)뿐임을 검사한다 |
+
+### provenance에 대한 보장 — 이 adapter에만 있는 항목
+
+| | |
+|---|---|
+| **`published_date`를 만들지 않는다** | provider의 날짜 필드는 "published **or last modified**"로 정의되어 있다. publication date가 아니므로 기록하지 않는다. snippet의 연도·URL 경로·검색 시각에서 **추론하지 않는다** |
+| **`retrieved_at` ≠ `published_at`** | 검색 시각은 adapter가 말할 자격이 있는 유일한 사실이고 채운다. 5년 된 페이지를 오늘 읽은 것은 **오래된 자료의 최근 retrieval**이지 최근 자료가 아니다 |
+| **publisher를 유도하지 않는다** | hostname에서 만들지 않고, 200자를 넘으면 자르지 않고 **버린다.** 부재는 confidence를 제한할 뿐이며 그것은 동작하는 답이다 |
+| **URL을 고쳐 쓰지 않는다** | tracking 파라미터 제거 · host 정규화 · redirect 해제 전부 하지 않는다. 검사만 한다 |
+| **snippet은 engine의 발췌다** | adapter가 URL을 따라가 본문을 가져오지 않는다. locator는 `snippet`이고 ceiling은 MEDIUM이다 — `tests/test_search_contract.py`가 manual·brave 양쪽에서 확인한다 |
+| **AI 생성물이 retrieval로 섞이지 않는다** | `summary`·`enable_rich_callback`을 켜지 않고 `result_filter=web`으로 요청하므로 summarizer·infobox 블록이 응답에 **오지 않는다** |
+| **query를 바꾸지 않는다** | provider 기본값인 `spellcheck`(수정된 query로 검색)와 `operators`(구두점을 문법으로 해석)를 **끈다.** keyword 확장 · site 필터 · 지역 자동 추가 없음 |
+
+### 보장하지 않는 것 — 정확히 적는다
+
+- **provider가 query를 어떻게 다루는지 이 코드가 보장하지 않는다.** 검색어 보관 · 로그 ·
+  익명화 · 재판매 여부는 배포의 속성이다. "저장하지 않는다" 같은 문장을 코드에도 이 문서에도
+  쓰지 않는다. 0절의 확인 항목표가 그대로 적용되며, 배포 조직이 **직접 확인**한다.
+- **query는 문서보다 짧을 뿐 덜 민감하지 않다.** 조직명이 들어간 query를 외부 검색 API로
+  보내는 것은 그 조직을 조사 중이라는 사실을 제3자에게 알리는 일이다. `ManualSearch`가 여전히
+  기본값인 이유이고, 외부 검색이 허용되지 않는 환경에서 Harness가 계속 동작하는 이유다.
+- **timeout은 전체 deadline이 아니다.** `urlopen`의 `timeout`은 socket 연산 단위다.
+- **index coverage·결과 품질·순위 근거를 주장하지 않는다.** provider의 결과 순서는 search
+  ranking이며 `sales_priority`와 무관하다.
+- **third-party·runtime·OS 내부 동작은 검증 대상이 아니다** (2절과 같은 범위 제한).
+- **실제 provider 왕복은 NOT_MEASURED다.** live 테스트는 `HARNESS_SEARCH_LIVE_TEST=1` ·
+  `HARNESS_SEARCH_LIVE_API_KEY` **두 개가 함께** 있을 때만 돈다. `BRAVE_API_KEY`가 환경에
+  있다는 것은 그것을 쓰겠다는 동의가 아니므로 게이트가 아니다. 기본 test suite는 네트워크
+  없이 실행된다.
+
+로그 가능: `provider` · `status` · `latency_ms` · `attempts` · `limit` · `returned_count` ·
+`mapped_count` · `rejected_count` · `query_chars` · `country` · error code.
+로그 금지: query 원문 · snippet · 결과 URL · publisher · API key · provider 에러 메시지.
+
+---
+
 ## 4-1. Web Application 표면 *(Phase 8)*
 
 Phase 1–7의 원칙은 그대로다. Web에서 처음 생기는 표면만 여기 적는다. 이 절은 **별도

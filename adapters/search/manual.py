@@ -5,8 +5,8 @@ No network access, no external index. This is the honest default for a tool whos
 be traceable: everything it can return has a known provenance because someone put it there.
 
 It also keeps the MVP usable where outbound web access is not allowed, which is common in the
-environments this harness is meant to be embedded in. A real web adapter arrives in Phase 3 and
-implements the same two-line interface.
+environments this harness is meant to be embedded in, and it stays the default there.
+``brave`` implements the same two-line interface against an external index.
 """
 from __future__ import annotations
 

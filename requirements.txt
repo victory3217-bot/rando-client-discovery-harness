@@ -36,3 +36,14 @@ openpyxl>=3.1         # MIT    XLSX. Requires et-xmlfile
 # jsonschema above is what validates structured output against the requested schema. Without
 # it the adapter stops with LLM_SCHEMA_VALIDATOR_UNAVAILABLE rather than returning a value it
 # has not checked.
+
+# --- Search adapters (Phase 8) ---
+# Nothing here either. adapters/search/brave.py speaks to the Web Search API with the standard
+# library: it is one GET with seven query parameters, and it takes its transport as a
+# constructor argument, so an organisation that prefers requests/httpx installs and injects it
+# without this file changing.
+#
+# This was re-derived rather than copied from the LLM adapter's conclusion: the provider
+# publishes no official Python SDK worth adopting, and a general-purpose HTTP client would
+# bring a retry policy this harness needs to own itself (a retry re-sends the query). See
+# adapters/README.md.

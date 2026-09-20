@@ -71,6 +71,20 @@ Phase 1에서 **만들지 않은 것**과 그 이유:
 | **core gap 문자열의 locale 렌더링** | `"not assessed in this run"` 같은 fallback을 Core가 영문으로 만들어 사용자 목록에 그대로 나온다 (`examples/run_example.py` 11절에서 확인 가능). Bilingual by Design대로라면 code를 반환하고 `locales/*.json`이 렌더해야 한다. Phase 4의 `core/client/fit.py`도 같은 방식이라 **두 Phase를 함께 고쳐야** 하고, 그래서 Phase 5 범위에서 하지 않았다 |
 | **claim과 인용 finding의 의미적 적합성** | 모델이 무관한 FACT finding을 `BUYER`에 인용해도 구조 검사는 통과한다. 지금 막는 것은 ref 해석 가능성 · finding의 evidence_type · 조직명 검증뿐이다. **해결 방법은 아직 정하지 않았다.** 더 좁은 구조적 제약으로 상당 부분을 걸러낼 수 있는지부터 검토하고, 그것으로 부족할 때 어떤 수단을 쓸지는 그때 판단한다 — 이 저장소가 지금까지 도입하지 않은 수단(NER · embedding · LLM 심판)을 들이는 선택지도 그 검토에 포함되지만, 필요하다고 단정된 상태는 아니다 |
 
+### Phase 8 Step 2C에서 남긴 것 (backlog)
+
+production Search adapter를 붙이면서 드러난 **Core 쪽** 문제다. Step 2C에서는 adapter만
+만들었으므로 고치지 않았고, Core 수정이 필요하므로 별도 단계로 미룬다.
+
+| | |
+|---|---|
+| **provider 실패가 stage 전체를 중단시킨다** | `core/analysis/research.py:research_client`는 `criteria.queries`를 루프로 돌며 query마다 `search()`를 부르는데, **`core/` 어디에도 `ProviderError`를 잡는 곳이 없다** (전체 `try/except`가 모델 출력 파싱용 `ValueError`·`TypeError`뿐이다). 그래서 다섯 개 중 세 번째 query가 `SEARCH_RATE_LIMITED`를 받으면 **1–2번에서 이미 추출한 finding까지 버려진 채** 예외가 pipeline 밖으로 나간다. 부분 성공을 담을 자리가 반환 시그니처 `(sources, findings, rejections, records)`에 없고, `Rejection`도 맞는 그릇이 아니다 — 그 타입은 정의상 "**모델이 생산한 것** 중 파이프라인이 거부한 것"이다 |
+
+**지금 어디서 구분되는가는 분명하다.** 0건과 provider 실패는 **adapter의 예외 경계**에서
+갈린다 — 0건은 `[]`로 in-band, 실패는 예외로 out-of-band이고, Core가 아무것도 잡지 않으므로
+둘이 섞이는 경로가 없다. 모호한 것은 구분이 아니라 **실패 이후의 복구 정책**이고, 그것은
+Core 결정이다.
+
 ### Web / Training 관련으로 아직 만들지 않은 것
 
 Phase 8의 방향은 `docs/product-spec.md`에 기록되어 있으나, 현재 저장소에는 다음이 **하나도
@@ -140,6 +154,8 @@ pytest -k evidence
 | `test_transmission_boundary.py` | **`core/` 전체에서 LLM 호출이 단일 게이트웨이를 통과** (AST) · 전송 객체의 `repr` 은닉 |
 | `test_llm_contract.py` | **`LLMProvider` 계약을 echo·anthropic 양쪽에 같이** 돌린다 — protocol · 시그니처 · 4개 메서드 · 모든 schema 충족 · gateway 통과 · research pipeline 전체 실행. 전부 오프라인 |
 | `test_llm_anthropic.py` | Anthropic adapter 고유 — 요청 구성 · **envelope 전체 열거** · output_lang · retry(기본 없음 · 명시 시 backoff · retry-after · 비대상) · timeout · 에러 매핑 10종 · **provider 메시지 비노출** · canary 6표면 · **전송됨 vs 누출됨** · import 부수효과 0 · 디스크 0 · **network import가 `adapters/llm/` 밖에 없음**(AST) · live 테스트 opt-in 게이트 |
+| `test_search_contract.py` | **`SearchProvider` 계약을 manual·brave 양쪽에 같이** 돌린다 — protocol · 시그니처 동일성 · 결과 타입 · provenance 필드 · `check_source_metadata` 통과 · **snippet ceiling MEDIUM** · 의도된 차이 1개(빈 query). 전부 오프라인 |
+| `test_search_brave.py` | Brave adapter 고유 — 요청 파라미터 **닫힌 집합 열거** · query 원문 전달 · **provider 기본값 2개(spellcheck·operators) 차단** · country/limit 매핑 · timeout · retry(기본 없음 · `x-ratelimit-reset`) · 에러 매핑 7종 · **provider 메시지 비노출** · 결과 단위 거부 · **publication date 미생성** · 중복 미제거 · ranking≠priority · canary 8표면 · **전송됨 vs 누출됨** · import 부수효과 0 · 디스크 0 · live 테스트 opt-in 게이트 |
 | `test_client_discovery.py` | criteria · 조직 추출 · fit 8개 · 검색 통합 · 오프라인 E2E |
 | `test_client_validation.py` | **회사명 hallucination 거부** · **토큰 경계 공격** · signal 없는 STRONG 차단 · 파생 집계 일관성 · 잘림 없는 거부 |
 | `test_client_priority.py` | 규칙표 전 분기 · **snippet P1 차단** · reason code i18n · 결정성 |
@@ -159,6 +175,7 @@ pytest -k evidence
 | `pricing_fixtures.py` | Phase 7 고정값 (테스트가 아니라 fixture 모듈). **모든 숫자가 서로 유도되지 않게** 골라져 있다 |
 | `scripted_llm.py` | 준비된 응답을 돌려주는 테스트 double (테스트가 아니라 도구 모듈) |
 | `fake_transport.py` | 네트워크 없이 응답하는 transport (테스트가 아니라 도구 모듈). 요청에서 schema를 되꺼내 유효 instance를 합성하므로, 계약 테스트가 두 provider에 같이 돈다 |
+| `fake_search_transport.py` | 검색용 transport 도구 모듈. GET이므로 `params` mapping을 그대로 기록한다 — 테스트가 query string을 파싱하지 않는다 |
 | `intake_fixtures.py` | 테스트 문서 8종을 메모리에서 생성 (테스트가 아니라 fixture 모듈) |
 
 `.gitignore`가 `*.pdf` `*.docx` `*.pptx` `*.xlsx`를 차단하므로 **바이너리 fixture를 커밋할 수
@@ -172,14 +189,23 @@ pytest -k evidence
 테스트는 `fake_transport.py`를 넣으므로, 전체 suite에 credential이 필요 없고 소켓도 열리지
 않는다. 실제 왕복은 **NOT_MEASURED**이며 그렇게 표시한다.
 
-실제로 한 번 확인하려면 환경변수 **세 개를 함께** 준다.
+실제로 한 번 확인하려면 환경변수를 **함께** 준다. LLM은 3개, Search는 2개다.
 
 ```bash
 HARNESS_LLM_LIVE_TEST=1 HARNESS_LLM_LIVE_API_KEY=... HARNESS_LLM_LIVE_MODEL=... pytest -k live
 ```
 
-`ANTHROPIC_API_KEY`는 일부러 게이트로 쓰지 않는다 — 다른 작업에서 남은 키가 환경에 있다는 것이
-그것을 쓰겠다는 동의는 아니다. 셋 중 하나라도 없으면 해당 테스트는 **skip**되고 이유를 출력한다.
+```bash
+HARNESS_SEARCH_LIVE_TEST=1 HARNESS_SEARCH_LIVE_API_KEY=... pytest -k ac2
+```
+
+`ANTHROPIC_API_KEY`·`BRAVE_API_KEY`는 일부러 게이트로 쓰지 않는다 — 다른 작업에서 남은 키가
+환경에 있다는 것이 그것을 쓰겠다는 동의는 아니다. 하나라도 없으면 해당 테스트는 **skip**되고
+이유를 출력한다.
+
+`adapters/search/brave.py`도 transport를 주입받으므로 검색 쪽 역시 기본 suite에서 소켓이 열리지
+않는다. **네트워크로 나가는 파일은 이 저장소에 2개뿐**이고, `test_llm_anthropic.py`의
+`NETWORK_CAPABLE`이 그 목록을 이름으로 들고 있다 — 세 번째가 생기려면 그 줄을 고쳐야 한다.
 
 **경계 테스트가 실패하면 테스트를 고치지 않는다.** `test_core_purity`와
 `test_core_standalone`은 `HARNESS.md` 11절 성공기준의 마지막 두 항목을 자동 검증하는

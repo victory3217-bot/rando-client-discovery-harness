@@ -6,7 +6,9 @@ material a person has already supplied. That is the honest default for a tool wh
 must be traceable, and it keeps the MVP usable in environments where outbound web access is
 not allowed.
 
-A web adapter arrives in Phase 3 and implements the same two-line interface.
+A production adapter that reaches an external index implements this same two-line
+interface and lives entirely under ``adapters/search/`` — the core gains no notion of a
+vendor, an endpoint or a credential when one is wired in.
 """
 from __future__ import annotations
 
