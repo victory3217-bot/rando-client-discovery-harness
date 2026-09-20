@@ -110,6 +110,54 @@
       "PAYLOAD_READY": "전달 준비",
       "COMPLETED": "완료",
       "FAILED": "실패"
+    },
+    "AnalysisDimension": {
+      "USER": "사용자",
+      "BUYER": "구매자",
+      "DECISION_MAKER": "의사결정자",
+      "BUDGET_OWNER": "예산 주체",
+      "PROBLEM": "고객 문제",
+      "PROBLEM_SEVERITY": "문제 심각도",
+      "CURRENT_WORKAROUND": "현재 대처 방식",
+      "KBF": "구매결정요인",
+      "CURRENT_SOLUTION": "현재 솔루션",
+      "COMPETITOR": "경쟁자",
+      "SUBSTITUTE": "대체재",
+      "VALUE_PROPOSITION": "가치제안",
+      "COMPETITIVE_ADVANTAGE": "경쟁우위",
+      "SALES_ACCESS_ROUTE": "접근 경로",
+      "PARTNER": "파트너",
+      "VALUE_DRIVER": "가치 동인",
+      "PRICE_SENSITIVITY": "가격 민감도",
+      "BUDGET_EVIDENCE": "예산 근거",
+      "PROCUREMENT_CONTEXT": "조달 여건"
+    },
+    "InternationalDimension": {
+      "LOCAL_BUYING_STRUCTURE": "현지 구매구조",
+      "REGULATION": "규제",
+      "CERTIFICATION": "인증",
+      "TARIFF": "관세",
+      "LOGISTICS": "물류",
+      "CURRENCY_FX": "환율",
+      "ENTRY_BARRIER": "진입장벽",
+      "LOCAL_PARTNER_REQUIREMENT": "현지 파트너 요건"
+    },
+    "AccessRoute": {
+      "KNOWN_CHANNEL": "기존 채널",
+      "PARTNER": "파트너",
+      "PROCUREMENT_PORTAL": "조달 포털",
+      "BUYER_CONTACT_ROUTE": "구매자 접촉 경로",
+      "INDUSTRY_EVENT": "산업 행사",
+      "PUBLIC_TENDER": "공개 입찰"
+    },
+    "PurchaseSignal": {
+      "PROCUREMENT_ACTIVITY": "조달 활동",
+      "BUDGET_EVIDENCE": "예산 근거",
+      "PROJECT_ANNOUNCEMENT": "사업 발표",
+      "PURCHASE_HISTORY": "구매 이력",
+      "RFP": "제안요청",
+      "INVESTMENT_PLAN": "투자 계획",
+      "EXPANSION_PLAN": "증설 계획"
     }
   },
   "fields": {

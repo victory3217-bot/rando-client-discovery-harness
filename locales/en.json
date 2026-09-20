@@ -110,6 +110,54 @@
       "PAYLOAD_READY": "Ready to send",
       "COMPLETED": "Completed",
       "FAILED": "Failed"
+    },
+    "AnalysisDimension": {
+      "USER": "User",
+      "BUYER": "Buyer",
+      "DECISION_MAKER": "Decision maker",
+      "BUDGET_OWNER": "Budget owner",
+      "PROBLEM": "Customer problem",
+      "PROBLEM_SEVERITY": "Problem severity",
+      "CURRENT_WORKAROUND": "Current workaround",
+      "KBF": "Key buying factor",
+      "CURRENT_SOLUTION": "Current solution",
+      "COMPETITOR": "Competitor",
+      "SUBSTITUTE": "Substitute",
+      "VALUE_PROPOSITION": "Value proposition",
+      "COMPETITIVE_ADVANTAGE": "Competitive advantage",
+      "SALES_ACCESS_ROUTE": "Sales access route",
+      "PARTNER": "Partner",
+      "VALUE_DRIVER": "Value driver",
+      "PRICE_SENSITIVITY": "Price sensitivity",
+      "BUDGET_EVIDENCE": "Budget evidence",
+      "PROCUREMENT_CONTEXT": "Procurement context"
+    },
+    "InternationalDimension": {
+      "LOCAL_BUYING_STRUCTURE": "Local buying structure",
+      "REGULATION": "Regulation",
+      "CERTIFICATION": "Certification",
+      "TARIFF": "Tariff",
+      "LOGISTICS": "Logistics",
+      "CURRENCY_FX": "Currency and FX",
+      "ENTRY_BARRIER": "Entry barrier",
+      "LOCAL_PARTNER_REQUIREMENT": "Local partner requirement"
+    },
+    "AccessRoute": {
+      "KNOWN_CHANNEL": "Known channel",
+      "PARTNER": "Partner",
+      "PROCUREMENT_PORTAL": "Procurement portal",
+      "BUYER_CONTACT_ROUTE": "Buyer contact route",
+      "INDUSTRY_EVENT": "Industry event",
+      "PUBLIC_TENDER": "Public tender"
+    },
+    "PurchaseSignal": {
+      "PROCUREMENT_ACTIVITY": "Procurement activity",
+      "BUDGET_EVIDENCE": "Budget evidence",
+      "PROJECT_ANNOUNCEMENT": "Project announcement",
+      "PURCHASE_HISTORY": "Purchase history",
+      "RFP": "Request for proposal",
+      "INVESTMENT_PLAN": "Investment plan",
+      "EXPANSION_PLAN": "Expansion plan"
     }
   },
   "fields": {

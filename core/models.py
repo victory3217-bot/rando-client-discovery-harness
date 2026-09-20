@@ -276,6 +276,104 @@ class ProposalStatus(str, Enum):
     PROPOSAL_DRAFTED = "PROPOSAL_DRAFTED"
 
 
+class PurchaseSignal(str, Enum):
+    """Evidence that an organization actually buys things.
+
+    A closed list, because the alternative is what people reach for by default: "they are large,
+    therefore they have money". Size, fame and sector are not buying signals — they are reasons
+    to assume one, and an assumption dressed as a signal is how a pipeline manufactures
+    confidence.
+    """
+
+    PROCUREMENT_ACTIVITY = "PROCUREMENT_ACTIVITY"
+    BUDGET_EVIDENCE = "BUDGET_EVIDENCE"
+    PROJECT_ANNOUNCEMENT = "PROJECT_ANNOUNCEMENT"
+    PURCHASE_HISTORY = "PURCHASE_HISTORY"
+    RFP = "RFP"
+    INVESTMENT_PLAN = "INVESTMENT_PLAN"
+    EXPANSION_PLAN = "EXPANSION_PLAN"
+
+
+class AccessRoute(str, Enum):
+    """How a seller could actually reach this organization.
+
+    A closed list, because the alternative is "they have a website, so we can contact them" -
+    reasoning that produces a route for every organization on earth and therefore distinguishes
+    none of them. Re-exported from ``core.client.models`` where it was first defined.
+    """
+
+    KNOWN_CHANNEL = "KNOWN_CHANNEL"
+    PARTNER = "PARTNER"
+    PROCUREMENT_PORTAL = "PROCUREMENT_PORTAL"
+    BUYER_CONTACT_ROUTE = "BUYER_CONTACT_ROUTE"
+    INDUSTRY_EVENT = "INDUSTRY_EVENT"
+    PUBLIC_TENDER = "PUBLIC_TENDER"
+
+
+class AnalysisDimension(str, Enum):
+    """The nineteen questions Phase 5 asks about one selected client.
+
+    Grouped by the Master Note that supplies the lens, because the analysis runs one group at
+    a time: asking for nineteen answers in a single response gets the last few filled in
+    carelessly or not at all.
+
+    Several obvious-looking dimensions are deliberately absent. ``COMPARISON_CRITERIA`` is part
+    of ``KBF`` — what a customer compares on *is* what decides the purchase. ``CHANNEL`` and
+    ``CUSTOMER_TOUCHPOINT`` are evidence for ``SALES_ACCESS_ROUTE`` rather than answers of their
+    own. ``POSITIONING`` belongs to the proposal, ``REVENUE_MODEL_IMPLICATION`` to pricing, and
+    ``OUR_SOLUTION`` is an input: asking a model what we sell is asking it to invent a product.
+    """
+
+    # MN03 - buying structure and problem
+    USER = "USER"
+    BUYER = "BUYER"
+    DECISION_MAKER = "DECISION_MAKER"
+    BUDGET_OWNER = "BUDGET_OWNER"
+    PROBLEM = "PROBLEM"
+    PROBLEM_SEVERITY = "PROBLEM_SEVERITY"
+    CURRENT_WORKAROUND = "CURRENT_WORKAROUND"
+    KBF = "KBF"
+
+    # MN04 - alternatives and our fit
+    CURRENT_SOLUTION = "CURRENT_SOLUTION"
+    COMPETITOR = "COMPETITOR"
+    SUBSTITUTE = "SUBSTITUTE"
+    VALUE_PROPOSITION = "VALUE_PROPOSITION"
+    COMPETITIVE_ADVANTAGE = "COMPETITIVE_ADVANTAGE"
+
+    # MN05 - sales access
+    SALES_ACCESS_ROUTE = "SALES_ACCESS_ROUTE"
+    PARTNER = "PARTNER"
+
+    # MN06 - commercial context. Not pricing: see core/analysis/dimensions.py.
+    VALUE_DRIVER = "VALUE_DRIVER"
+    PRICE_SENSITIVITY = "PRICE_SENSITIVITY"
+    BUDGET_EVIDENCE = "BUDGET_EVIDENCE"
+    PROCUREMENT_CONTEXT = "PROCUREMENT_CONTEXT"
+
+
+class InternationalDimension(str, Enum):
+    """What an overseas client needs answered that a domestic one does not.
+
+    Kept apart from :class:`AnalysisDimension` rather than appended to it, so that a domestic
+    analysis carries no empty overseas slots and a reader can tell at a glance which questions
+    only arise because of the border.
+
+    The four that used to sit in ``InternationalContext`` and are missing here - local
+    competitor, local price, purchasing power, distribution structure - are answered by the
+    common dimensions. A competitor is a competitor; the country is already on the record.
+    """
+
+    LOCAL_BUYING_STRUCTURE = "LOCAL_BUYING_STRUCTURE"
+    REGULATION = "REGULATION"
+    CERTIFICATION = "CERTIFICATION"
+    TARIFF = "TARIFF"
+    LOGISTICS = "LOGISTICS"
+    CURRENCY_FX = "CURRENCY_FX"
+    ENTRY_BARRIER = "ENTRY_BARRIER"
+    LOCAL_PARTNER_REQUIREMENT = "LOCAL_PARTNER_REQUIREMENT"
+
+
 class PricingStatus(str, Enum):
     NOT_REQUESTED = "NOT_REQUESTED"
     PAYLOAD_READY = "PAYLOAD_READY"
@@ -324,8 +422,11 @@ class FitAssessment:
     missing_evidence: list[str] = field(default_factory=list)
 
 
-def aggregate_finding_ids(fit: Iterable["FitAssessment"]) -> list[str]:
-    """The canonical candidate-level ``finding_ids``: sorted unique union of the assessments'.
+def aggregate_finding_ids(fit: Iterable[Any]) -> list[str]:
+    """The canonical entity-level ``finding_ids``: sorted unique union of its parts'.
+
+    Takes anything with ``finding_ids`` - a :class:`FitAssessment`, an :class:`AnalysisClaim`,
+    an :class:`InternationalClaim`. One rule, because it is one rule.
 
     Candidate-level evidence fields are **derived, not authored.** The same ids otherwise get
     produced twice — once per criterion and once for the candidate — and the two copies drift
@@ -338,11 +439,12 @@ def aggregate_finding_ids(fit: Iterable["FitAssessment"]) -> list[str]:
     return sorted({fid for assessment in fit for fid in assessment.finding_ids if fid})
 
 
-def aggregate_missing_evidence(fit: Iterable["FitAssessment"]) -> list[str]:
+def aggregate_missing_evidence(fit: Iterable[Any]) -> list[str]:
     """The canonical missing-evidence set: sorted unique union of the assessments'.
 
-    :attr:`ClientCandidate.missing_evidence` and :attr:`PriorityDecision.missing_evidence` both
-    come from here, so a gap is stated once and cannot be reported differently in two places.
+    :attr:`ClientCandidate.missing_evidence`, :attr:`PriorityDecision.missing_evidence` and
+    :attr:`ClientAnalysis.missing_evidence` all come from here, so a gap is stated once and
+    cannot be reported differently in two places.
     """
     return sorted(
         {
@@ -368,6 +470,59 @@ class PriorityDecision:
     #: Derived from the assessments by :func:`aggregate_missing_evidence`, never written
     #: independently — see that function for why.
     missing_evidence: list[str] = field(default_factory=list)
+
+
+#: Longest interpretation kept on an analysis claim. Same reasoning as the fit reason cap.
+MAX_CLAIM_STATEMENT_CHARS = 500
+
+
+@dataclass
+class AnalysisClaim:
+    """One dimension's answer for one client, with the findings behind it.
+
+    ``finding_ids`` is the only reference stored. Sources are reachable through the findings
+    (:func:`core.analysis.source_ids_for`), so keeping a second copy here would be a second
+    thing to keep in step - the drift that ``ClientCandidate`` was restructured to avoid.
+    :class:`FitAssessment` does hold ``source_ids``, because a fit criterion can rest on a
+    search snippet with no finding behind it; every claim here goes through a finding.
+
+    ``evidence_type`` and ``confidence`` are **derived, never authored**. A model asked how
+    confident it is will answer fluently and without information.
+    """
+
+    dimension: AnalysisDimension
+    statement: Optional[str] = None
+    finding_ids: list[str] = field(default_factory=list)
+    missing_evidence: list[str] = field(default_factory=list)
+    #: Derived from the dimension's kind and the cited findings - see core/analysis/claims.py.
+    evidence_type: EvidenceType = EvidenceType.MISSING_EVIDENCE
+    #: Derived: the weakest supporting confidence, capped by the dimension's ceiling.
+    confidence: Confidence = Confidence.UNKNOWN
+    #: Derived: which Master Notes the cited findings were read through.
+    framework_basis: list[str] = field(default_factory=list)
+    #: Only on a named-organization dimension, and only once it has passed verification
+    #: against the cited passage.
+    organization_name: Optional[str] = None
+    #: Only on SALES_ACCESS_ROUTE.
+    access_route: Optional[AccessRoute] = None
+
+
+@dataclass
+class InternationalClaim:
+    """The same shape, for an overseas-specific dimension.
+
+    A separate dataclass rather than a union on :class:`AnalysisClaim`, because
+    :func:`_coerce` resolves a ``Union`` by taking its first member: an international value
+    would come back through the wrong enum and raise on load.
+    """
+
+    dimension: InternationalDimension
+    statement: Optional[str] = None
+    finding_ids: list[str] = field(default_factory=list)
+    missing_evidence: list[str] = field(default_factory=list)
+    evidence_type: EvidenceType = EvidenceType.MISSING_EVIDENCE
+    confidence: Confidence = Confidence.UNKNOWN
+    framework_basis: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -622,10 +777,24 @@ class ClientCandidate:
 
 @dataclass
 class ClientAnalysis:
-    """Deep analysis of one prioritised client, using MN03/MN04/MN05/MN06 only.
+    """Deep analysis of one **human-selected** client, using MN03/MN04/MN05/MN06 only.
 
     MN02 and MN07 are company-level diagnoses and are not repeated per client — see
     HARNESS.md section 5.
+
+    This record answers nineteen questions and says, for each one, what it rests on. It used to
+    be twenty optional strings sharing a single ``evidence`` list, which meant nobody could tell
+    which finding supported *buyer* and which supported *competitive advantage* — the same flaw
+    :class:`ClientCandidate` had before the eight criteria each took their own references.
+
+    **It carries no priority.** The band lives on :class:`ClientCandidate.priority` and is
+    decided by an explicit rule from the fit assessments. A second priority here, written by
+    whatever a deep analysis happened to turn up, would give one client two answers with nothing
+    to say which is current.
+
+    ``our_solution`` is copied in from the caller, not produced by a model. It is the one field
+    on this record that describes us rather than them, and asking a model to fill it in is
+    asking it to invent a product.
     """
 
     project_id: str
@@ -633,42 +802,28 @@ class ClientAnalysis:
     client_name: str
     country: str
     industry: str
-
-    # MN03 — customer, buyer, problem
-    company_summary: Optional[str] = None
-    business_issue: Optional[str] = None
-    user: Optional[str] = None
-    buyer: Optional[str] = None
-    decision_maker: Optional[str] = None
-    problem: Optional[str] = None
-    problem_severity: Optional[str] = None
-
-    # MN04 — value proposition, competitive advantage, positioning
-    current_solution: Optional[str] = None
-    competitor: Optional[str] = None
-    substitute: Optional[str] = None
-    kbf: Optional[str] = None
-    our_solution: Optional[str] = None
-    value_proposition: Optional[str] = None
-    competitive_advantage: Optional[str] = None
-
-    # MN05 — business model, access route
-    sales_access_route: Optional[str] = None
-    potential_partner: Optional[str] = None
-
-    # MN06 — cost, price, revenue model
-    pricing_implication: Optional[str] = None
-
-    evidence: list[EvidenceRef] = field(default_factory=list)
-    missing_evidence: list[str] = field(default_factory=list)
-    sales_priority: SalesPriority = SalesPriority.UNKNOWN
+    #: What we are offering, supplied by the caller. Never model output.
+    our_solution: str = ""
+    #: Exactly one claim per :class:`AnalysisDimension`.
+    claims: list[AnalysisClaim] = field(default_factory=list)
+    #: Empty unless ``market_scope`` is INTERNATIONAL.
+    international_claims: list[InternationalClaim] = field(default_factory=list)
     market_scope: MarketScope = MarketScope.DOMESTIC
-    international: Optional[InternationalContext] = None
+    #: Derived: the sorted union of every claim's finding_ids.
+    finding_ids: list[str] = field(default_factory=list)
+    #: Derived: the sorted union of every claim's missing_evidence.
+    missing_evidence: list[str] = field(default_factory=list)
     mn_basis: list[str] = field(default_factory=lambda: ["MN03", "MN04", "MN05", "MN06"])
     analysis_id: str = field(default_factory=lambda: new_id("cla"))
     lang: str = "ko"
     created_at: str = field(default_factory=utc_now)
     schema_version: str = SCHEMA_VERSION
+
+    def claim_for(self, dimension: AnalysisDimension) -> Optional[AnalysisClaim]:
+        for claim in self.claims:
+            if claim.dimension is dimension:
+                return claim
+        return None
 
 
 @dataclass

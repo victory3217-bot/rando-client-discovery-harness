@@ -1,79 +1,272 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/rando/client-discovery-harness/schemas/client_analysis.schema.json",
-  "title": "Client Discovery Harness - Client Analysis",
-  "description": "Deep analysis of one prioritised client using MN03/MN04/MN05/MN06 only. MN02 and MN07 diagnose the company rather than the client and are not repeated per client. When evidence is empty, missing_evidence must say what needs to be found - enforced by core/evidence.py.",
+  "$id": "https://github.com/victory3217-bot/rando-client-discovery-harness/schemas/client_analysis.schema.json",
+  "title": "ClientAnalysis",
+  "description": "Deep analysis of one human-selected client, as nineteen evidence-backed claims. Carries no priority: the band lives on ClientCandidate.priority and is decided by an explicit rule from the fit assessments. A second priority here would give one client two answers with nothing to say which is current.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["analysis_id", "project_id", "client_id", "client_name", "country", "industry", "evidence", "missing_evidence", "sales_priority", "mn_basis", "schema_version"],
+  "required": [
+    "analysis_id",
+    "project_id",
+    "client_id",
+    "client_name",
+    "country",
+    "industry",
+    "our_solution",
+    "claims",
+    "international_claims",
+    "finding_ids",
+    "missing_evidence",
+    "mn_basis",
+    "schema_version"
+  ],
   "$defs": {
-    "evidenceRef": {
+    "analysisClaim": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["finding_id"],
+      "required": [
+        "dimension"
+      ],
       "properties": {
-        "finding_id": { "type": "string" },
-        "source_id": { "type": ["string", "null"] },
-        "note": { "type": ["string", "null"] }
+        "dimension": {
+          "type": "string",
+          "enum": [
+            "USER",
+            "BUYER",
+            "DECISION_MAKER",
+            "BUDGET_OWNER",
+            "PROBLEM",
+            "PROBLEM_SEVERITY",
+            "CURRENT_WORKAROUND",
+            "KBF",
+            "CURRENT_SOLUTION",
+            "COMPETITOR",
+            "SUBSTITUTE",
+            "VALUE_PROPOSITION",
+            "COMPETITIVE_ADVANTAGE",
+            "SALES_ACCESS_ROUTE",
+            "PARTNER",
+            "VALUE_DRIVER",
+            "PRICE_SENSITIVITY",
+            "BUDGET_EVIDENCE",
+            "PROCUREMENT_CONTEXT"
+          ]
+        },
+        "statement": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "An interpretation of the evidence, never a copy of it. Null when the evidence does not settle this dimension."
+        },
+        "finding_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The only reference stored. Sources are reached through these findings - see core.analysis.source_ids_for."
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "FACT",
+            "INFERENCE",
+            "ASSUMPTION",
+            "MISSING_EVIDENCE"
+          ],
+          "description": "Derived from the dimension's kind, not copied from the supporting findings: joining three facts into a conclusion produces an inference."
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "HIGH",
+            "MEDIUM",
+            "LOW",
+            "UNKNOWN"
+          ]
+        },
+        "framework_basis": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "organization_name": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Only once verified against the cited passage by core.client.verify."
+        },
+        "access_route": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "KNOWN_CHANNEL",
+            "PARTNER",
+            "PROCUREMENT_PORTAL",
+            "BUYER_CONTACT_ROUTE",
+            "INDUSTRY_EVENT",
+            "PUBLIC_TENDER",
+            null
+          ],
+          "description": "SALES_ACCESS_ROUTE only."
+        }
+      }
+    },
+    "internationalClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dimension"
+      ],
+      "properties": {
+        "dimension": {
+          "type": "string",
+          "enum": [
+            "LOCAL_BUYING_STRUCTURE",
+            "REGULATION",
+            "CERTIFICATION",
+            "TARIFF",
+            "LOGISTICS",
+            "CURRENCY_FX",
+            "ENTRY_BARRIER",
+            "LOCAL_PARTNER_REQUIREMENT"
+          ]
+        },
+        "statement": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500,
+          "description": "An interpretation of the evidence, never a copy of it. Null when the evidence does not settle this dimension."
+        },
+        "finding_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "The only reference stored. Sources are reached through these findings - see core.analysis.source_ids_for."
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence_type": {
+          "type": "string",
+          "enum": [
+            "FACT",
+            "INFERENCE",
+            "ASSUMPTION",
+            "MISSING_EVIDENCE"
+          ],
+          "description": "Derived from the dimension's kind, not copied from the supporting findings: joining three facts into a conclusion produces an inference."
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "HIGH",
+            "MEDIUM",
+            "LOW",
+            "UNKNOWN"
+          ]
+        },
+        "framework_basis": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
       }
     }
   },
   "properties": {
-    "analysis_id": { "type": "string" },
-    "project_id": { "type": "string" },
-    "client_id": { "type": "string" },
-    "client_name": { "type": "string", "minLength": 1 },
-    "country": { "type": "string" },
-    "industry": { "type": "string" },
-
-    "company_summary": { "type": ["string", "null"] },
-    "business_issue": { "type": ["string", "null"] },
-    "user": { "type": ["string", "null"], "description": "MN03: who uses it." },
-    "buyer": { "type": ["string", "null"], "description": "MN03: who pays." },
-    "decision_maker": { "type": ["string", "null"], "description": "MN03: who approves." },
-    "problem": { "type": ["string", "null"] },
-    "problem_severity": { "type": ["string", "null"] },
-
-    "current_solution": { "type": ["string", "null"] },
-    "competitor": { "type": ["string", "null"] },
-    "substitute": { "type": ["string", "null"] },
-    "kbf": { "type": ["string", "null"], "description": "MN04: key buying factor." },
-    "our_solution": { "type": ["string", "null"] },
-    "value_proposition": { "type": ["string", "null"] },
-    "competitive_advantage": { "type": ["string", "null"] },
-
-    "sales_access_route": { "type": ["string", "null"], "description": "MN05: how we actually reach the buyer." },
-    "potential_partner": { "type": ["string", "null"] },
-
-    "pricing_implication": { "type": ["string", "null"], "description": "MN06: what this client implies for price, margin and revenue model. Not a price." },
-
-    "evidence": { "type": "array", "items": { "$ref": "#/$defs/evidenceRef" } },
-    "missing_evidence": { "type": "array", "items": { "type": "string" } },
-    "sales_priority": { "type": "string", "enum": ["P1", "P2", "P3", "DEFERRED", "UNKNOWN"] },
-    "market_scope": { "type": "string", "enum": ["DOMESTIC", "INTERNATIONAL"] },
-    "international": {
-      "description": "Filled only when market_scope is INTERNATIONAL. Kept as its own object so a domestic project never carries twelve empty fields.",
-      "type": ["object", "null"],
-      "additionalProperties": false,
-      "required": [],
-      "properties": {
-        "local_buyer": { "type": ["string", "null"] },
-        "local_competitor": { "type": ["string", "null"] },
-        "regulation": { "type": ["string", "null"] },
-        "certification": { "type": ["string", "null"] },
-        "tariff": { "type": ["string", "null"] },
-        "logistics": { "type": ["string", "null"] },
-        "exchange_rate": { "type": ["string", "null"] },
-        "local_partner": { "type": ["string", "null"] },
-        "distribution_structure": { "type": ["string", "null"] },
-        "local_price": { "type": ["string", "null"] },
-        "purchasing_power": { "type": ["string", "null"] },
-        "entry_barrier": { "type": ["string", "null"] }
+    "analysis_id": {
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "client_id": {
+      "type": "string",
+      "description": "The ClientCandidate a person selected for analysis."
+    },
+    "client_name": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "industry": {
+      "type": "string"
+    },
+    "our_solution": {
+      "type": "string",
+      "description": "Supplied by the caller, never produced by a model. Asking a model what we sell is asking it to invent a product."
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 19,
+      "maxItems": 19,
+      "items": {
+        "$ref": "#/$defs/analysisClaim"
+      },
+      "description": "Exactly one per AnalysisDimension. A dimension nobody could settle says so rather than being absent."
+    },
+    "international_claims": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/internationalClaim"
+      },
+      "description": "Empty unless market_scope is INTERNATIONAL."
+    },
+    "market_scope": {
+      "type": "string",
+      "enum": [
+        "DOMESTIC",
+        "INTERNATIONAL"
+      ]
+    },
+    "finding_ids": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Derived: the sorted union of every claim's finding_ids."
+    },
+    "missing_evidence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Derived: the sorted union of every claim's missing_evidence."
+    },
+    "mn_basis": {
+      "type": "array",
+      "items": {
+        "type": "string"
       }
     },
-    "mn_basis": { "type": "array", "items": { "type": "string" } },
-    "lang": { "type": "string" },
-    "created_at": { "type": "string" },
-    "schema_version": { "type": "string" }
+    "lang": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "schema_version": {
+      "type": "string"
+    }
   }
 }

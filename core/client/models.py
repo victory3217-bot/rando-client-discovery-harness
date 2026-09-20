@@ -12,43 +12,16 @@ into the candidate it becomes.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from enum import Enum
 from typing import Optional
 
-from core.models import FitCriterion, FitLevel
+# AccessRoute moved to core.models when core/analysis/ began using it too. Re-exported
+# here so that `from core.client.models import AccessRoute` keeps working.
+from core.models import AccessRoute, FitCriterion, FitLevel, PurchaseSignal
 
-
-class PurchaseSignal(str, Enum):
-    """Evidence that an organization actually buys things.
-
-    A closed list, because the alternative is what people reach for by default: "they are large,
-    therefore they have money". Size, fame and sector are not buying signals — they are reasons
-    to assume one, and an assumption dressed as a signal is how a pipeline manufactures
-    confidence.
-    """
-
-    PROCUREMENT_ACTIVITY = "PROCUREMENT_ACTIVITY"
-    BUDGET_EVIDENCE = "BUDGET_EVIDENCE"
-    PROJECT_ANNOUNCEMENT = "PROJECT_ANNOUNCEMENT"
-    PURCHASE_HISTORY = "PURCHASE_HISTORY"
-    RFP = "RFP"
-    INVESTMENT_PLAN = "INVESTMENT_PLAN"
-    EXPANSION_PLAN = "EXPANSION_PLAN"
-
-
-class AccessRoute(str, Enum):
-    """A named way of reaching the buyer.
-
-    Same reasoning as :class:`PurchaseSignal`. "They are a public body so we can contact them"
-    and "they have a website" are not routes; they are the absence of one.
-    """
-
-    KNOWN_CHANNEL = "KNOWN_CHANNEL"
-    PARTNER = "PARTNER"
-    PROCUREMENT_PORTAL = "PROCUREMENT_PORTAL"
-    BUYER_CONTACT_ROUTE = "BUYER_CONTACT_ROUTE"
-    INDUSTRY_EVENT = "INDUSTRY_EVENT"
-    PUBLIC_TENDER = "PUBLIC_TENDER"
+__all__ = [
+    "AccessRoute", "PurchaseSignal", "ClientDiscoveryCriteria", "OrganizationMention",
+    "VerifiedOrganization", "DiscoveryHypothesis", "FitDraft", "DiscoveryOutcome",
+]
 
 
 @dataclass

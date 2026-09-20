@@ -17,13 +17,16 @@ from typing import Iterable, Optional
 
 from core.errors import EvidenceRuleViolation
 from core.models import (
+    MAX_CLAIM_STATEMENT_CHARS,
     MAX_FIT_REASON_CHARS,
+    AnalysisDimension,
     ClientAnalysis,
     ClientCandidate,
     EvidenceType,
     FitCriterion,
     FitLevel,
     KeyIssue,
+    MarketScope,
     ProposalStrategy,
     ResearchFinding,
     SourceMetadata,
@@ -367,14 +370,107 @@ def _check_fit(candidate: ClientCandidate) -> list[str]:
     return violations
 
 
-def check_client_analysis(analysis: ClientAnalysis) -> list[str]:
-    """An analysis with no evidence must say what evidence it is missing."""
+def check_client_analysis(
+    analysis: ClientAnalysis,
+    known_finding_ids: Optional[Iterable[str]] = None,
+) -> list[str]:
+    """Every dimension answered or openly unanswered, and nothing carrying a second priority.
+
+    The rules mirror ``check_client_candidate``, because the two records fail the same way. A
+    claim that is favourable with nothing behind it is an opinion; a dimension that is simply
+    absent is indistinguishable from one nobody could settle; and an aggregate that disagrees
+    with the claims it was derived from means the record says two things at once.
+    """
     violations: list[str] = []
 
-    if not analysis.evidence and not analysis.missing_evidence:
+    if not analysis.client_id:
         violations.append(
-            f"analysis {analysis.analysis_id}: evidence is empty, so missing_evidence must "
-            "list what needs to be found"
+            f"analysis {analysis.analysis_id}: client_id is empty — an analysis belongs to a "
+            "client that was selected, and there is no way to say which"
+        )
+
+    seen = [claim.dimension for claim in analysis.claims]
+    absent = [d.value for d in AnalysisDimension if d not in seen]
+    if absent:
+        violations.append(
+            f"analysis {analysis.analysis_id}: no claim for {absent} — a dimension nobody "
+            "could settle must say so, not be missing"
+        )
+    duplicated = sorted({d.value for d in seen if seen.count(d) > 1})
+    if duplicated:
+        violations.append(f"analysis {analysis.analysis_id}: duplicate claims for {duplicated}")
+
+    for claim in analysis.claims:
+        violations.extend(_check_claim(analysis.analysis_id, claim))
+
+    if analysis.market_scope is not MarketScope.INTERNATIONAL and analysis.international_claims:
+        violations.append(
+            f"analysis {analysis.analysis_id}: international_claims on a "
+            f"{analysis.market_scope.value} analysis"
+        )
+    international_seen = [claim.dimension for claim in analysis.international_claims]
+    international_duplicated = sorted(
+        {d.value for d in international_seen if international_seen.count(d) > 1}
+    )
+    if international_duplicated:
+        violations.append(
+            f"analysis {analysis.analysis_id}: duplicate international claims for "
+            f"{international_duplicated}"
+        )
+    for claim in analysis.international_claims:
+        violations.extend(_check_claim(analysis.analysis_id, claim))
+
+    parts = list(analysis.claims) + list(analysis.international_claims)
+    if analysis.finding_ids != aggregate_finding_ids(parts):
+        violations.append(
+            f"analysis {analysis.analysis_id}: finding_ids is not the sorted union of the "
+            "claims' finding_ids — it is derived from them, not authored separately"
+        )
+    if analysis.missing_evidence != aggregate_missing_evidence(parts):
+        violations.append(
+            f"analysis {analysis.analysis_id}: missing_evidence is not the sorted union of "
+            "the claims' missing_evidence"
+        )
+
+    if known_finding_ids is not None:
+        known = set(known_finding_ids)
+        unknown = [fid for fid in analysis.finding_ids if fid not in known]
+        if unknown:
+            violations.append(
+                f"analysis {analysis.analysis_id}: references unknown finding_ids {unknown}"
+            )
+
+    return violations
+
+
+def _check_claim(analysis_id: str, claim) -> list[str]:
+    """One claim: a statement needs references, and an open question needs a gap."""
+    violations: list[str] = []
+    name = claim.dimension.value
+
+    if claim.statement and not claim.finding_ids:
+        violations.append(
+            f"analysis {analysis_id}: {name} states a conclusion with no finding_ids — a "
+            "claim nobody can check is an opinion"
+        )
+    if not claim.statement and not claim.missing_evidence:
+        violations.append(
+            f"analysis {analysis_id}: {name} is unanswered but does not say what evidence "
+            "would settle it"
+        )
+    if claim.statement and len(claim.statement) > MAX_CLAIM_STATEMENT_CHARS:
+        violations.append(
+            f"analysis {analysis_id}: {name} statement exceeds {MAX_CLAIM_STATEMENT_CHARS} "
+            "characters — a statement is an interpretation, not a copy of the passage"
+        )
+    if claim.statement and claim.evidence_type is EvidenceType.MISSING_EVIDENCE:
+        violations.append(
+            f"analysis {analysis_id}: {name} has a statement but an evidence_type of "
+            "MISSING_EVIDENCE"
+        )
+    if getattr(claim, "organization_name", None) and not claim.finding_ids:
+        violations.append(
+            f"analysis {analysis_id}: {name} names an organization with no finding behind it"
         )
 
     return violations
