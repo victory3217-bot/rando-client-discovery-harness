@@ -50,7 +50,7 @@ PyMuPDF는 PDF 텍스트 추출 품질이 더 낫지만 **AGPL-3.0**이라 채�
 | **5** | Client Deep Analysis (사람이 선택) | **완료** | 자동 Top 3 불가 · Phase 4 band 불변 · SYNTHESIS는 FACT 불가 |
 | **6** | Proposal Strategy | **완료** | 목표 기본값 없음 · Solution whitelist · Phase 5 게이트 유지 · 근거 없는 숫자 거부 |
 | **7** | Pricing Harness Adapter | **완료** | `pricing_payload`가 Pricing Harness 스키마 검증 통과 · LLM 부재 · 숫자 무생성 · payload만 전송 |
-| **8** | Web App Integration + Mobile-first Reference UI + Training UX + SQLite Adapter | 예정 | Reference App 삭제 후에도 core 테스트 통과 |
+| **8** | SQLite · production provider adapter (Application·UI는 **별도 저장소**) | 예정 | Application 삭제 후에도 core 테스트 통과 · Core 변경 0 |
 | **9** | Report Output (HTML/DOCX) | 예정 | 구조화 데이터만 읽어서 생성 |
 
 Phase 1에서 **만들지 않은 것**과 그 이유:
@@ -86,6 +86,30 @@ Team Comparison · Deployment
 Web framework 의존성이 하나라도 들어오면 `tests/test_core_purity.py`가 `core/`에서 그것을
 잡는다. Application Layer 쪽은 테스트가 막아주지 않으므로, 그 디렉토리를 만드는 시점에
 `HARNESS.md` 12절의 경계를 먼저 읽는다.
+
+Phase 8의 Application과 UI는 **이 저장소가 아니라 별도 저장소**에 만든다. 근거는
+`docs/product-spec.md` Phase 8 절에 있다 — 배포 대상이 런타임 없는 정적 사이트이고, Core는
+어떤 사이트의 백엔드도 되어서는 안 된다. 이 저장소에 추가되는 것은 adapter 뿐이다.
+
+### `scripts/spikes/`
+
+측정용 코드다. production 코드가 아니고, `core/`도 `adapters/`도 import하지 않는 것을
+전제로 하지 않는다 — 오히려 Core를 밖에서 호출해 재는 것이 목적이다. 규칙 3개:
+
+1. `core/`에 넣지 않는다.
+2. 테스트 스위트의 의존성이 되지 않는다 (`pytest`가 수집하지 않는 위치·이름).
+3. 문서 원문 · prompt · secret을 출력하지 않는다.
+
+`phase8_runtime_spike.py`는 Bootstrap Analysis Run의 provider 호출 수 · 문자 수 ·
+wall-clock · peak 메모리를 볼륨별로 잰다. **production module이 아니라 재현 가능한
+architecture benchmark**다 — 결과가 `docs/product-spec.md`에 인용되어 있으므로, 제약이
+바뀌었는지 확인할 때 같은 명령으로 다시 돌린다.
+
+| | |
+|---|---|
+| 기본 모드 | `EchoLLM` · 네트워크 없음 · credential 없음 · 결정적 |
+| 실제 provider | **explicit opt-in** (`--real-provider`). 기본값으로는 절대 켜지지 않는다 |
+| 출력 | 개수 · 문자 수 · 초 · 바이트. **secret · prompt · 문서 원문을 stdout에도 로그에도 쓰지 않는다** |
 
 ---
 

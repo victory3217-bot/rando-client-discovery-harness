@@ -320,10 +320,33 @@ caller의 화면이 낡았다는 뜻이므로 거부한다.
 Enterprise SSO · 복잡한 권한관리
 
 추가로 Phase 1–8에서 제외:
-인증·계정·멀티테넌시 · 비동기 Job Queue · LLM Streaming · PDF OCR ·
+인증·계정·멀티테넌시 · **durable asynchronous Job Queue** · LLM Streaming · PDF OCR ·
 enum 값 번역 · Finding 자동 중복제거 · Priority 가중합 총점 · PyPI 배포
 
 기능을 추가하고 싶으면 먼저 **이 목록에 들어 있지 않은지** 확인한다.
+
+### in-process background run은 Job Queue가 아니다
+
+Phase 8의 Bootstrap Analysis Run은 provider 왕복이 수 분에 이르러 한 HTTP 요청 안에서
+끝나지 않는다 (`docs/product-spec.md` Phase 8 절의 실측). 그래서 **Application 프로세스 안의
+background run**을 허용한다. 위 목록이 제외하는 것은 그것이 아니라 **durable asynchronous
+Job Queue**다. 둘의 경계는 다음과 같다.
+
+| 허용 — Application-local in-process background run | 제외 — durable asynchronous Job Queue |
+|---|---|
+| 같은 application process 안에서 실행 | Redis · RabbitMQ · SQS 등 **broker** |
+| broker 없음 | **distributed worker** |
+| worker fleet 없음 | **retry queue** |
+| durable queue 없음 | **scheduled job orchestration** |
+| 자동 재시도 없음 | |
+| 분산 스케줄링 없음 | |
+| exactly-once 보장 없음 | |
+
+**프로세스가 종료되면 진행 중이던 Bootstrap은 소실된다.** 재시도도 재개도 없다 — 사용자가
+다시 시작해야 하고, 문서는 다시 올려야 한다. 이것은 결함이 아니라 위 표의 오른쪽을 들이지
+않은 대가이며, UX가 그렇게 말해야 한다.
+
+이 구분을 흐리는 순간(예: "잠깐 Redis만") Phase 8은 위 목록이 막으려던 인프라를 갖게 된다.
 
 ---
 

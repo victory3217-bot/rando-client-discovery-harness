@@ -8,14 +8,16 @@
 ## 1. 레이어
 
 ```
-  +------------------- Web UI  (Phase 8, 아직 없음) -------------------------+
+  +------------------- Web UI  (Phase 8, 별도 저장소) -----------------------+
   |  브라우저 · 화면 · 입력. Harness가 아니라 Harness를 쓰는 Interface다     |
+  |  서버 렌더 mobile HTML. magisglobal.co.kr(정적 Astro)와는 분리된다       |
   +--------------------------------+---------------------------------------+
                                    | HTTP 등 (Core는 모른다)
   +--------------------------------v---------------------------------------+
-  |  Application / API Layer  (Phase 8, 아직 없음)                          |
-  |  라우팅 · 인증 · 세션 · 배포 대상별 설정. reference-app/이 이 자리다     |
+  |  Application / API Layer  (Phase 8, 별도 저장소)                        |
+  |  라우팅 · 인증 · 세션 · Bootstrap Analysis Run · training session        |
   |  환경변수를 읽어 Adapter를 생성하고 create_harness()에 주입한다          |
+  |  provider 선택은 여기서 config/env로 한다. Core는 provider agnostic      |
   +--------------------------------+---------------------------------------+
                                    | 주입 (injection)
   +--------------------------------v---------------------------------------+
@@ -79,6 +81,25 @@
 
 아래 절반은 Phase 8에서 처음 생긴다. 지금 `core/`가 그것들을 모른다는 사실이 중요한 이유는,
 Phase 8에 가서야 알게 되면 이미 늦기 때문이다.
+
+### Phase 8 Application은 별도 저장소다
+
+`magisglobal.co.kr`(`rando-knowledge-web`)은 **런타임이 없는 Astro 정적 사이트**다 —
+adapter 없음, UI framework 없음, client JS 없음, API route 없음. 따라서 Application은 그
+사이트 안이 아니라 **별도 저장소·별도 배포**로 만들고, 사이트는 설명 페이지와 CTA만 제공한다.
+근거와 측정치는 `docs/product-spec.md`의 Phase 8 절에 있다.
+
+Application이 소유하는 것 중 Core에 **절대 들어오지 않는** 것:
+
+```
+Bootstrap Analysis Run 오케스트레이션 · background task · 폴링 상태
+training session · participant · prediction · reveal state
+StepStatus 같은 화면 상태 enum · view model · UI chrome locale
+provider 선택 · session · auth · QR · 배포 대상
+```
+
+`EvidenceCandidate`가 저장 불가라는 사실이 이 경계를 강제한다: research와 discovery는 한
+operation 안에서 끝나야 하고, 그 오케스트레이션은 Core가 아니라 Application의 일이다.
 
 ### 경계를 강제하는 테스트 3개
 
@@ -194,7 +215,9 @@ core/pricing_bridge      attach_engine_result()로 결과를 기록한다
 | Client 심층분석 규칙을 바꾼다 | `core/analysis/dimensions.py`의 kind·ceiling 표. 교차 의존은 `claims.py` |
 | 제안 목표 규칙을 바꾼다 | `core/proposal/objectives.py`의 요건표. 자동 fallback을 만들지 않는다 |
 | Entity에 집계 필드를 추가한다 | 파생 함수를 `core/models.py`에 두고 `core/evidence.py`가 관계를 검증한다 |
-| Web·API를 붙인다 | `core/`가 아니라 Application Layer. 경계는 2절, 규칙은 `HARNESS.md` 12절 |
+| Web·API를 붙인다 | `core/`가 아니라 **별도 Application 저장소.** 경계는 2절, 규칙은 `HARNESS.md` 12절 |
+| Training session을 만든다 | Application. Core Entity도 `StorageProvider` 메서드도 추가하지 않는다 |
+| 화면 상태를 추가한다 | Application view model에서 합성한다. Core에 universal status enum을 만들지 않는다 |
 | 업로드 상한을 바꾼다 | `IntakePolicy`를 만들어 주입한다. `core/`는 환경변수를 읽지 않는다 |
 | UI 문구를 바꾼다 | `locales/ko.json` · `locales/en.json` |
 | MN 프레임워크 항목을 바꾼다 | `knowledge/master-notes/MN0*.json` |
@@ -278,5 +301,5 @@ chapters와 worksheet이 존재한다. `adapters/knowledge/handbook.py`는 그 *
 | 5 | `core/analysis/` · `prompts/analysis/` | **완료** |
 | 6 | `core/proposal/` · `prompts/proposal/` | **완료** |
 | 7 | `core/pricing_bridge/` · `adapters/pricing/` | **완료** |
-| 8 | Application/API Layer · `reference-app/` (mobile-first) · `adapters/storage/sqlite.py` | 예정 |
+| 8 | `adapters/storage/sqlite.py` · production LLM/Search adapter. Application·UI는 **별도 저장소** | 예정 |
 | 9 | `core/interfaces/reporting.py` · `adapters/reporting/` | 예정 |

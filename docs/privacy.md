@@ -274,6 +274,35 @@ Core는 아예 로그를 남기지 않는다 (`test_core_purity`가 `logging` im
 
 ---
 
+## 4-1. Web Application 표면 *(Phase 8)*
+
+Phase 1–7의 원칙은 그대로다. Web에서 처음 생기는 표면만 여기 적는다. 이 절은 **별도
+Application 저장소가 지켜야 할 요구사항**이며, 이 저장소의 코드가 아니다.
+
+| 표면 | 규칙 |
+|---|---|
+| upload lifetime | 메모리 파싱, 디스크 미기록. 요청 종료 시 버퍼 해제 |
+| `EvidenceCandidate` | **어떤 mode에서도 저장하지 않는다.** Bootstrap Run 종료와 함께 소멸 |
+| session lifetime | 서명 쿠키 · `HttpOnly` · `Secure` · `SameSite=Lax`. 세션 종료 + N시간 후 데이터 삭제 |
+| browser storage | 분석 내용 저장 금지. UI 선호(언어·접힘 상태)만 |
+| server logs | allowlist: `request_id` `project_id` `session_id` `step` `status` `latency_ms` `error_code` `source_id` `gap_ref` `pricing_case_id` |
+| error reporting | request body capture · locals capture · raw payload capture **전부 끈다** (5절) |
+| analytics | 페이지뷰 수준만. 입력 내용·업로드·프롬프트 전송 금지 |
+| crash reporting | 스택만, 변수 없이 |
+| cache · CDN | 분석 결과 응답은 `no-store`. 정적 자산만 CDN |
+| API traces | span 이름과 코드만. 인자 값 금지 |
+| 교육생 식별 | 익명 participant id. **이름·이메일·전화번호를 받지 않는다** |
+| 강사 화면 | 개별 교육생의 raw input을 기본 노출하지 않는다. 집계만 |
+| LLM 전송 | zero-retention이라고 **과장하지 않는다.** 전송 고지를 화면에 노출 |
+| sample data | 공개 데모·seed는 전부 가상 (`HARNESS.md` 9절) |
+
+저장되는 것은 **해석 결과와 그 출처 id**뿐이다 — Finding · SWOT · KeyIssue ·
+ClientCandidate · ClientAnalysis · ProposalStrategy · PricingResult. 원본 문서는 어느
+mode에서도 남지 않으며, 그래서 STEP 1–7을 재개하려면 자료를 다시 올려야 한다. 이 제약은
+비용이 아니라 privacy 보장의 결과다.
+
+---
+
 ## 5. APM · 디버거 · 에러 추적 도구 — 저장소 밖의 위험
 
 `ExtractedDocument` · `DocumentSegment` · `EvidenceCandidate`는 텍스트를 노출하지 않는

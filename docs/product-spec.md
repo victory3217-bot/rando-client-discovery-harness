@@ -572,16 +572,213 @@ Scenario Compare는 Phase 7 범위 밖이다. 한 번에 계약 하나.
 
 ## Web Application Integration *(Phase 8)*
 
-Phase 8은 원래 "Reference Dashboard 4화면"이었다. 범위를 다음으로 넓혀서 검토한다.
-
 ```
 Web Application Integration  +  Mobile-first Reference UI  +  Training UX Validation
 ```
 
-**지금 구현하지 않는다.** Phase 8에 도달했을 때 그 시점의 배포 대상 기술구조를 실제로 확인한
-뒤 API 방식 · frontend · deployment · session · mobile UX를 정한다. 지금 특정 기술을
-선결정하지 않는다 — 2026년에 고른 framework로 Phase 8을 시작하게 되는 것이 이 결정을 미루는
-이유다.
+배포 대상의 실제 구조를 확인한 뒤 설계를 확정했다. 확인 결과와 그에 따른 결정은 아래와 같다.
+
+### 확인된 배포 대상
+
+`magisglobal.co.kr`은 **Astro 정적 사이트**다 (`rando-knowledge-web`).
+
+| | 확인된 사실 |
+|---|---|
+| output | 정적 빌드. `adapter`도 `output: 'server'`도 없다 |
+| UI framework | 없다. 의존성은 `astro` 하나 |
+| client-side JS | 없다. `client:*` 지시자도 `<script>`도 0건 |
+| API route · auth · DB | 없다 |
+| 기존 Harness 3종 | 설명 페이지이며 GitHub으로 link out |
+
+**결론: 사이트에는 런타임이 없다.** Phase 8은 사이트에 얹는 것이 아니라 별도 런타임을 만들고
+사이트가 그것을 가리키게 한다.
+
+### Decision 1 — 사이트와 App을 분리한다
+
+```
+magisglobal.co.kr           Astro 정적 마케팅 사이트. 설명 페이지 + CTA/link만
+Client Discovery App        별도 런타임. 실행·세션·저장은 전부 여기
+```
+
+사이트에 Python 런타임·세션·인증 표면을 만들지 않는다. 기존 Harness 3종이 이미 쓰는 패턴
+(설명 → link out)을 그대로 따른다.
+
+### Decision 2 — 단일 Python 런타임
+
+Application Service + JSON endpoint + 서버 렌더 mobile HTML을 **하나의 Python 런타임**이
+제공한다. 런타임을 둘로 나누면 언어 2개·배포 2개·계약 1개가 늘고, MVP가 필요로 하는 UI는
+"한 화면 한 판단 + 폼 제출"이라 SPA가 필요할 상태가 없다.
+
+**Web framework는 확정하지 않는다.** runtime spike 결과(아래)로 고른다.
+
+### Decision 3 — locale 경계
+
+| | 소유 | 내용 |
+|---|---|---|
+| Harness locale | 이 저장소 | `enums` · `fields` — **canonical domain code label** |
+| | | `screens` · `actions` · `messages` — legacy. 유지하되 **신규 추가 금지** |
+| App locale | App 저장소 | nav · button · screen copy · help · error · training instruction |
+
+Phase 8에서 새로 생기는 UI 문구는 Harness locale에 **추가하지 않는다.** 기존 세 섹션의 정리는
+별도 refactor로 처리한다 — 이번 Phase에서 Core를 바꾸지 않기 위해서다.
+
+### Decision 4 — 첫 실행 작업은 Runtime Spike
+
+프레임워크나 호스트를 고르기 전에 **측정한다.** 결과는 아래 "Runtime spike 결과"에 있다.
+
+### Bootstrap Analysis Run
+
+**화면의 step과 Core pipeline 호출을 1:1로 대응시키지 않는다.**
+
+`EvidenceCandidate`는 문서 원문을 담는 transient DTO이고 `StorageProvider`에 저장 메서드가
+없다 (`docs/privacy.md` 3절). `run_research`와 `run_discovery`는 **둘 다** 그것을 읽는다.
+따라서 둘은 candidate가 살아 있는 **하나의 Application operation** 안에서 끝나야 한다.
+
+```
+회사·시장·역량·솔루션 입력  +  문서 업로드
+        ↓
+ephemeral EvidenceCandidate 생성          ← 메모리에만 존재
+        ↓
+run_research()      → Finding · SWOT · KeyIssue        저장
+        ↓
+run_discovery()     → ClientCandidate · Fit · Priority 저장
+        ↓
+EvidenceCandidate 즉시 폐기
+```
+
+이것을 **Bootstrap Analysis Run**이라 부른다. UI는 그 뒤에 Diagnosis → Key Issue →
+Client Candidate → Fit → Priority를 단계적으로 공개한다.
+
+> **계산 순서와 공개 순서는 같을 필요가 없다.** 이 구분이 Phase 8 UX의 전제다.
+
+### Bootstrap은 all-or-nothing이 아니다
+
+Research는 성공하고 Discovery만 실패할 수 있다. 그 경우 Finding · SWOT · KeyIssue는 **이미
+저장되어 있으므로** Diagnosis / Key Issue review는 재개된다. 하지만 `EvidenceCandidate`는
+저장되지 않으므로 **Discovery 재실행에는 문서 재업로드가 필요하다.**
+
+Application이 관리하는 상태 — **Core enum으로 추가하지 않는다:**
+
+| 상태 | 저장된 것 | 재개 가능 | 재업로드 필요 |
+|---|---|---|---|
+| `NOT_STARTED` | 없음 | — | — |
+| `RUNNING_RESEARCH` | 없음 | — | 프로세스 종료 시 ○ |
+| `RESEARCH_COMPLETED` | Finding · SWOT · KeyIssue | STEP 3–4 | Discovery 위해 ○ |
+| `RUNNING_DISCOVERY` | Finding · SWOT · KeyIssue | STEP 3–4 | 프로세스 종료 시 ○ |
+| `COMPLETED` | 위 + ClientCandidate · Fit · Priority | STEP 3–7 | ✗ |
+| `RESEARCH_FAILED` | 없음 | — | **○** |
+| `DISCOVERY_FAILED_REUPLOAD_REQUIRED` | Finding · SWOT · KeyIssue | STEP 3–4 | **○** |
+
+마지막 상태의 이름이 긴 것은 의도다. 화면이 "실패"라고만 쓰면 사용자는 재시도 버튼을 찾고,
+그 버튼은 존재할 수 없다.
+
+UX 문구는 상태마다 다르다.
+
+| 상태 | 사용자에게 |
+|---|---|
+| `COMPLETED` | *"업로드한 문서는 삭제되었습니다. 분석 결과는 남아 있습니다."* |
+| `DISCOVERY_FAILED_REUPLOAD_REQUIRED` | *"진단 결과는 남아 있습니다. 고객 발굴을 다시 하려면 자료를 다시 올려야 합니다 — 원본 문서는 보관하지 않습니다."* |
+| `RESEARCH_FAILED` | *"분석을 완료하지 못했습니다. 자료를 다시 올려주세요."* |
+| 프로세스 종료로 중단 | *"분석이 중단되었습니다. 자동으로 다시 시작되지 않습니다."* (`HARNESS.md` 10절) |
+
+**재개할 수 없는 것은 언제나 같다:** 원본 문서와 `EvidenceCandidate`.
+
+### Runtime spike 결과
+
+`scripts/spikes/phase8_runtime_spike.py`, 볼륨당 5회. Provider는 `EchoLLM`(오프라인)이므로
+**실제 provider latency는 NOT_MEASURED**다 — 이 환경에 credential이 없고 만들지 않는다.
+
+| 볼륨 | 업로드 | candidate | 측정된 호출 | Harness 자체 연산 (median) | peak Python |
+|---|---|---|---|---|---|
+| small | 872 B | 8 | 7 | 1.3 ms | 27 KB |
+| medium | 3,623 B | 29 | 19 | 2.7 ms | 41 KB |
+| large | 13,055 B | 101 | 55 | 8.4 ms | 109 KB |
+
+- **외부 search 호출 0건** — `run_research`·`run_discovery`는 `SearchProvider`를 받지 않는다.
+  검색은 Phase 5 `run_client_analysis(search=...)`에서만 시작되고 client당 6 query × 5 result로
+  상한이 걸려 있다.
+- **Harness 자체 연산은 무시할 수준이다.** 시간은 전부 provider 왕복이다.
+- 측정된 호출 수는 **하한**이다. `EchoLLM`이 "확인되지 않음"을 반환하므로 inference·SWOT
+  분류·key issue 종합·조직 추출·fit 평가 경로를 걷지 않는다.
+
+코드 구조와 policy 상수에서 유도한 **populated upper bound** (측정 아님):
+
+| 볼륨 | batch | 측정 | 모델 상한 |
+|---|---|---|---|
+| small | 1 | 7 | 36 |
+| medium | 3 | 19 | 62 |
+| large | 9 | 55 | **140** |
+
+```
+research  extract      B x F         discovery  criteria       1
+research  infer        B x F         discovery  organizations  B
+research  classify     ceil(K/40)    discovery  fit            min(M, 20)
+research  key issues   ceil(S/40)
+B=batch(12 candidate) F=framework(6) K=finding S=SWOT M=organization
+```
+
+### 결론: Bootstrap Run은 한 HTTP 요청에 들어가지 않는다
+
+large의 모델 상한 140 호출에 대해:
+
+| 호출당 지연 | Bootstrap 총 대기 |
+|---|---|
+| 2 s | 4.7 분 |
+| 4 s | 9.3 분 |
+| 8 s | **18.7 분** |
+
+따라서 Phase 8 MVP는:
+
+1. **Bootstrap Run을 in-process background run으로 실행하고 상태를 폴링**한다. 허용 범위와
+   제외 범위는 `HARNESS.md` 10절 "in-process background run은 Job Queue가 아니다"에 표로
+   고정되어 있다 — broker · worker fleet · durable queue · 자동 재시도 · 분산 스케줄링 없음.
+   따라서 **persistent process가 필요하고**(serverless로는 불가능하다), **프로세스가 종료되면
+   진행 중이던 Bootstrap은 소실된다.** 재시도도 재개도 없다.
+2. **framework 범위는 교육 설계가 정한다 — 런타임이 정하지 않는다.** 아래 참조.
+
+### framework subset은 Training Mode의 선택이다
+
+`run_research(frameworks=[...])`는 "operator가 의도적으로 분석을 좁히는 것이며, 파이프라인이
+조용히 좁히는 것과 다르다"는 이유로 존재한다 (`core/research/pipeline.py`). Phase 8도 그
+구분을 지킨다.
+
+| | framework 범위 |
+|---|---|
+| **Training Mode** | 교육목표에 따라 **명시적으로** subset을 고를 수 있다. 화면이 어떤 MN을 돌렸는지 보여준다 |
+| **Work Mode** | 호출 수·비용·호스팅 최적화를 이유로 **silent downgrade하지 않는다.** 좁히려면 사람이 고른다 |
+
+런타임 제약을 근거로 분석 범위를 줄이는 것은 Application이 분석의 깊이를 결정하는 것이다.
+느리면 느리다고 말하고 기다리게 하거나, 사람이 범위를 줄이게 한다.
+
+### 호스팅 제약
+
+수치는 **공식 문서를 2026-09-20에 확인**한 것이다. 플랫폼 제약은 바뀌므로, 호스트를 최종
+결정할 때 다시 확인한다.
+
+| 호스트 | 요청 상한 | 영속 디스크 | 요청 본문 상한 | 확인일 |
+|---|---|---|---|---|
+| Vercel Functions | Hobby 300s / Pro 800s (1800s beta) | 없음 (Lambda 기반) | **4.5 MB** | 2026-09-20 |
+| Google Cloud Run | 기본 300s, 최대 3600s | 컨테이너 임시 | 미확인 | 2026-09-20 |
+| Fly.io Machines | 플랫폼 상한 문서에 명시 없음 | **Fly Volumes** (최대 500 GB) | 미확인 | 2026-09-20 |
+| Render Web Service | 문서에 명시 없음 | **Persistent Disk** (인스턴스 1개 제약) | 미확인 | 2026-09-20 |
+
+#### Vercel을 App 호스트로 보지 않는 이유
+
+실행시간 하나로 배제하는 것이 아니다. 세 가지가 함께 작용한다.
+
+1. **요청 본문 상한과 intake 계약의 충돌.** Vercel Functions의 본문 상한 4.5 MB는
+   `IntakePolicy.max_file_bytes = 25 MiB`보다 작다. Harness가 허용하는 문서 **한 개**조차
+   직접 업로드로는 받을 수 없다. 우회(서명 URL로 객체 스토리지에 직접 업로드)는 가능하지만
+   그 순간 "메모리에서만 파싱하고 디스크에 남기지 않는다"는 intake 보장을 다시 설계해야 한다.
+2. **persistence 모델 불일치.** MVP는 SQLite + persistent process를 전제로 한다. Vercel
+   Functions에는 요청 간 유지되는 파일시스템이 없고, 외부 관리형 DB를 도입하면 G절의
+   "DB 제품을 먼저 고르지 않는다"를 뒤집게 된다.
+3. **long-running Bootstrap 수명주기의 운영 복잡성.** in-process background run은 프로세스가
+   요청보다 오래 살아 있어야 한다. 요청 단위로 동결·해제되는 실행 모델에서는 상태 폴링과
+   중단 감지를 플랫폼 밖에서 다시 만들어야 한다.
+
+정적 사이트가 Vercel에 있다는 것과 App이 Vercel이어야 한다는 것은 별개다 — 둘은 독립적으로
+배포된다.
 
 ### 데스크톱 4화면
 
@@ -636,6 +833,68 @@ Fit Criterion · Fit Level · Reason · Evidence · Missing Evidence
 Mobile-first · touch-friendly · short-step · evidence-visible은 **UI 요구사항이다.** Core
 business logic에 넣지 않는다. Core는 화면 크기도, 교육 세션도, 접속한 사람이 강사인지
 교육생인지도 모른다 (`HARNESS.md` 12절).
+
+### Work Mode와 Training Mode
+
+한 Core, 한 API, 두 view.
+
+| | Work Mode | Training Mode |
+|---|---|---|
+| 목적 | 결과 | 과정 |
+| REVIEW 단계 | 접힌 요약으로 통과 | 펼쳐서 설명 |
+| provenance | 한 탭 뒤, 기본 접힘 | 기본 노출 |
+| 멈추는 곳 | Human decision 6개 | 6개 + 학습 단계 |
+
+**Human decision 6개** — 어느 mode에서도 UI가 대신 결정하지 않는다:
+Client 선택 · Proposal Objective · Solution selection · Pricing gap acknowledgement ·
+원가·가격 입력 · 제안 실행 여부. API에 이들의 default 경로를 만들지 않는다.
+
+### computed ≠ revealed
+
+predict-then-reveal에서 **AI 결과를 미리 계산하는 것은 허용한다.** Bootstrap Run이 한 번에
+끝나므로 오히려 그래야 한다. 금지되는 것은 learner가 자기 판단을 제출하기 전에 **공개**하는
+것이다.
+
+```
+computed   Bootstrap Run이 끝난 시점
+revealed   learner가 prediction을 제출한 시점
+```
+
+reveal state는 **Application Layer가 관리한다.** Core에 training·reveal 개념을 넣지 않는다.
+
+### Persistence ownership
+
+| | 소유 | 저장 대상 |
+|---|---|---|
+| Harness `StorageProvider` | 이 저장소 | Core 9 entity **만** |
+| Application persistence | App 저장소 | `training_session` · `participant` · `prediction` · reveal state · session expiry · application metadata |
+
+`TrainingSession`을 Core Entity로 만들지 않고 `StorageProvider`에 메서드를 추가하지 않는다.
+같은 SQLite 파일을 쓰더라도 **table ownership과 repository module은 분리한다.**
+
+세 가지 persistence mode:
+
+| | Ephemeral Demo | Training Session | Authenticated Work |
+|---|---|---|---|
+| storage adapter | `null` / `memory` | `sqlite` | 조직이 연결 |
+| 원본 문서 | 저장 안 함 | **저장 안 함** | 조직 정책 |
+| `EvidenceCandidate` | 요청 후 소멸 | **소멸** | 소멸 |
+| 저장 대상 | 없음 | structured entity만 | 동일 + 조직 확장 |
+| 수명 | 요청 | 세션 종료 + N시간 | 조직이 정함 |
+
+**세 모드 모두 raw document를 저장하지 않는다.**
+
+### Provider adapter는 config가 고른다
+
+Phase 8은 production provider를 붙여야 하지만, **특정 vendor를 architecture에 고정하지
+않는다.** Core는 `LLMProvider`·`SearchProvider` Protocol만 안다. 첫 production provider가
+무엇이든 `adapters/llm/<provider>.py`로 추가되고, **선택은 Application wiring이 config/env로
+한다.**
+
+### Phase 9와의 경계
+
+Phase 8은 **interactive structured UI까지**다. PDF · DOCX · PPTX · formal proposal ·
+report renderer는 Phase 9다. Phase 8에서 report generation을 끌어오지 않는다.
 
 ---
 
