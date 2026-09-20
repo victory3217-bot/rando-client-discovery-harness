@@ -355,9 +355,21 @@ ALL_NINE = [
 ]
 
 
-def _populate(store) -> None:
+def _populate(store) -> dict:
+    """Save one of each entity, and hand back the objects that were actually saved.
+
+    Returning them is the point. Every entity defaults ``created_at`` from the clock at
+    ``timespec="seconds"``, so a test that rebuilds an "expected" value at comparison time is
+    comparing two different timestamps whenever the two calls land either side of a second
+    boundary — which is a flake, not a finding. What the round-trip contract says is that
+    what went in comes back unchanged, so the thing to compare against is what went in.
+    """
+    saved: dict = {}
     for save, _, build, _id in ALL_NINE:
-        getattr(store, save)(build())
+        entity = build()
+        getattr(store, save)(entity)
+        saved[save] = entity
+    return saved
 
 
 # -- A: protocol -----------------------------------------------------------
@@ -471,15 +483,17 @@ def test_e_pricing_result_and_its_gap_context_survive(storage) -> None:
 
 def test_f_everything_survives_a_new_instance(db: Path) -> None:
     first = SQLiteStorage(db)
-    _populate(first)
+    saved = _populate(first)
     del first
 
     second = SQLiteStorage(db)
-    assert second.get_project(PROJECT) == _project()
-    for save, get, build, _ in ALL_NINE:
+    # Compared against the objects that were stored, not against fresh ones built now: see
+    # ``_populate``. The equality is still the full dataclass, ``created_at`` included.
+    assert second.get_project(PROJECT) == saved["save_project"]
+    for save, get, _build, _expected_id in ALL_NINE:
         if save == "save_project":
             continue
-        assert getattr(second, get)(PROJECT) == [build()], save
+        assert getattr(second, get)(PROJECT) == [saved[save]], save
 
 
 # -- G/H: agreement with MemoryStorage -------------------------------------
