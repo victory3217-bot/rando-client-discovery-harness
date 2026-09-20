@@ -457,18 +457,75 @@ Phase 5의 gap은 전부 전달되고, 아무도 시점을 정하지 않은 것�
 | 필드 | 타입 | 설명 |
 |---|---|---|
 | `pricing_result_id` `project_id` `client_id` | str | 필수 |
-| `pricing_payload` | dict | **Pricing Harness의 `client_input.schema.json`에 맞춘다**: `schema_version` `client_id` `case_id` `product` `tax` `fx` `costs` |
-| `commercial_context` | dict | Pricing Engine이 소비하지 않는 영업 컨텍스트 |
-| `engine_result` | dict? | Pricing Harness의 `analysis_result` 원본 |
-| `engine_version` | str? | |
+| `strategy_id` | str | 이 case가 가격을 매기는 `ProposalStrategy` |
+| `analysis_id` | str | 그 전략이 읽은 `ClientAnalysis`. `commercial_context`는 저장소 경계를 넘어온 복사본이고, 출처 없는 복사본은 다시 대조할 수 없다 |
+| `pricing_case_id` | str | **이 case.** 외부 payload의 `case_id`가 된다 |
+| `pricing_payload` | dict | **Pricing Harness의 `client_input.schema.json`에 맞춘다**: `schema_version` `client_id` `case_id` `product` `tax` `fx` `costs` (+ `targets` `meta`) |
+| `commercial_context` | dict | 이 case를 설명하는 확정 context. **전송하지 않는다** |
+| `engine_result` | dict? | Pricing Harness의 `analysis_result` 원본. 재해석하지 않는다 |
+| `engine_version` | str? | `engine_result.source.engine_version`에서 온다 |
 | `status` | PricingStatus | |
-| `error_code` | str? | |
+| `error_code` | str? | `FAILED`일 때만 |
 
-> **두 블록을 분리한 이유.** `client` · `country` · `problem` · `buyer` ·
-> `value_proposition` · `competitive_advantage` · `competitor` · `channel` ·
-> `commercial_conditions`는 Pricing Engine이 쓰지 않고 제안서가 쓴다. 이걸 한 덩어리로
-> 보내면 Pricing Harness 스키마를 고쳐야 하고, 두 저장소가 서로를 붙잡는다.
-> 자세한 내용은 `ARCHITECTURE.md` 6절.
+### `case_id`는 `strategy_id`가 아니다
+
+한 `ProposalStrategy`에서 여러 pricing case가 나온다 — 범위를 바꾼 견적, 물량을 바꾼 견적,
+원가표를 고친 재산출. 전략 id를 case id로 쓰면 두 번째 case가 그쪽 기록에서 첫 번째를
+덮어쓴다. 같은 case를 다시 만드는 것이 의도라면 `pricing_case_id`를 그대로 넘긴다.
+
+### 두 블록
+
+`pricing_payload`만 저장소 경계를 넘는다. `commercial_context`는 **보내지 않는다** —
+그쪽 스키마에 필드가 없고 최상위가 닫혀 있다. 열린 `meta`에는 `strategy_id` · `analysis_id`
+두 개만 들어간다.
+
+`commercial_context`에 담기는 것:
+
+```
+pricing_case_id · strategy_id · analysis_id · client_id · client_name · country · market_scope
+objective · objective_source
+offered[]            ref · text · component_id        (payload가 못 싣는 결속)
+claims{}             MN06 4개는 항상, 미확정이면 established:false
+                     확정된 PROBLEM · KBF · COMPETITIVE_ADVANTAGE
+international_claims{}  INTERNATIONAL일 때 TARIFF · CURRENCY_FX
+evidence_needs[]     BEFORE_PRICING · BEFORE_CONTRACT
+                     각 항목: gap_ref · need · timing · dimension
+open_gap_counts{}    모든 timing의 건수
+expected_quantity · commercial_conditions[]
+```
+
+복사되는 claim은 `statement` · `evidence_type` · `confidence` · `finding_ids` ·
+`framework_basis`를 함께 싣는다. 경계를 넘으면 `analysis_id`를 해석할 수 없으므로, 문장만
+복사하면 `PRICE_SENSITIVITY`가 LOW ceiling의 SYNTHESIS라는 사실이 사라진다. **근거 원문은
+복사하지 않는다** — `finding_ids`로 도달한다.
+
+분석 전체를 복제하지 않는 것은 data minimization이다. 나머지 14개 dimension은
+`analysis_id` 하나 건너에 있다.
+
+### PricingStatus
+
+| 값 | 의미 |
+|---|---|
+| `NOT_REQUESTED` | 아직 pricing을 요청하지 않았다 |
+| `HANDOFF_BLOCKED` | payload는 있으나 `BEFORE_PRICING` 선행조건이 열려 있다 |
+| `PAYLOAD_READY` | 전달 가능 |
+| `COMPLETED` | `engine_result` 보관됨 |
+| `FAILED` | `error_code` 필수 |
+
+`NOT_REQUESTED`와 `HANDOFF_BLOCKED`를 합치지 않는 이유는 `EvidenceTiming.UNCLASSIFIED`를
+따로 둔 이유와 같다 — 기록된 뒤에 "아무도 요청 안 함"과 "요청했는데 선행조건이 열려 있음"을
+구분할 수 없게 된다.
+
+### gap은 ref와 display text를 분리한다
+
+`commercial_context.evidence_needs[*]`는 `gap_ref`(machine reference)와 `need`(사람이 읽는
+문장)를 **둘 다** 싣는다. Phase 8 UI는 `need`를 표시하고 `gap_ref`를 되돌려 보낸다.
+`SelectedSolutionElement`의 `ref`/`text`와 같은 장치이고 같은 이유다 — 산문은 식별자가 아니다.
+
+`PricingGap`은 `core/pricing_bridge/gaps.py`의 transient value object다. Entity가 아니고
+`schemas/`에 스키마가 없다. gap의 정본은 `ProposalStrategy.evidence_needs`이며, `gap_ref`는
+거기서 결정적으로 파생된다 — 저장하면 같은 관계의 두 번째 사본이 된다. 파생 규칙은
+`docs/product-spec.md` Stage 9에 있다.
 
 ---
 

@@ -176,6 +176,9 @@ ResearchFinding.source_id 존재  또는   evidence_type in {ASSUMPTION, MISSING
 ClientAnalysis.evidence == []   ->     missing_evidence != []  필수
 ClientCandidate                 ->     최소 1개의 finding_id 참조
 ProposalStrategy                ->     client_id 참조 필수
+PricingResult                   ->     strategy_id · analysis_id · pricing_case_id 필수
+PricingResult.pricing_payload   ->     case_id == pricing_case_id, client_id == client_id
+PricingResult.pricing_payload   ->     commercial_context 키를 포함하지 않는다
 ```
 
 ---
@@ -248,6 +251,48 @@ distribution_structure · local_price · purchasing_power · entry_barrier 필�
 **Pricing Engine을 이 저장소에 만들지 않는다.** Client Discovery는 `PricingResult.pricing_payload`
 (Pricing Harness 스키마에 맞는 JSON)와 `commercial_context`(영업 컨텍스트)를 산출하는 데서
 멈춘다. 계산은 Pricing Harness가 한다.
+
+### 넘어가는 것은 payload 하나다
+
+`pricing_payload`만 저장소 경계를 넘는다. `commercial_context`는 **보내지 않는다** — 그쪽
+`client_input.schema.json`에 그런 필드가 없고, 최상위가 닫혀 있으며(`additionalProperties:
+false`), 남의 계약에 우리 데이터모델을 넣는 순간 두 저장소가 서로를 붙잡는다. 그쪽 `meta`는
+열려 있지만 거기에 밀어넣지도 않는다. 거기 들어가는 것은 `strategy_id` · `analysis_id`
+두 개뿐이고, 그것은 payload 하나만 놓고 봤을 때 원래 레코드로 되돌아가기 위한 식별자다.
+
+### Phase 7은 숫자를 만들지 않는다
+
+가격·원가·환율·목표마진·물량은 **호출자가 입력한 값만** 쓴다. Phase 5의 MN06 claim은
+`commercial_context`에 provenance와 함께 실리되, 어떤 경우에도 계약의 숫자 필드가 되지
+않는다 — CURRENCY_FX claim이 `fx.rate_base_per_reporting`을, BUDGET_EVIDENCE가
+`actual_price`를 채우지 않는다. 모르는 값은 `null`이며 **`0`으로 바꾸지 않는다**: 그쪽 계약에서
+`0`은 "확인된 0"이고 `null`이 "미입력"이다. 6-3절과 같은 규칙이다.
+
+LLM을 쓰지 않는다. Phase 7은 결정적 bridge이고, 가격을 옮기는 모델은 가격을 바꿀 수 있는
+모델이다.
+
+### 확인하지 않은 것을 확인했다고 말하지 않는다
+
+Pricing Harness 저장소는 런타임 의존성이 아니다. 경로가 주입되면 실제
+`client_input.schema.json`으로 검증하고, 없으면 우리 자체 contract 검사만 수행한 뒤
+`EXTERNAL_CONTRACT_NOT_CHECKED`로 구분한다. "검사하지 않았다"와 "검사해서 통과했다"는 다른
+사실이다.
+
+### BEFORE_PRICING gap은 handoff를 막는다
+
+Phase 6이 `BEFORE_PRICING`으로 기록한 gap이 열려 있으면 `HANDOFF_BLOCKED`다. payload는
+만들어서 보여준다 — 막히는 것은 payload 생성이 아니라 전달이다. 사람이 **각 gap을 지목해서**
+확인하면 전달되고 `GAPS_ACKNOWLEDGED`가 남는다. `UNCLASSIFIED`와 `OPTIONAL`은 막지 않는다.
+
+지목은 **`gap_ref`로 한다.** 7절의 *산문을 식별자로 쓰지 않는다*가 여기에도 적용된다 — gap의
+문장을 키로 쓰면 같은 문구의 두 gap이 합쳐지고, 문구를 다듬는 순간 그것을 가리키던 승인이
+끊어진다. `gap_ref`는 gap 내용에서 결정적으로 파생되므로 gap이 바뀌면 함께 바뀌고, 그래서
+바뀐 gap이 옛 승인으로 통과하지 않는다. 이 strategy에 없는 ref는 **조용히 무시하지 않는다** —
+caller의 화면이 낡았다는 뜻이므로 거부한다.
+
+한 `ProposalStrategy`에서 여러 pricing case가 나올 수 있다. 그래서 `case_id`는
+`pricing_case_id`이지 `strategy_id`가 **아니다** — 전략 id를 case id로 쓰면 두 번째 견적이
+그쪽 기록에서 첫 번째를 덮어쓴다.
 
 ---
 

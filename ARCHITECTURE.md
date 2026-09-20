@@ -37,7 +37,8 @@
   |    proposal/     objectives · strategy · objections · pipeline         |
   |                  (ENGINE 3 — 제안전략. 문서는 만들지 않는다)           |
   |    transmission.py  LLM 전송 단일 게이트웨이 (core 전체)                |
-  |    pricing_bridge/ Phase 7 예정                                        |
+  |    pricing_bridge/ contract · payload · context · gaps(PricingGap)       |
+  |                  · codes · policy · pipeline   (Phase 7 — LLM 없음)     |
   +--------+------------+------------+------------+------------------------+
            |            |            |            |
   +--------v------------v------------v------------v------------------------+
@@ -48,7 +49,7 @@
   |    search/   manual                   (+ web → Phase 3)               |
   |    intake/   text · html · pdf · office · session · registry          |
   |    prompts/  prompt 파일 로딩 (core는 파일을 읽지 않는다)              |
-  |                                       (+ pricing/ → Phase 7)          |
+  |    pricing/  file — pricing-harness-public와의 JSON 파일 교환          |
   +-----------------------------------------------------------------------+
 ```
 
@@ -87,7 +88,7 @@ Phase 8에 가서야 알게 되면 이미 늦기 때문이다.
 | `tests/test_core_standalone.py` | `reference-app/`과 `adapters/`가 없는 상태를 가정하고 `core`만 import해 Entity·불변식이 동작하는지 확인한다 |
 | `tests/test_docs_no_duplication.py` | `CLAUDE.md`/`AGENTS.md`/`GEMINI.md`가 얇은 포인터로 유지되는지 (길이·복제 여부) 확인한다 |
 
-`core/`가 `dataclasses`, `enum`, `typing`, `datetime`, `uuid`, `re`를 쓰는 것은 허용한다.
+`core/`가 `dataclasses`, `enum`, `typing`, `datetime`, `uuid`, `re`, `hashlib`을 쓰는 것은 허용한다.
 표준 라이브러리 중 **부수효과를 갖는 것만** 금지된다.
 
 ---
@@ -104,7 +105,7 @@ provider가 아니다. 나머지 2개는 이 문서에 정의만 둔다 (구현 
 | **LLMProvider** | 구현 | `generate` `generate_structured` `analyze` `summarize` | `core/interfaces/llm.py` |
 | **SearchProvider** | 구현 | `search(query, scope, country, limit)` | `core/interfaces/search.py` |
 | **DocumentParser** | 구현 | `parse(data: bytes, *, file_type)` | `core/interfaces/intake.py` |
-| PricingProvider | Phase 7 | `to_pricing_input(strategy, cost_input)` `run_pricing(pricing_input)` | — |
+| ~~PricingProvider~~ | **만들지 않음** | Core가 Pricing Harness를 호출하지 않으므로 provider가 아니다 — 아래 | |
 | ReportProvider | Phase 9 | `render(entity, lang, output_format)` | — |
 
 ### DocumentParser는 provider가 아니다
@@ -116,6 +117,22 @@ provider가 아니다. 나머지 2개는 이 문서에 정의만 둔다 (구현 
 계약의 경계가 **경로가 아니라 `bytes`인 것**도 의도적이다. Core는 `bytes` 타입을 언급할 뿐
 아무것도 열지 않으며, 8종 전부 메모리에서 파싱되므로 이 구현이 임시 파일을 만들지 않는다.
 파서 시그니처에 `filename` 파라미터가 없어서 **원본 파일명이 구조적으로 유입 불가능**하다.
+
+### PricingProvider는 만들지 않았다
+
+Phase 7 계획에는 `PricingProvider` Protocol이 있었다. 구현하면서 취소했다 — **Core가
+Pricing Harness를 호출하지 않기 때문이다.** provider는 Core가 부르는 것이고, 부르지 않는
+것에 Protocol을 씌우면 계약이 아니라 추측이 된다 (`docs/development-guide.md`).
+
+```
+core/pricing_bridge      payload 조립. 여기서 멈춘다
+adapters/pricing/file    파일로 내보내고 결과 파일을 읽는다
+Pricing Harness          별도 프로세스에서 계산한다
+core/pricing_bridge      attach_engine_result()로 결과를 기록한다
+```
+
+`create_harness()`는 그대로 **provider 4개**를 받는다. `FilePricingBridge`는 그 디렉토리를
+소유하는 Application Layer가 직접 조립한다.
 
 ### Protocol을 쓰는 이유
 
@@ -147,7 +164,7 @@ provider가 아니다. 나머지 2개는 이 문서에 정의만 둔다 (구현 
 | `adapters/intake/session.py` | — | 2 | request 수명 · batch 상한 · 버퍼 해제 |
 | `adapters/llm/anthropic.py` | LLM | 3 | 예정 |
 | `adapters/search/web.py` | Search | 3 | 예정 |
-| `adapters/pricing/file.py` | Pricing | 7 | 예정. JSON 파일 계약 |
+| `adapters/pricing/file.py` | — (provider 아님) | 7 | `pricing-harness-public`와의 JSON 파일 교환. 스키마 경로를 주입받으면 실제 계약으로 검증한다 |
 | `adapters/storage/sqlite.py` | Storage | 8 | 예정. Dashboard와 함께 |
 
 ### `echo` LLM Adapter를 Phase 1에 먼저 만드는 이유
@@ -182,7 +199,9 @@ provider가 아니다. 나머지 2개는 이 문서에 정의만 둔다 (구현 
 | UI 문구를 바꾼다 | `locales/ko.json` · `locales/en.json` |
 | MN 프레임워크 항목을 바꾼다 | `knowledge/master-notes/MN0*.json` |
 | Prompt를 바꾼다 | `prompts/<stage>/*.md` (코드에 프롬프트를 쓰지 않는다) |
-| Pricing 연계를 바꾼다 | `adapters/pricing/` + `docs/product-spec.md` |
+| Pricing 연계를 바꾼다 | 계약 이름·enum은 `core/pricing_bridge/contract.py` **한 파일**. 파일 I/O는 `adapters/pricing/file.py` |
+| Pricing gate 규칙을 바꾼다 | `core/pricing_bridge/gaps.py`. 막는 timing을 늘리지 않고, `gap_ref` 파생 규칙을 바꾸면 기존 승인이 전부 무효화된다 |
+| Pricing에 숫자를 추가한다 | `CommercialInput`에 필드를 추가한다. claim에서 유도하지 않는다 |
 | 개발 순서를 확인한다 | `docs/development-guide.md` |
 
 ---
@@ -194,23 +213,38 @@ provider가 아니다. 나머지 2개는 이 문서에 정의만 둔다 (구현 
 **연결 방식: JSON 파일 계약. import 하지 않는다.**
 
 ```
-Client Discovery Harness                    Pricing Harness
-------------------------                    ---------------
-ProposalStrategy.pricing_input
+Client Discovery Harness                          Pricing Harness
+------------------------                          ---------------
+ClientAnalysis  +  ProposalStrategy
+        +  CommercialInput (호출자 숫자, transient)
         |
-        v
-PricingResult.pricing_payload   --(JSON)-->  client_input.schema.json 검증
-PricingResult.commercial_context             build_analysis_result(...)
-                                                     |
-                                <--(JSON)---  analysis_result.schema.json
+        v  core/pricing_bridge      (결정적. LLM 없음)
+PricingResult
+  ├─ pricing_payload   --(JSON 파일)-->  client_input.schema.json 검증
+  │                     adapters/pricing/file.py    build_analysis_result(...)
+  │                                                          |
+  │                    <--(JSON 파일)---  analysis_result.schema.json
+  │                     attach_engine_result()  → engine_result (원문 보관)
+  │
+  └─ commercial_context   여기 남는다. 보내지 않는다
 ```
 
 `pricing_payload`는 Pricing Harness의 `client_input.schema.json` **필수 필드에 정확히
 맞춘다**: `schema_version`, `client_id`, `case_id`, `product`, `tax`, `fx`, `costs`.
+`schema_version`은 **그쪽 계약 version**이고 (`CommercialInput.contract_version`, 기본값 없음),
+`case_id`는 `pricing_case_id`다 — `strategy_id`가 아니다. 한 전략에서 여러 case가 나온다.
 
-`commercial_context`는 Pricing Engine이 소비하지 않는 영업 컨텍스트(client · country ·
-problem · buyer · value_proposition · competitive_advantage · competitor · channel ·
-commercial_conditions)를 담는다. 제안서 작성에만 쓰인다.
+`commercial_context`는 **보내지 않는다.** 그쪽 스키마에 그런 필드가 없고 최상위가
+`additionalProperties: false`다. 열려 있는 `meta`에 밀어넣지도 않는다 — 거기 들어가는 것은
+`strategy_id` · `analysis_id` 두 개뿐이다. context는 `PricingResult` 안에 남아 UI · Phase 9 ·
+audit이 읽는다. 담기는 것은 MN06 claim 4개(provenance 포함) · 확정된 PROBLEM · KBF ·
+COMPETITIVE_ADVANTAGE · offered 결속 · objective · 상업적 gap이며, **분석 전체를 복제하지
+않는다.** 근거 원문은 어느 쪽에도 복사되지 않는다 (`finding_ids`로 도달한다).
+
+`price_component`도 닫혀 있으므로 `solution_element_ref`는 payload에 넣지 않는다. 결속의
+canonical 위치는 `commercial_context.offered`다.
+
+Phase 7은 숫자를 만들지 않는다. 규칙은 `HARNESS.md` 8절에 있다.
 
 > **알려진 제약 — `core` 패키지 이름 충돌**
 > `pricing-harness-public`은 pip-installable이 아니며(`pyproject.toml`/`setup.py` 없음),
@@ -218,6 +252,10 @@ commercial_conditions)를 담는다. 제안서 작성에만 쓰인다.
 > 이 저장소도 top-level 패키지명이 `core`이므로 **두 저장소를 같은 프로세스에서 import하면
 > 충돌한다.** 그래서 Pricing Adapter는 in-process import를 하지 않고 JSON 파일로 교환한다.
 > 이 결정을 되돌리려면 이 저장소의 패키지명을 먼저 바꿔야 한다.
+>
+> 이 제약은 **Python import에만** 적용된다. 그쪽 스키마 *파일*을 읽는 것은 충돌하지 않으므로,
+> `FilePricingBridge.from_repository(path)`는 실제 `client_input.schema.json`으로 검증한다.
+> 경로가 없으면 자체 contract 검사만 하고 `EXTERNAL_CONTRACT_NOT_CHECKED`로 표시한다.
 
 ### 6-2. Business Planning Handbook (`business-planning-handbook`)
 
@@ -239,6 +277,6 @@ chapters와 worksheet이 존재한다. `adapters/knowledge/handbook.py`는 그 *
 | 4 | `core/client/` · `prompts/discovery/` | **완료** |
 | 5 | `core/analysis/` · `prompts/analysis/` | **완료** |
 | 6 | `core/proposal/` · `prompts/proposal/` | **완료** |
-| 7 | `core/pricing_bridge/` · `adapters/pricing/` | 예정 |
+| 7 | `core/pricing_bridge/` · `adapters/pricing/` | **완료** |
 | 8 | Application/API Layer · `reference-app/` (mobile-first) · `adapters/storage/sqlite.py` | 예정 |
 | 9 | `core/interfaces/reporting.py` · `adapters/reporting/` | 예정 |

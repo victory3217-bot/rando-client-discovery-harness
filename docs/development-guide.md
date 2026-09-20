@@ -49,7 +49,7 @@ PyMuPDF는 PDF 텍스트 추출 품질이 더 낫지만 **AGPL-3.0**이라 채�
 | **4** | Client Discovery · Fit · Priority | **완료** | 근거 없는 회사명 저장 불가 · 숫자 없는 band · snippet P1 차단 |
 | **5** | Client Deep Analysis (사람이 선택) | **완료** | 자동 Top 3 불가 · Phase 4 band 불변 · SYNTHESIS는 FACT 불가 |
 | **6** | Proposal Strategy | **완료** | 목표 기본값 없음 · Solution whitelist · Phase 5 게이트 유지 · 근거 없는 숫자 거부 |
-| **7** | Pricing Adapter | 예정 | `pricing_payload`가 Pricing Harness 스키마 검증 통과 |
+| **7** | Pricing Harness Adapter | **완료** | `pricing_payload`가 Pricing Harness 스키마 검증 통과 · LLM 부재 · 숫자 무생성 · payload만 전송 |
 | **8** | Web App Integration + Mobile-first Reference UI + Training UX + SQLite Adapter | 예정 | Reference App 삭제 후에도 core 테스트 통과 |
 | **9** | Report Output (HTML/DOCX) | 예정 | 구조화 데이터만 읽어서 생성 |
 
@@ -59,7 +59,7 @@ Phase 1에서 **만들지 않은 것**과 그 이유:
 |---|---|
 | SQLite Adapter | Phase 1–7에는 읽는 주체(대시보드)가 없다. 지금 만들면 실제 쿼리 요구가 확정되기 전에 스키마를 고정하고, 마이그레이션 비용만 남는다. Phase 8에서 대시보드와 함께 만든다 |
 | `core/intake/` · `core/research/` · `core/client/` 빈 패키지 | 아무것도 하지 않는 패키지를 미리 만들지 않는다. 위치는 `ARCHITECTURE.md` 7절에 문서화되어 있다 |
-| `PricingProvider` · `ReportProvider` Protocol | 호출자가 없는 Protocol은 계약이 아니라 추측이다. 정의는 `ARCHITECTURE.md` 3절에 있다 |
+| `PricingProvider` · `ReportProvider` Protocol | 호출자가 없는 Protocol은 계약이 아니라 추측이다. `PricingProvider`는 Phase 7에서 **최종적으로 취소**했다 — Core가 Pricing Harness를 호출하지 않기 때문이다 (`ARCHITECTURE.md` 3절) |
 
 ### Phase 5에서 남긴 것 (backlog)
 
@@ -125,6 +125,11 @@ pytest -k evidence
 | `test_proposal_strategy.py` | 2회 호출 · Phase 5 게이트 · serializer roundtrip · 오프라인 E2E |
 | `test_proposal_canary.py` | 6표면 누출 0 · 연락처 필드 부재 |
 | `test_proposal_handoff.py` | Phase 7 commercial context · Phase 9 **구조만** (렌더링 0) |
+| `test_pricing_contract.py` | 로컬 strict contract · unknown key 0 · **실제 외부 스키마 검증**(있을 때) · 미검증과 통과의 구분 · contract_version · 결정성 |
+| `test_pricing_validation.py` | **LLM 부재(AST)** · **곱셈·나눗셈 부재(AST)** · 필드별 정확 복사 · `None`→`null`(0 아님) · MN06 claim 숫자화 차단 · whitelist · **gap_ref gate**(문장으로 승인 불가 · 결정성 · 변경 시 무효 · stale ref 거부) · 그쪽 rule은 flag · engine result 대조 |
+| `test_pricing_bridge.py` | serializer roundtrip · Entity 불변식 · 파일 어댑터 E2E · blocked는 파일을 쓰지 않음 · **blocked→acknowledged UI round trip** · 두 저장소 동시 import 부재 |
+| `test_pricing_canary.py` | 6표면 + **export 표면** — payload에 파일명·경로·URL·claim 원문 0 |
+| `pricing_fixtures.py` | Phase 7 고정값 (테스트가 아니라 fixture 모듈). **모든 숫자가 서로 유도되지 않게** 골라져 있다 |
 | `scripted_llm.py` | 준비된 응답을 돌려주는 테스트 double (테스트가 아니라 도구 모듈) |
 | `intake_fixtures.py` | 테스트 문서 8종을 메모리에서 생성 (테스트가 아니라 fixture 모듈) |
 
@@ -201,14 +206,15 @@ CLAUDE.md / AGENTS.md / GEMINI.md   AI별 얇은 진입점 (40줄 이하)
 
 | 저장소 | 관계 | 필요 여부 |
 |---|---|---|
-| `pricing-harness-public` | Phase 7에서 JSON 파일 계약으로 연결 | 선택 |
+| `pricing-harness-public` | JSON 파일 계약으로 연결. `FilePricingBridge.from_repository(path)`에 경로를 주입하면 실제 스키마로 검증하고, 없으면 `EXTERNAL_CONTRACT_NOT_CHECKED` | 선택 |
 | `business-planning-handbook` | MN 방법론 원본. `adapters/knowledge/handbook.py`가 경로 주입으로 읽는다 | 선택 — 없어도 카드만으로 동작 |
 
 둘 다 **런타임 의존성이 아니다.** `examples/run_example.py`는 handbook이 `../business-planning-handbook`에
 있으면 `handbook found`, 없으면 `cards only`로 표시하고 정상 동작한다.
 
 `pricing-harness-public`을 in-process import 하면 **`core` 패키지명이 충돌한다** —
-`ARCHITECTURE.md` 6절의 "알려진 제약"을 읽는다.
+`ARCHITECTURE.md` 6절의 "알려진 제약"을 읽는다. 스키마 *파일*을 읽는 것은 충돌하지 않으므로
+Phase 7의 외부 검증은 그 방식으로 한다.
 
 ---
 

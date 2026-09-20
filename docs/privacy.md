@@ -203,7 +203,7 @@ CRM 연결은 별도 기능이며 이 저장소는 그 경로를 제공하지 �
 | 연락처 필드 부재 | `ProposalStrategy`·`StrategyStatement`·`StoryStep`·`ProposalObjection` 어디에도 없다 |
 | 제품 서술 필드 부재 | 출력 스키마에 없다. 없는 역량이 들어갈 자리가 없다 |
 | 제안 문장의 출처 추적 | `solution_element_refs`(ref) → `selected_solution_elements[*].ref` → 호출자 목록. 단, 문장의 **정확성**은 보장하지 않는다 — best-effort이며 backlog 대상 |
-| 가격 구조 부재 | `pricing_input` 삭제. Phase 6는 숫자를 만들지 않는다 |
+| 가격 구조 부재 | `pricing_input` 삭제. Phase 6는 숫자를 만들지 않는다. 숫자는 Phase 7의 `CommercialInput`으로만 들어온다 |
 | Phase 5 claim 원문 미복제 | dimension 참조만 저장한다 |
 | 길이 초과 거부 | 잘라서 저장하지 않는다 |
 | draft의 redacting `__repr__` | canary 6표면 |
@@ -215,6 +215,36 @@ CRM 연결은 별도 기능이며 이 저장소는 그 경로를 제공하지 �
 로그 가능: `strategy_id` · `analysis_id` · `client_id` · `objective` · `objective_source` ·
 `step_type` · `basis` · `timing` · counts · rejection/flag code.
 로그 금지: 위 모든 free text · `objective_detail` · `selected_solution_elements` 원문.
+
+### Pricing Hand-off (Phase 7) — 유일하게 프로세스를 나가는 산출물
+
+앞의 모든 Phase는 결과가 메모리·storage에 머문다. Phase 7은 **파일을 쓴다.** 그 파일에는
+고객 원가구조가 들어 있고, 그것은 경쟁사가 돈을 주고 살 자료이자 고객이 봐서는 안 되는
+자료다. 그래서 여기서는 export 표면을 따로 본다.
+
+| 구조적 보장 | |
+|---|---|
+| `source_ref`·`source_type`은 불투명 식별자만 | allowlist 정규식 `^[A-Za-z0-9_-]{1,64}$`. 파일명·경로·URL·공백·점이 포함되면 `UNSAFE_SOURCE_REF`로 **거부**한다. 잘라내지 않는다 |
+| 외부 스키마가 `source_ref`를 "File name, URL, or citation"으로 규정해도 따르지 않는다 | 원본 파일명은 3절 영구저장 금지목록에 있다. 계약이 허용한다는 것과 우리가 보낼 수 있다는 것은 다르다 |
+| 파일명은 `<pricing_case_id>.client_input.json` | 불투명 id다. 디렉토리 목록도 표면이다 — 고객사명·제품명이 파일명에 들어가지 않는다 |
+| 출력 디렉토리는 필수 인자 | 기본값이 없다. 원가표가 담긴 파일이 아무도 고르지 않은 위치에 생기지 않는다 |
+| `HANDOFF_BLOCKED`는 파일을 쓰지 않는다 | 파일을 쓰는 것이 곧 전달이다. `PricingHandoffBlocked` 예외 |
+| Phase 5 claim 원문 미전송 | `commercial_context`에만 남고 payload에는 가지 않는다 |
+| 연락처 필드 부재 | `CommercialInput`·`PriceComponentInput`·`CostItemInput`·`CommercialSourceRef`·`PricingResult` 어디에도 없다 |
+| 거부가 원인을 되풀이하지 않는다 | 파일명을 거부하면서 파일명을 기록하지 않는다 (`safe_reference`) |
+| `CommercialInput` 미저장 | transient DTO다. `StorageProvider`에 저장 메서드가 없다 |
+| `gap_ref`에 gap 원문 부재 | SHA-256 digest의 앞 16자다. gap 문장이 ref에 실리지 않으므로, ref는 로그·URL·API 경로에 남겨도 되는 값이다 |
+
+| prompt / policy 수준 (보장 아님) | |
+|---|---|
+| `cost_item.label`·`product.name`에 문서명이 없을 것 | 호출자가 자기 원가표에 붙인 이름이며 자유 텍스트다. 검증하지 않는다 |
+
+로그 가능: `pricing_case_id` · `strategy_id` · `analysis_id` · `client_id` · `status` ·
+`component_id` · `item_id` · `gap_ref` · counts · rejection/flag code.
+로그 금지: 모든 금액·요율·환율 · `product.name` · `cost_item.label` · `PricingGap.need` · `commercial_context`.
+
+`tests/test_pricing_canary.py`가 6표면에 더해 payload 자체를 문서형 패턴(확장자·경로
+구분자·URL)으로 스캔한다.
 
 ### `display_label`은 allowlist에 없다
 

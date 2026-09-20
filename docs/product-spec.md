@@ -443,22 +443,118 @@ Phase 5 gap은 전부 전달된다. 시점을 판정할 수 없으면 `UNCLASSIF
 의미적 적합성 검증은 `docs/development-guide.md`의 backlog 항목이며, 이를 가리기 위한 verifier·
 embedding·NER을 Phase 6에서 도입하지 않았다.
 
-## Stage 9 — Pricing *(Phase 7)*
+## Stage 9 — Pricing Hand-off *(Phase 7)*
 
 | | |
 |---|---|
-| 입력 | `ProposalStrategy` + 원가·물량·목표마진 |
+| 입력 | `ClientAnalysis` + `ProposalStrategy` + `CommercialInput` (호출자 숫자) |
 | 출력 | `PricingResult` |
 
-이 Harness는 **계산하지 않는다.** 두 블록을 만들어 넘긴다.
+이 Harness는 **계산하지 않는다.** 결정적 변환만 한다 — LLM 없음, 산술 없음.
 
-| 블록 | 내용 |
+```
+core/pricing_bridge.run_pricing_handoff(
+    analysis=..., strategy=..., commercial=...,
+    acknowledged_gap_refs=(), pricing_case_id=None, policy=DEFAULT_PRICING_POLICY)
+```
+
+signature에 `llm`도 `prompts`도 `project`도 없다. 보낼 것이 없으니 보낼 도구도 없다.
+
+| 블록 | 내용 | 전송 |
+|---|---|---|
+| `pricing_payload` | `client_input.schema.json` 형태: `schema_version` `client_id` `case_id` `product` `tax` `fx` `costs` (+ `targets` `meta`) | **간다** |
+| `commercial_context` | 이 case를 설명하는 확정 context (`docs/data-model.md` 9절) | **안 간다** |
+
+### 숫자의 출처는 `CommercialInput` 하나다
+
+`CommercialInput`은 transient DTO다 — 저장하지 않고 스키마도 없다. 실제로 쓰인 숫자는
+`pricing_payload`에 이미 보존되므로, 두 번째 사본은 두 번째 SSOT일 뿐이다.
+
+```
+CommercialInput.vat_rate                      → tax.vat_rate
+CommercialInput.rate_base_per_reporting       → fx.rate_base_per_reporting
+PriceComponentInput.actual_price              → product.price_components[*].actual_price
+CostItemInput.amount / rate                   → costs.items[*].amount / rate
+```
+
+한 필드 → 한 필드. `None`은 `null`이 되고 **`0`이 되지 않는다.**
+
+### Solution 결속
+
+```
+Phase 6 selected_solution_elements[*].ref
+        ↑ PriceComponentInput.solution_element_ref (필수, 이 목록 안에서만)
+        ↓
+payload  product.price_components[*].component_id      ← ref는 넣지 않는다 (닫힌 객체)
+context  offered[*] = {ref, text, component_id}        ← 결속의 canonical 위치
+```
+
+선택되지 않은 ref → **전체 거부** (`UNKNOWN_SOLUTION_ELEMENT`). component 하나를 조용히
+빼면 제안보다 적게 견적하고, 그것이 원래 의도였던 것처럼 보인다.
+선택되었는데 가격이 없으면 `ELEMENT_NOT_PRICED` **flag**다 — 부분 견적은 정당한 판단이다.
+
+### Gate
+
+`BEFORE_PRICING` gap이 열려 있으면 `HANDOFF_BLOCKED`. payload는 만들어서 보여준다 — 막히는
+것은 전달이다. 사람이 **gap을 하나씩 지목해** 확인하면 통과하고 `GAPS_ACKNOWLEDGED`가 남는다.
+`UNCLASSIFIED` · `OPTIONAL`은 막지 않는다.
+
+#### 지목은 `gap_ref`로 한다 — 문장으로 하지 않는다
+
+```python
+@dataclass(frozen=True)
+class PricingGap:          # transient. Entity도 아니고 schema도 없다
+    gap_ref: str           # machine reference — 불투명, 결정적
+    need: str              # display text — 사람이 읽는 문장
+    timing: EvidenceTiming
+    dimension: Optional[AnalysisDimension]
+```
+
+`gap_ref = "gap_" + sha256(strategy_id ␟ need ␟ timing ␟ dimension)[:16]`
+
+- **불투명하다** — need 원문이 ref에 실리지 않는다
+- **결정적이다** — 같은 gap 상태면 프로세스·머신과 무관하게 같은 ref
+- **gap이 바뀌면 ref가 바뀐다** — 승인은 *그 시점에 그렇게 쓰여 있던 그 gap*에 대한 것이고,
+  문구·시점·dimension이 달라지면 자동으로 유효하지 않다
+- **strategy를 넘어 전이되지 않는다** — 두 고객이 똑같이 읽히는 gap을 가질 수 있고, 한쪽의
+  승인이 다른 쪽의 승인은 아니다
+- 정규화는 **공백뿐이다.** 대소문자·문장부호·어휘는 건드리지 않는다 — 그것을 접으면 "다르게
+  쓰인 두 문장이 같은 뜻"이라는 의미 판단이 되고, 이 저장소는 그 판단을 하지 않는다
+
+이것은 `HARNESS.md` 7절의 *산문을 식별자로 쓰지 않는다*가 Phase 7에 적용된 것이다. 문장을
+키로 쓰면 같은 문구의 두 gap이 합쳐지고, 문구를 다듬는 순간 그것을 가리키던 승인이 끊어진다.
+
+| 보낸 ref | 처리 |
 |---|---|
-| `pricing_payload` | Pricing Harness의 `client_input.schema.json` 형태: `schema_version` `client_id` `case_id` `product` `tax` `fx` `costs` (+ `targets`) |
-| `commercial_context` | client · country · problem · buyer · value_proposition · competitive_advantage · competitor · channel · expected_quantity · commercial_conditions |
+| 이 strategy의 blocking gap | 해제 대상 |
+| 이 strategy의 non-blocking gap | `NON_BLOCKING_GAP_ACKNOWLEDGED` **flag**. 아무것도 해제하지 않는다 |
+| 이 strategy에 없는 ref (stale · 오타 · 타 strategy) | `UNKNOWN_GAP_REF` **rejection — run 전체 거부** |
 
-Pricing Harness가 돌려주는 것: `analysis_result` (MODE A 현재가격 진단 / MODE B 목표가격 /
-MODE C 허용원가 / BEP), 또는 Scenario Compare 결과. 그대로 `engine_result`에 보관한다.
+마지막 줄이 중요하다. 조용히 무시하면 caller가 준 승인과 기록된 승인이 달라진다. stale ref는
+"gap을 닫아라"가 아니라 **"당신이 보고 있는 화면이 낡았다"**이므로, 거부하고 다시 읽게 한다.
+
+`commercial_context.evidence_needs[*]`가 `gap_ref` · `need` · `timing` · `dimension`을 함께
+싣는다 — Phase 8 UI는 `need`를 표시하고 `gap_ref`를 round-trip한다.
+
+`adapters/pricing/file.py`의 `write_payload()`가 `HANDOFF_BLOCKED`를 거부한다 — 파일을 쓰는
+것이 곧 전달이므로, gate가 거기서 물지 않으면 권고에 불과하다.
+
+### 그쪽 규칙은 그쪽이 판정한다
+
+`shared` + `direct`, `amount`와 `rate` 동시 입력, component type과 어긋난 `pricing_model` —
+`dependency_rules.md`가 오류로 규정하는 조합들이다. 우리는 `DEPENDENCY_RULE_RISK` flag를
+남기고 **값을 그대로 통과시킨다.** 자동 수정도, 값 제거도, allocation 변경도 하지 않는다.
+
+### 돌아오는 것
+
+`analysis_result` (MODE A 현재가격 진단 / MODE B 목표가격 / MODE C 허용원가 / BEP).
+`attach_engine_result()`가 `source.case_id` · `source.client_id`를 대조하고, 일치하면
+**원문 그대로** `engine_result`에 넣는다. 불일치는 `ENGINE_RESULT_MISMATCH` + `FAILED`이고
+문서는 보관하지 않는다 — 파일 계약에서는 엉뚱한 파일이 돌아올 수 있고, 모양이 맞는 틀린
+답이 가장 위험하다. 모듈 status(`OK` `INCOMPLETE` `UNKNOWN` `ERROR`)는 그쪽 어휘이며
+재해석하지 않는다.
+
+Scenario Compare는 Phase 7 범위 밖이다. 한 번에 계약 하나.
 
 연결 방식과 `core` 패키지명 충돌 주의사항은 `ARCHITECTURE.md` 6절에 있다.
 

@@ -17,10 +17,10 @@ other systems embed.
 
 ## Status
 
-**Phase 6 of 9 — proposal strategy.**
-Version `0.6.0-alpha.1`. Research, diagnosis, client discovery, deep analysis and proposal
-strategy run; pricing and report output do not. See [docs/development-guide.md](docs/development-guide.md) for the
-phase plan.
+**Phase 7 of 9 — pricing hand-off.**
+Version `0.7.0-alpha.1`. Research, diagnosis, client discovery, deep analysis, proposal
+strategy and the hand-off to the separate pricing harness run; report output does not. See
+[docs/development-guide.md](docs/development-guide.md) for the phase plan.
 
 Intended uses: a standalone public harness, the analysis core behind a web application, and a
 mobile-first practice tool for sales training. The core stays independent of all three — see
@@ -34,7 +34,7 @@ mobile-first practice tool for sales training. The core stays independent of all
 | 4 | Client discovery, fit assessment, deterministic priority | **done** |
 | 5 | Deep analysis of human-selected clients | **done** |
 | 6 | Proposal strategy (a strategy, not a document) | **done** |
-| 7 | Pricing adapter | planned |
+| 7 | Pricing hand-off to the separate pricing harness (no engine here) | **done** |
 | 8–9 | Reference dashboard, report output | planned |
 
 ---
@@ -125,7 +125,7 @@ provider you configure. See [docs/privacy.md](docs/privacy.md).
 
 | Repository | Relationship |
 |---|---|
-| `pricing-harness-public` | Pricing calculation. Connected by a JSON file contract in Phase 7; no runtime dependency |
+| `pricing-harness-public` | Pricing calculation. Connected by a JSON file contract; no runtime dependency. Point `FilePricingBridge.from_repository()` at a checkout to validate against the real schema |
 | `business-planning-handbook` | Public expression of the MN01–MN08 analysis framework; read by path injection |
 
 ## License

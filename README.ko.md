@@ -16,9 +16,10 @@
 
 ## 현재 상태
 
-**Phase 6 / 9 — Proposal Strategy.**
-버전 `0.6.0-alpha.1`. Research · 진단 · Client Discovery · 심층분석 · 제안전략은 동작하고,
-Pricing과 보고서 출력은 아직이다. 개발 순서는 [docs/development-guide.md](docs/development-guide.md)를 참조한다.
+**Phase 7 / 9 — Pricing Hand-off.**
+버전 `0.7.0-alpha.1`. Research · 진단 · Client Discovery · 심층분석 · 제안전략 · 별도
+Pricing Harness로의 handoff는 동작하고, 보고서 출력은 아직이다. 개발 순서는
+[docs/development-guide.md](docs/development-guide.md)를 참조한다.
 
 사용 예정: 독립 Public Harness · Web Application의 분석 Core · 영업조직 교육용 Mobile-first
 실습 도구. Core는 이 셋 모두에 대해 독립을 유지한다 — [HARNESS.md](HARNESS.md) 12절.
@@ -31,7 +32,7 @@ Pricing과 보고서 출력은 아직이다. 개발 순서는 [docs/development-
 | 4 | Client Discovery · Fit 평가 · 결정적 우선순위 | **완료** |
 | 5 | 사람이 선택한 Client 심층분석 | **완료** |
 | 6 | 제안전략 (문서가 아니라 전략) | **완료** |
-| 7 | Pricing Adapter | 예정 |
+| 7 | 별도 Pricing Harness로의 handoff (여기에 Engine을 만들지 않는다) | **완료** |
 | 8–9 | Reference Dashboard · Report Output | 예정 |
 
 ---
@@ -122,7 +123,7 @@ docs/                   product-spec · privacy · data-model · development-gui
 
 | 저장소 | 관계 |
 |---|---|
-| `pricing-harness-public` | 가격 계산. Phase 7에서 JSON 파일 계약으로 연결. 런타임 의존성 없음 |
+| `pricing-harness-public` | 가격 계산. JSON 파일 계약으로 연결. 런타임 의존성 없음. `FilePricingBridge.from_repository()`에 경로를 주면 실제 스키마로 검증한다 |
 | `business-planning-handbook` | MN01–MN08 분석 프레임워크의 공개용 표현체. 경로 주입으로 읽는다 |
 
 ## 라이선스
