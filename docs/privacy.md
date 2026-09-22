@@ -301,7 +301,9 @@ Core는 아예 로그를 남기지 않는다 (`test_core_purity`가 `logging` im
 **WAL 주의.** 갓 커밋된 행은 checkpoint 전까지 `<db>-wal`에 있다. DB 파일만 검사하는 점검은
 잘못된 이유로 통과한다.
 
-**한계.** SQLite는 동시 쓰기가 많은 부하에 맞지 않는다. 교육 세션 규모를 전제로 한다.
+**한계.** SQLite는 동시 쓰기가 많은 부하에 맞지 않는다. Work Mode의 단일 instance 소규모 사용을
+전제로 한다. (Phase 8 초안은 "교육 세션 규모"를 전제로 적었다 — BYOAI Training은 서버 저장을 쓰지
+않는다, 4-4절.)
 
 ---
 
@@ -444,23 +446,24 @@ LLM adapter와 다르다. 저쪽이 보내는 것은 **고객이 준 문서**이
 
 ## 4-1. Web Application 표면 *(Phase 8)*
 
-Phase 1–7의 원칙은 그대로다. Web에서 처음 생기는 표면만 여기 적는다. 이 절은 **별도
-Application 저장소가 지켜야 할 요구사항**이며, 이 저장소의 코드가 아니다.
+Phase 1–7의 원칙은 그대로다. Web에서 처음 생기는 표면만 여기 적는다. 이 절은 **hosted Work Mode
+Application(별도 저장소)이 지켜야 할 요구사항**이며, 이 저장소의 코드가 아니다. 서버가 분석 결과를
+가지는 구조를 전제로 한다. **BYOAI Training Mode의 표면은 4-4절이다** — 서버가 없으므로 규칙이 다르다.
 
 | 표면 | 규칙 |
 |---|---|
 | upload lifetime | 메모리 파싱, 디스크 미기록. 요청 종료 시 버퍼 해제 |
 | `EvidenceCandidate` | **어떤 mode에서도 저장하지 않는다.** Bootstrap Run 종료와 함께 소멸 |
 | session lifetime | 서명 쿠키 · `HttpOnly` · `Secure` · `SameSite=Lax`. 세션 종료 + N시간 후 데이터 삭제 |
-| browser storage | 분석 내용 저장 금지. UI 선호(언어·접힘 상태)만 |
+| browser storage | **(hosted Work Mode)** 분석 내용 저장 금지 — 결과는 서버가 가진다. UI 선호(언어·접힘 상태)만. BYOAI Training은 4-4절 |
 | server logs | allowlist: `request_id` `project_id` `session_id` `step` `status` `latency_ms` `error_code` `source_id` `gap_ref` `pricing_case_id` |
 | error reporting | request body capture · locals capture · raw payload capture **전부 끈다** (5절) |
 | analytics | 페이지뷰 수준만. 입력 내용·업로드·프롬프트 전송 금지 |
 | crash reporting | 스택만, 변수 없이 |
 | cache · CDN | 분석 결과 응답은 `no-store`. 정적 자산만 CDN |
 | API traces | span 이름과 코드만. 인자 값 금지 |
-| 교육생 식별 | 익명 participant id. **이름·이메일·전화번호를 받지 않는다** |
-| 강사 화면 | 개별 교육생의 raw input을 기본 노출하지 않는다. 집계만 |
+| 교육생 식별 | (hosted 방식의 교육 기능을 만든다면) 익명 participant id. **이름·이메일·전화번호를 받지 않는다.** BYOAI Training은 식별자 자체를 두지 않는다 — 4-4절 |
+| 강사 화면 | (hosted 방식의 교육 기능을 만든다면) 개별 교육생의 raw input을 기본 노출하지 않는다. 집계만. BYOAI Training MVP에는 강사 화면이 없다 |
 | LLM 전송 | zero-retention이라고 **과장하지 않는다.** 전송 고지를 화면에 노출 |
 | sample data | 공개 데모·seed는 전부 가상 (`HARNESS.md` 9절) |
 
@@ -468,6 +471,39 @@ Application 저장소가 지켜야 할 요구사항**이며, 이 저장소의 �
 ClientCandidate · ClientAnalysis · ProposalStrategy · PricingResult. 원본 문서는 어느
 mode에서도 남지 않으며, 그래서 STEP 1–7을 재개하려면 자료를 다시 올려야 한다. 이 제약은
 비용이 아니라 privacy 보장의 결과다.
+
+---
+
+## 4-4. BYOAI Training 표면 *(Step 5)*
+
+Training Mode는 교육생의 스마트폰에서만 동작하는 **별도 static application**이다(`docs/product-spec.md`
+"Training Mode — BYOAI"). 서버가 분석을 저장하지도 AI를 호출하지도 않으므로 4-1절의 hosted 규칙을
+그대로 쓰지 않는다. 이 절은 **Training application 저장소가 지켜야 할 요구사항**이며, 이 저장소의
+코드가 아니다.
+
+**교육생 데이터가 있는 곳.**
+
+| 상태 | 있는 곳 | 나가는 곳 |
+|---|---|---|
+| BusinessContext — 사업 · 제품/서비스 · 시장/고객 입력 · 사실/근거 `I#` | 교육생 기기 | 교육생이 **직접** 자기 AI에 붙여넣을 때만 그 AI provider로 간다 |
+| LearnerJudgment — 사전 판단 | 교육생 기기**만** | **어디에도 가지 않는다.** AI에 전송되지 않는다 — Execution Pack · 재출력 요청 · app이 복사하는 어떤 내용에도 없다 |
+| AIResultPack — 교육생의 AI가 만든 결과 | 교육생 기기 | 어디에도 가지 않는다 |
+| LearnerDecision — 교육생의 최종 판단 | 교육생 기기**만** | 어디에도 가지 않는다 |
+
+| 표면 | 규칙 |
+|---|---|
+| server transmission | **없다.** Training application은 교육생 데이터를 우리 서버로 보내지 않는다 |
+| 우리 측 AI 호출 | **Our AI API calls = 0** — AI API · Search API 호출이 없다 |
+| URL | **데이터를 URL에 넣지 않는다** — query · fragment 어디에도. exercise 식별자만 둔다 |
+| device-local persistence | 모바일에서 AI 앱으로 전환한 뒤 돌아왔을 때 상태를 복구하기 위해 **기기 안에** 둔다. 이것은 **Training MVP의 device-local persistence mechanism**이며 영구적인 아키텍처 의무가 아니다. 현재 MVP 후보는 `localStorage`다 |
+| 만료 | **24시간.** 만료된 상태는 다음에 app을 열 때 지운다 |
+| 삭제 | 화면에 **[기록 지우기]** — 즉시 지운다 |
+| shared-device 위험 | 같은 기기를 다른 사람이 쓰면 남은 기록을 볼 수 있다고 안내한다. 실습이 끝나면 [기록 지우기]를 권한다 |
+| 민감정보 | 실제 고객 정보 · 개인정보 · 영업비밀을 넣지 말라고 안내한다. 가상 회사로 연습하는 선택지를 둔다 |
+| 교육생의 AI provider | 붙여넣은 내용의 보관 · 학습 사용 · 처리 지역은 **그 provider와 교육생 계정 설정의 속성**이며 이 시스템이 보장하지 않는다 (0절). 과장하지 않는다 |
+| 식별 · 계정 | 회원가입 · 로그인 · 이름 · 이메일 · 전화번호 · participant id를 받지 않는다 |
+| analytics · error reporting | 입력 내용 · 붙여넣은 결과 · 판단을 보내지 않는다 |
+| 공개 배포물 | static JS는 누구나 읽을 수 있다 — **공개용 framework card만** 담는다. 비공개 Master Note 전문을 넣지 않는다 (`HARNESS.md` 5 · 9절) |
 
 ---
 

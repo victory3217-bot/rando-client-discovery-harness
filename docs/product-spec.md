@@ -576,6 +576,11 @@ Scenario Compare는 Phase 7 범위 밖이다. 한 번에 계약 하나.
 Web Application Integration  +  Mobile-first Reference UI  +  Training UX Validation
 ```
 
+> **Step 5 결정 (2026-09-22) — Training Mode는 이 Web Application에 들어가지 않는다.** Training
+> Mode는 **BYOAI**(Bring Your Own AI) 방식의 별도 static application으로 결정되었다 — 이 문서의
+> "Work Mode와 Training Mode" 절과 "영업조직 교육 실습" 절의 "Training Mode — BYOAI" 결정. 이 절의
+> Work Mode 결정(별도 런타임 · Bootstrap Analysis Run · persistence · provider 선택)은 **바뀌지 않는다.**
+
 배포 대상의 실제 구조를 확인한 뒤 설계를 확정했다. 확인 결과와 그에 따른 결정은 아래와 같다.
 
 ### 확인된 배포 대상
@@ -617,7 +622,8 @@ Application Service + JSON endpoint + 서버 렌더 mobile HTML을 **하나의 P
 |---|---|---|
 | Harness locale | 이 저장소 | `enums` · `fields` — **canonical domain code label** |
 | | | `screens` · `actions` · `messages` — legacy. 유지하되 **신규 추가 금지** |
-| App locale | App 저장소 | nav · button · screen copy · help · error · training instruction |
+| App locale | App 저장소 | nav · button · screen copy · help · error (Work Mode) |
+| Training locale | 별도 Training application | Training 화면 문구 · 실습 안내 (Step 5, BYOAI). domain code 라벨은 이 저장소의 `enums` · `fields`를 **build time에 읽어** 쓴다 |
 
 Phase 8에서 새로 생기는 UI 문구는 Harness locale에 **추가하지 않는다.** 기존 세 섹션의 정리는
 별도 refactor로 처리한다 — 이번 Phase에서 Core를 바꾸지 않기 위해서다.
@@ -744,7 +750,7 @@ large의 모델 상한 140 호출에 대해:
 
 | | framework 범위 |
 |---|---|
-| **Training Mode** | 교육목표에 따라 **명시적으로** subset을 고를 수 있다. 화면이 어떤 MN을 돌렸는지 보여준다 |
+| **Training Mode** (BYOAI) | exercise 정의가 교육목표에 따라 Execution Pack에 넣을 MN subset을 **명시적으로** 고른다. 화면이 어떤 MN을 썼는지 보여준다 |
 | **Work Mode** | 호출 수·비용·호스팅 최적화를 이유로 **silent downgrade하지 않는다.** 좁히려면 사람이 고른다 |
 
 런타임 제약을 근거로 분석 범위를 줄이는 것은 Application이 분석의 깊이를 결정하는 것이다.
@@ -798,10 +804,10 @@ large의 모델 상한 140 호출에 대해:
 한 화면에 대형 표를 넣는 대신 **card · step · progressive disclosure · simple comparison ·
 expandable evidence**를 우선 검토한다.
 
-모바일 화면 후보 9개:
+모바일 화면 후보 9개 (Work Mode — Training Mode의 화면은 별도 Training application이 정한다):
 
 ```
-1 Project / Training Session   4 Client Candidates   7 Priority
+1 Project                      4 Client Candidates   7 Priority
 2 Evidence / Research          5 Client Detail       8 Missing Evidence
 3 Key Issues                   6 Fit Assessment      9 Result Summary
 ```
@@ -828,61 +834,84 @@ Fit Criterion · Fit Level · Reason · Evidence · Missing Evidence
 
 구체적인 디자인은 Phase 8에서 정한다. 요구사항만 여기 고정한다.
 
-### Training UX는 Application Layer의 책임이다
+### Training UX는 Harness 밖 Interface의 책임이다
 
 Mobile-first · touch-friendly · short-step · evidence-visible은 **UI 요구사항이다.** Core
 business logic에 넣지 않는다. Core는 화면 크기도, 교육 세션도, 접속한 사람이 강사인지
-교육생인지도 모른다 (`HARNESS.md` 12절).
+교육생인지도 모른다 (`HARNESS.md` 12절). Step 5에서 그 Interface는 Work App이 아니라 **별도 static
+BYOAI Training application**이다 (아래 "Work Mode와 Training Mode").
 
 ### Work Mode와 Training Mode
 
-한 Core, 한 API, 두 view.
+> **Step 5 결정 (2026-09-22)으로 이 절을 다시 썼다.** Phase 8 초안은 "한 Core, 한 API, 두 view" —
+> Training Mode도 Work Mode와 같은 실행 경로(서버 · `LLMProvider` · Storage)를 쓰고 화면만 다르다고
+> 가정했다. Training Mode는 **BYOAI**로 결정되었고 그 가정은 **대체(supersede)**되었다. Work Mode는
+> 바뀌지 않는다.
 
-| | Work Mode | Training Mode |
+```
+Work Mode      =  Executable Harness + App + LLMProvider + Storage
+Training Mode  =  Static BYOAI application + Harness Execution Pack
+                  + student's own AI + device-local comparison
+```
+
+두 mode는 **같은 Client Discovery 지식체계**(이 저장소의 framework card · Evidence 규칙 · Client
+Discovery 규칙 · Fit 8개 기준 · enum과 라벨 · schema 용어)를 쓰고, **실행 architecture가 다르다.**
+
+| | Work Mode (기업 납품) | Training Mode (BYOAI) |
 |---|---|---|
-| 목적 | 결과 | 과정 |
-| REVIEW 단계 | 접힌 요약으로 통과 | 펼쳐서 설명 |
+| 실행 엔진 | 설정된 `LLMProvider` — 서버에서 | 교육생 **자신의** ChatGPT / Claude 등. vendor에 종속되지 않는다 |
+| 이 저장소의 사용 | runtime에 Python Core를 실행한다 | build time에 data · contract 파일만 읽어 Execution Pack을 만든다. **runtime에 Core를 import하지 않고, Harness 코드를 실행하지 않는다** |
+| 우리 측 AI API 호출 | 있다 | **Our AI API calls = 0** |
+| AI 왕복 | pipeline 호출 여러 번(자동) | 한 exercise에 교육생의 복사·붙여넣기 **1회 왕복** |
+| 저장 | App DB + `StorageProvider` | 교육생 **기기 안**만. 서버 저장 없음 |
+| 목적 | 결과 | 과정 — **Learner Judgment vs Independent AI Analysis → Learner Decision** |
 | provenance | 한 탭 뒤, 기본 접힘 | 기본 노출 |
-| 멈추는 곳 | Human decision 6개 | 6개 + 학습 단계 |
+| Priority band | `core/client/priority.py` 규칙표 (검증된 provenance 필요) | **쓰지 않는다** — provenance를 검증할 수 없다 |
 
 **Human decision 6개** — 어느 mode에서도 UI가 대신 결정하지 않는다:
 Client 선택 · Proposal Objective · Solution selection · Pricing gap acknowledgement ·
-원가·가격 입력 · 제안 실행 여부. API에 이들의 default 경로를 만들지 않는다.
+원가·가격 입력 · 제안 실행 여부. API에 이들의 default 경로를 만들지 않는다. Training Mode는 여기에
+더해 **Priority band · AI 추천 · AI ranking을 쓰지 않는다.** "나는 어느 고객을 우선 공략할 것인가?"는
+교육생이 직접 쓰는 **Learner Decision**이다 (아래 "Training Mode — BYOAI").
 
-### computed ≠ revealed
+### ~~computed ≠ revealed~~ — Step 5에서 대체됨
 
-predict-then-reveal에서 **AI 결과를 미리 계산하는 것은 허용한다.** Bootstrap Run이 한 번에
-끝나므로 오히려 그래야 한다. 금지되는 것은 learner가 자기 판단을 제출하기 전에 **공개**하는
-것이다.
-
-```
-computed   Bootstrap Run이 끝난 시점
-revealed   learner가 prediction을 제출한 시점
-```
-
-reveal state는 **Application Layer가 관리한다.** Core에 training·reveal 개념을 넣지 않는다.
+> **대체됨 (Step 5, 2026-09-22).** 이 절은 서버가 Bootstrap Run으로 AI 결과를 먼저 **계산**해 두고,
+> learner가 prediction을 제출한 뒤 **공개**하는 hosted predict-then-reveal을 전제로 했다. BYOAI
+> Training에서는 그런 계산 결과가 존재하지 않는다.
+>
+> - 교육생의 사전 판단(**Learner Judgment**)은 AI 실행 **전에** 작성되고, **기기에만** 저장되며,
+>   **AI에게 전달되지 않는다.**
+> - 교육생의 AI는 BusinessContext · 교육생이 입력한 사실/근거 `I#` · Harness 규칙만 보고
+>   **독립적으로** 분석한다.
+> - 비교는 Training application이 기기 안에서 두 독립 결과를 나란히 보여주며 한다.
+>
+> reveal state · prediction은 저장 대상이 아니다. **Core에 training · reveal 개념을 넣지 않는다**는
+> 원칙은 그대로다.
 
 ### Persistence ownership
 
 | | 소유 | 저장 대상 |
 |---|---|---|
 | Harness `StorageProvider` | 이 저장소 | Core 9 entity **만** |
-| Application persistence | App 저장소 | `training_session` · `participant` · `prediction` · reveal state · session expiry · application metadata |
+| Application persistence | Work App 저장소 | session · Bootstrap run · application metadata (Work Mode) |
+| Training state | 교육생 기기 (Training application) | BusinessContext · LearnerJudgment · AIResultPack · LearnerDecision — **서버 저장 없음**. 기기 안 저장 방식은 Training MVP의 device-local persistence mechanism이다 (`docs/privacy.md` 4-4절) |
 
-`TrainingSession`을 Core Entity로 만들지 않고 `StorageProvider`에 메서드를 추가하지 않는다.
+Training 상태를 Core Entity로 만들지 않고 `StorageProvider`에 메서드를 추가하지 않는다. Work App이
 같은 SQLite 파일을 쓰더라도 **table ownership과 repository module은 분리한다.**
 
-세 가지 persistence mode:
+persistence mode (Harness storage 관점):
 
-| | Ephemeral Demo | Training Session | Authenticated Work |
+| | Ephemeral Demo | Authenticated Work | BYOAI Training (Step 5) |
 |---|---|---|---|
-| storage adapter | `null` / `memory` | `sqlite` | 조직이 연결 |
-| 원본 문서 | 저장 안 함 | **저장 안 함** | 조직 정책 |
-| `EvidenceCandidate` | 요청 후 소멸 | **소멸** | 소멸 |
-| 저장 대상 | 없음 | structured entity만 | 동일 + 조직 확장 |
-| 수명 | 요청 | 세션 종료 + N시간 | 조직이 정함 |
+| storage adapter | `null` / `memory` | 조직이 연결 | **없음** — Harness storage를 쓰지 않는다 |
+| 원본 문서 | 저장 안 함 | 조직 정책 | **받지 않는다** (문서 업로드 없음) |
+| `EvidenceCandidate` | 요청 후 소멸 | 소멸 | 없음 — 근거는 교육생이 입력한 `I#` |
+| 저장 대상 | 없음 | structured entity + 조직 확장 | 서버: 없음 · 기기: 네 상태 |
+| 수명 | 요청 | 조직이 정함 | 기기 안, Training MVP 기준 24시간 만료 · [기록 지우기] |
 
-**세 모드 모두 raw document를 저장하지 않는다.**
+**어느 모드도 raw document를 저장하지 않는다.** (Phase 8 초안의 "Training Session" 열 — sqlite ·
+structured entity · 세션 종료 + N시간 — 은 hosted Training 가정이었고 Step 5에서 대체되었다.)
 
 ### Provider adapter는 config가 고른다
 
@@ -898,29 +927,84 @@ report renderer는 Phase 9다. Phase 8에서 report generation을 끌어오지 �
 
 ---
 
-## 영업조직 교육 실습 *(Phase 8 이후, 미구현)*
+## 영업조직 교육 실습 *(Step 5 Training Mode — BYOAI, 미구현)*
 
-이 Harness는 영업조직 교육의 실습 도구로 사용할 예정이다. 아래는 **미래 UX 요구사항**이며,
-지금 Core에 권한 모델이나 세션 개념을 추가하는 근거가 아니다.
+이 Harness는 영업조직 교육의 실습 도구로 사용할 예정이다. 아래는 **UX 요구사항**이며, 지금 Core에
+권한 모델이나 세션 개념을 추가하는 근거가 아니다. Step 5에서 실행 방식이 **BYOAI**로 결정되었다 —
+바로 아래 절이 그 결정이다.
+
+### Training Mode — BYOAI (Step 5 결정, 2026-09-22)
+
+**정의.** 교육생의 스마트폰에서만 동작하는 static Training application이 **교육생의 사업 사실/근거와
+이 Harness의 규칙**으로 Execution Pack을 만들고, 교육생이 그것을 **자신의** ChatGPT / Claude에서 1회
+실행해 **독립 분석**을 받은 뒤, **기기에만 있는 자기 사전 판단**과 나란히 비교하고 **Learner
+Decision**을 직접 쓰게 한다.
+
+```
+Training Mode = Harness Delivery + Learning UX        (Hosted AI Service가 아니다)
+```
+
+**네 상태** — Training application 안에서 서로 분리한다.
+
+| 상태 | 언제 | 어디 | AI에 전달 |
+|---|---|---|---|
+| **BusinessContext** — 사업 · 제품/서비스 · 시장/고객 입력 · 교육생이 아는 사실/근거 `I#` | AI 실행 전 | 기기 | **예** — Execution Pack에 들어가는 유일한 교육생 데이터 |
+| **LearnerJudgment** — 핵심 고객 · 핵심 문제 · Key Issue · Problem Fit · Solution Fit · 사전 우선 고객 등 | AI 실행 **전** | **기기만** | **절대 아니오** |
+| **AIResultPack** — 교육생의 AI가 독립적으로 만든 결과 | AI 실행 후, 붙여넣기 | 기기 | (AI가 만든 것) |
+| **LearnerDecision** — "나는 어느 고객을 우선 공략할 것인가?"와 그 이유 | 비교 **후** | **기기만** | 아니오. AI 추천이 아니다 |
+
+**Execution Pack의 경계.** builder의 입력은 **exercise + Harness pack data + BusinessContext뿐**이다.
+Pack에는 계약/version · `pack_id` · Harness SHA · 언어 · BusinessContext · 사실/근거 `I#` · framework
+subset · Evidence Grammar · Client Discovery 규칙 · Fit 8개 기준 · hallucination 방지 규칙 · Result
+Contract만 들어간다. **LearnerJudgment · LearnerDecision과 학생 판단에 대한 어떤 hint도 넣지 않는다.**
+
+**Result Pack.** 교육생의 AI가 돌려주는 record형 텍스트다. 허용 record: `FINDING` · `SWOT` ·
+`KEY_ISSUE` · `CLIENT` · `FIT` · `GAP` · `VIEW`(`CUSTOMER` · `PROBLEM` — AI의 독립 가설). **금지:
+`REVIEW` · `PRIORITY` · `RANKING` · `RECOMMENDATION`.** 일반 사용자의 AI 화면을 거치므로 완벽한 JSON
+compliance를 전제로 하지 않는다 — 형식의 작은 흔들림은 무손실 정규화로 읽고, 의미는 보정하지 않으며,
+위반은 그대로 보이고 표시한다. Work Mode Core의 strict schema 검증과 **같은 것이 아니다.**
+
+**Human Decision First.** AI 분석은 **정답이 아니고, 추천이 아니고, 순위가 아니다.** 비교와 학습
+질문은 Training application이 두 독립 결과를 나란히 보여주며 한다. 우선 공략 고객은 교육생이 쓰는
+Learner Decision이고 AI가 정하지 않는다.
+
+**Cost boundary.** **Our AI API calls = 0.** 우리 측에는 AI API · Search API 호출이 없다. 이것은
+Training 전체 비용이 항상 0이라는 뜻이 아니다 — 교육생 개인 AI 계정의 조건과 hosting/domain 비용은
+별개다.
+
+**이 저장소와의 관계 — data-only.** 이 저장소가 Single Source of Truth다. Training application은
+이 저장소의 **data · contract 파일**(`knowledge/master-notes/` · `locales/` · `schemas/` · prompt 규칙)을
+**build time에 읽기만** 하고, runtime에는 static JS만 실행한다 — Core를 import하지 않고 이 저장소의
+코드를 실행하지 않는다. **이 저장소는 Training application을 알지 않는다** (역방향 의존 없음). Core ·
+`StorageProvider` · `LLMProvider` · pipeline은 Training 때문에 바뀌지 않는다. 계약의 상세는 Training
+application 저장소의 문서가 소유한다.
+
+**Training MVP 범위.** BusinessContext → LearnerJudgment → Execution Pack → 교육생의 AI → Result Pack →
+비교 → LearnerDecision. 포함: Research 논리의 표현 · Evidence Grammar · SWOT · Key Issue · Client profile
+· Fit 8. 제외: Selected Client Analysis · Proposal Strategy · Pricing Harness · 강사 dashboard · login ·
+서버 DB · 우리 측 AI 호출 · Search API · 문서 업로드 · report export.
+
+향후 exercise로 확장할 수 있다 (문서 기록만): **Exercise 1** Client Discovery · **Exercise 2** Selected
+Client / Proposal Strategy · **Exercise 3** Pricing.
 
 ### 예상 흐름
 
 ```
-Instructor                              Learner
-  교육 세션 생성
-  실습 자료 선택
-  QR / URL 공유          ────────────▶   스마트폰 접속
-                                        실습 Project 선택 또는 생성
-                                        회사 / 시장 / 제공 자료 확인
-                                        Research Finding 확인
-                                        Key Issue 확인
-                                        Client Candidate 확인
-                                        Fit Assessment × 8 확인
-                                        Priority 비교
-                                        Missing Evidence 확인
-  팀별 결과 확인         ◀────────────   자신의 판단 정리
-  결과 비교 · 토론 진행
+강사                                  교육생 (자기 스마트폰)
+  exercise URL을 QR로 공유  ───────▶   접속 — 로그인 없음
+                                      BusinessContext 입력: 사업 · 제품/서비스 · 시장/고객 · 아는 사실 I#
+                                      LearnerJudgment 작성: AI 실행 전, 기기에만 남는다
+                                      [AI 요청 복사]: Execution Pack (사업 사실/근거 + Harness 규칙)
+                                      자기 ChatGPT / Claude에서 1회 실행 → 독립 분석
+                                      [AI 결과 붙여넣기]: Result Pack 검증
+                                      내 판단 vs 내 AI의 독립 분석
+                                      LearnerDecision: "어느 고객을 우선 공략할 것인가"
+  토론 진행 (결과 수집 없음)  ◀──────   자기 판단을 설명
 ```
+
+강사 dashboard · 팀별 결과 집계는 서버가 필요하므로 Training MVP 범위 밖이다. (Phase 8 초안의 흐름 —
+교육 세션 생성 · 실습 자료 선택 · Priority 비교 · 팀별 결과 확인 — 은 hosted Training 가정이었고
+Step 5에서 위 흐름으로 대체되었다.)
 
 ### Harness는 정답을 알려주는 도구가 아니다
 
@@ -930,11 +1014,12 @@ Instructor                              Learner
 - 어떤 Evidence가 있는가? 어떤 Evidence가 부족한가?
 - Problem Fit은 왜 높은가?
 - Purchasing Potential은 실제로 확인됐는가?
-- 왜 P1인가, 왜 P3인가?
+- 이 고객을 먼저 보자는 내 판단의 근거는 무엇인가?
 
-교육생이 화면의 band를 읽고 그대로 옮겨 적는다면 그 수업은 실패한 것이다. Training Mode도
-Human Decision First를 유지한다 — band는 검토 순서이지 영업 지시가 아니고, 그 사실을 교육이
-가장 먼저 무너뜨리기 쉽다.
+교육생이 AI 분석을 읽고 그대로 옮겨 적는다면 그 수업은 실패한 것이다. BYOAI Training은 band를
+계산하지 않는다 — AI 분석은 정답도 추천도 순위도 아니고, 우선 공략 고객은 교육생이 쓰는 Learner
+Decision이다. Work Mode의 band도 검토 순서이지 영업 지시가 아니다. 교육이 가장 먼저 무너뜨리기 쉬운
+것이 바로 이 사실이다.
 
 ### 훈련할 사고방식 10가지
 

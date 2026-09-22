@@ -101,6 +101,11 @@ Web framework 의존성이 하나라도 들어오면 `tests/test_core_purity.py`
 잡는다. Application Layer 쪽은 테스트가 막아주지 않으므로, 그 디렉토리를 만드는 시점에
 `HARNESS.md` 12절의 경계를 먼저 읽는다.
 
+**Step 5 (2026-09-22):** Training Mode는 **BYOAI 방식의 별도 static application**으로 결정되었다
+(`docs/product-spec.md` "Work Mode와 Training Mode"). 위 목록은 그대로다 — 이 저장소는 Training
+Session Engine · Instructor Console · Learner Account를 만들지 않고, Training application은 이
+저장소의 data · contract 파일을 build time에 읽을 뿐이다.
+
 Phase 8의 Application과 UI는 **이 저장소가 아니라 별도 저장소**에 만든다. 근거는
 `docs/product-spec.md` Phase 8 절에 있다 — 배포 대상이 런타임 없는 정적 사이트이고, Core는
 어떤 사이트의 백엔드도 되어서는 안 된다. 이 저장소에 추가되는 것은 adapter 뿐이다.

@@ -15,7 +15,7 @@
                                    | HTTP 등 (Core는 모른다)
   +--------------------------------v---------------------------------------+
   |  Application / API Layer  (Phase 8, 별도 저장소)                        |
-  |  라우팅 · 인증 · 세션 · Bootstrap Analysis Run · training session        |
+  |  라우팅 · 인증 · 세션 · Bootstrap Analysis Run  (Work Mode)             |
   |  환경변수를 읽어 Adapter를 생성하고 create_harness()에 주입한다          |
   |  provider 선택은 여기서 config/env로 한다. Core는 provider agnostic      |
   +--------------------------------+---------------------------------------+
@@ -58,6 +58,20 @@
 **import 방향은 한 방향이다.** `adapters/` → `core/` 는 허용, `core/` → `adapters/` 는 **금지**.
 `tests/test_core_purity.py`가 이를 검사한다.
 
+**Training Mode(Step 5)는 위 그림의 레이어가 아니다.** 별도 저장소의 **static BYOAI Training
+application**이고, 이 저장소를 build time에 **data로만** 읽는다 (2절 "Training Mode는 data-only
+Interface다").
+
+```
+  +---------- Training Mode  (Step 5 · 별도 저장소 · static BYOAI) ---------+
+  |  교육생 브라우저에서만 실행. 서버 · 우리 측 AI 호출 · DB 없음              |
+  |  runtime: static JS만. core를 import하지 않고 이 저장소의 코드를 실행하지 않는다 |
+  +------------------------------------+------------------------------------+
+                                       | build time에 읽기만 (역방향 의존 없음)
+                                       v
+          knowledge/master-notes · locales · schemas · prompts 규칙 (data · contract)
+```
+
 ---
 
 ## 2. Core vs Application Layer 경계
@@ -93,13 +107,35 @@ Application이 소유하는 것 중 Core에 **절대 들어오지 않는** 것:
 
 ```
 Bootstrap Analysis Run 오케스트레이션 · background task · 폴링 상태
-training session · participant · prediction · reveal state
 StepStatus 같은 화면 상태 enum · view model · UI chrome locale
 provider 선택 · session · auth · QR · 배포 대상
 ```
 
 `EvidenceCandidate`가 저장 불가라는 사실이 이 경계를 강제한다: research와 discovery는 한
 operation 안에서 끝나야 하고, 그 오케스트레이션은 Core가 아니라 Application의 일이다.
+
+(Phase 8 초안은 여기에 `training session · participant · prediction · reveal state`를 두었다 —
+hosted Training 가정이었고 Step 5에서 대체되었다. 아래 절.)
+
+### Training Mode는 data-only Interface다 (Step 5)
+
+```
+Work Mode      =  Executable Harness + App + LLMProvider + Storage
+Training Mode  =  Static BYOAI application + Harness Execution Pack
+                  + student's own AI + device-local comparison
+```
+
+| | |
+|---|---|
+| 위치 | 별도 저장소의 static application. Work App의 runtime에도, 이 저장소에도 들어오지 않는다 |
+| 이 저장소에 대한 의존 | **build time에 data · contract 파일을 읽기만 한다** (`knowledge/master-notes/` · `locales/` · `schemas/` · prompt 규칙). runtime에는 static JS만 실행한다 — Core를 import하지 않고 이 저장소의 코드를 실행하지 않는다 |
+| 역방향 의존 | **없다.** 이 저장소(와 Work App)는 Training application을 알지 않는다 |
+| Core · `StorageProvider` · `LLMProvider` · pipeline | Training 때문에 바뀌지 않는다. Core Entity · Storage 메서드 · LLM 경로를 추가하지 않는다 |
+| LLM 호출 | 우리 측은 **0** (Our AI API calls = 0). 교육생이 자기 AI에서 Execution Pack을 실행한다 |
+| 교육생 상태 | BusinessContext · LearnerJudgment · AIResultPack · LearnerDecision — 교육생 기기 안에만. **LearnerJudgment는 AI에게 전달되지 않는다** |
+
+규칙과 결정의 원본은 `docs/product-spec.md` "Work Mode와 Training Mode" · "Training Mode — BYOAI"
+절이고, privacy 표면은 `docs/privacy.md` 4-4절이다.
 
 ### 경계를 강제하는 테스트 4개
 
@@ -267,7 +303,7 @@ adapter가 model별 token ceiling을 알고 있다고 가정하지 않는다. �
 | 제안 목표 규칙을 바꾼다 | `core/proposal/objectives.py`의 요건표. 자동 fallback을 만들지 않는다 |
 | Entity에 집계 필드를 추가한다 | 파생 함수를 `core/models.py`에 두고 `core/evidence.py`가 관계를 검증한다 |
 | Web·API를 붙인다 | `core/`가 아니라 **별도 Application 저장소.** 경계는 2절, 규칙은 `HARNESS.md` 12절 |
-| Training session을 만든다 | Application. Core Entity도 `StorageProvider` 메서드도 추가하지 않는다 |
+| Training Mode를 바꾼다 | 별도 static BYOAI Training application(별도 저장소). 이 저장소는 build time data SSOT일 뿐이다 — Core Entity · `StorageProvider` 메서드 · LLM 경로를 추가하지 않는다 (2절) |
 | 화면 상태를 추가한다 | Application view model에서 합성한다. Core에 universal status enum을 만들지 않는다 |
 | 업로드 상한을 바꾼다 | `IntakePolicy`를 만들어 주입한다. `core/`는 환경변수를 읽지 않는다 |
 | UI 문구를 바꾼다 | `locales/ko.json` · `locales/en.json` |

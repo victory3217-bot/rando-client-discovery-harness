@@ -97,14 +97,16 @@ storage = SQLiteStorage("/var/lib/harness/harness.sqlite3")   # 경로 필수, �
 | **`clear()` 없음** | MemoryStorage의 `clear()`는 ephemeral 세션 종료용이다. 영속 adapter에서 같은 이름의 전체 삭제는 함정이다 |
 
 저장하지 않는 것: `EvidenceCandidate` · 원본 문서 · 문서 전문 · prompt · LLM 원문 응답 ·
-training session · participant · HTTP session · BootstrapRun. 마지막 네 개는 **Application
-저장소의 책임**이고, 같은 SQLite 파일을 쓰더라도 table을 공유하지 않는다.
+HTTP session · BootstrapRun. 마지막 두 개는 **Work App 저장소의 책임**이고, 같은 SQLite 파일을
+쓰더라도 table을 공유하지 않는다. Training 상태는 서버 어디에도 저장되지 않는다 — BYOAI Training은
+교육생 기기 안에서만 다룬다 (`docs/privacy.md` 4-4절).
 
 에러는 `SQLiteStorageError`로 감싼다. `sqlite3` 메시지는 SQL과 값을 인용하므로 **버리고**,
 stable code와 원래 예외의 **클래스명만** 남긴다 (`IntakeError`와 같은 규칙).
 
-한계: SQLite는 동시 쓰기가 많은 부하에 맞지 않는다. 교육 세션 규모를 전제로 하며, 그 이상이
-필요하면 같은 Protocol의 다른 구현체로 바꾼다 — Database Agnostic 원칙이 그것을 위해 있다.
+한계: SQLite는 동시 쓰기가 많은 부하에 맞지 않는다. Work Mode의 단일 instance 소규모 사용을
+전제로 하며, 그 이상이 필요하면 같은 Protocol의 다른 구현체로 바꾼다 — Database Agnostic 원칙이
+그것을 위해 있다.
 
 ### Anthropic LLM adapter
 
